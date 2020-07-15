@@ -19,14 +19,32 @@ include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
 include(CTest)
 
-include(ThirdPartyLibs)
+# Options
+option(SIGNALTL_TEST "Build signaltl test suite?" ${SIGNALTL_MASTER_PROJECT})
+option(SIGNALTL_EXAMPLES "Build the examples?" ${SIGNALTL_MASTER_PROJECT})
+option(SIGNALTL_INSTALL "Install the library and header files?"
+       ${SIGNALTL_MASTER_PROJECT})
+option(SIGNALTL_PYTHON_BINDINGS "Build the Python extension?" ON)
 
-if(NOT MSVC)
-  add_library(stql SHARED ${STQL_SOURCES})
-else()
-  # NOTE: This is some weird stuff for MSVC
-  add_library(stql STATIC ${STQL_SOURCES})
+set(_SIGNALTL_BUILD_THE_TESTS
+    OFF
+    CACHE INTERNAL "Easy option to build the tests")
+if((SIGNALTL_MASTER_PROJECT OR SIGNALTL_TEST) AND BUILD_TESTING)
+  set(_SIGNALTL_BUILD_THE_TESTS
+      ON
+      CACHE INTERNAL "Easy option to build the tests")
 endif()
+
+set(CMAKE_CXX_EXTENSIONS ON)
+
+# Third party libraries and dependencies
+include(ThirdPartyLibs)
+add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/third_party)
+
+# Add library and module
+set(STQL_SOURCES src/ast.cc)
+
+add_library(stql ${STQL_SOURCES})
 add_library(stql::stql ALIAS stql)
 target_include_directories(
   stql PUBLIC $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
