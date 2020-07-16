@@ -15,12 +15,12 @@
 
 #pragma once
 
-#ifndef __STQL_STREAM_HH__
-#define __STQL_STREAM_HH__
+#ifndef __PERCEMON_STREAM_HH__
+#define __PERCEMON_STREAM_HH__
 
 #include <map>
 
-namespace stql {
+namespace percemon {
 namespace stream {
 
 /**
@@ -64,6 +64,6 @@ struct Frame {
 };
 
 } // namespace stream
-} // namespace stql
+} // namespace percemon
 
-#endif /* end of include guard: __STQL_STREAM_HH__ */
+#endif /* end of include guard: __PERCEMON_STREAM_HH__ */

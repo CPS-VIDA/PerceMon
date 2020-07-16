@@ -16,7 +16,7 @@ else()
 endif()
 
 # Catch2
-if(STQL_TESTS)
+if(_PERCEMON_BUILD_THE_TESTS)
   find_package(Catch2 QUIET)
   if(Catch2_FOUND)
     message(STATUS "System installation of Catch2 found")
