@@ -42,17 +42,6 @@ if((PERCEMON_MASTER_PROJECT OR PERCEMON_TEST) AND BUILD_TESTING)
       ON
       CACHE INTERNAL "Easy option to build the tests")
 
-  if(PERCEMON_COVERAGE)
-    set(CODE_COVERAGE
-        ON
-        CACHE
-          INTERNAL
-          "Builds targets with code coverage instrumentation. (Requires GCC or Clang)"
-    )
-    include(code-coverage)
-    add_code_coverage_all_targets()
-  endif()
-
 endif()
 
 set(CMAKE_CXX_EXTENSIONS ON)
@@ -74,7 +63,5 @@ target_link_libraries(PerceMon PRIVATE mono_wedge::mono_wedge)
 target_link_libraries(PerceMon PUBLIC fmt::fmt)
 
 if(_PERCEMON_BUILD_THE_TESTS)
-  target_code_coverage(PerceMon)
-
   add_subdirectory(tests)
 endif()
