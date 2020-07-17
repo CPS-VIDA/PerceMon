@@ -1,0 +1,9 @@
+trigger:
+  branches:
+    include:
+      - master
+      - refs/tags/*
+
+stages:
+  - template: ci/compiler-tests.yml
+  - template: ci/unit-tests.yml

@@ -1,0 +1,18 @@
+stages:
+  - stage: unit_tests
+    displayName: "Run unit tests"
+    dependsOn: []
+    jobs:
+      - job: catch_test
+        pool:
+          vmImage: ubuntu-latest
+        steps:
+          - checkout: self
+            submodules: true
+          - task: CMake@1
+            displayName: "Run CMake"
+            inputs:
+              workingDirectory: '$(Build.SourcesDirectory)/build'
+          - script: ctest --output-on-failure
+            workingDirectory: '$(Build.SourcesDirectory)/build'
+
