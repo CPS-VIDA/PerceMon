@@ -15,9 +15,6 @@
 namespace percemon {
 namespace ast {
 
-struct TimeBound;
-struct FrameBound;
-
 /**
  * Placeholder value for Current Time
  */
@@ -83,11 +80,14 @@ enum class ComparisonOp { GT, GE, LT, LE };
  */
 struct TimeBound {
   Var_x x;
-  ComparisonOp op;
-  double bound = 0.0;
+  ComparisonOp op = ComparisonOp::GE;
+  double bound    = 0.0;
 
   TimeBound() = delete;
-  TimeBound(const Var_x& x, const ComparisonOp op, const double bound) :
+  TimeBound(
+      const Var_x& x,
+      const ComparisonOp op = ComparisonOp::GE,
+      const double bound    = 0.0) :
       x{x}, op{op}, bound{bound} {};
 
   inline bool operator==(const TimeBound& other) const {
@@ -108,11 +108,14 @@ struct TimeBound {
  */
 struct FrameBound {
   Var_f f;
-  ComparisonOp op;
-  double bound = 0.0;
+  ComparisonOp op = ComparisonOp::GE;
+  double bound    = 0.0;
 
   FrameBound() = delete;
-  FrameBound(const Var_f& f, const ComparisonOp op, const double bound) :
+  FrameBound(
+      const Var_f& f,
+      const ComparisonOp op = ComparisonOp::GE,
+      const double bound    = 0.0) :
       f{f}, op{op}, bound{bound} {};
 
   inline bool operator==(const FrameBound& other) const {
@@ -246,11 +249,8 @@ struct Exists {
 
   Exists& dot(const Expr& e) {
     if (this->pinned_at && this->pinned_at->phi) {
-      auto pinned_expr = *(this->pinned_at->phi);
-      if (pinned_expr == e) {
-        throw std::invalid_argument(
-            "Expression is already being used by the pinned subexpression. Malformed formula construction!");
-      }
+      throw std::invalid_argument(
+          "An expression is already being used by the pinned subexpression. Malformed formula construction!");
     }
     this->phi = e;
     return *this;
@@ -279,11 +279,8 @@ struct Forall {
 
   Forall& dot(const Expr& e) {
     if (this->pinned_at && this->pinned_at->phi) {
-      auto pinned_expr = *(this->pinned_at->phi);
-      if (pinned_expr == e) {
-        throw std::invalid_argument(
-            "Expression is already being used by the pinned subexpression. Malformed formula construction!");
-      }
+      throw std::invalid_argument(
+          "An expression is already being used by the pinned subexpression. Malformed formula construction!");
     }
     this->phi = e;
     return *this;
@@ -356,14 +353,17 @@ struct BackTo {
   BackTo(const Expr& arg0, const Expr& arg1) : args{std::make_pair(arg0, arg1)} {};
 };
 
-TimeBound operator>(const TimeBound& rhs, const double lhs);
-TimeBound operator>=(const TimeBound& rhs, const double lhs);
-TimeBound operator<(const TimeBound& rhs, const double lhs);
-TimeBound operator<=(const TimeBound& rhs, const double lhs);
-FrameBound operator>(const FrameBound& rhs, const double lhs);
-FrameBound operator>=(const FrameBound& rhs, const double lhs);
-FrameBound operator<(const FrameBound& rhs, const double lhs);
-FrameBound operator<=(const FrameBound& rhs, const double lhs);
+TimeBound operator-(const Var_x& lhs, C_TIME);
+FrameBound operator-(const Var_f& lhs, C_FRAME);
+
+TimeBound operator>(const TimeBound& lhs, const double bound);
+TimeBound operator>=(const TimeBound& lhs, const double bound);
+TimeBound operator<(const TimeBound& lhs, const double bound);
+TimeBound operator<=(const TimeBound& lhs, const double bound);
+FrameBound operator>(const FrameBound& lhs, const double bound);
+FrameBound operator>=(const FrameBound& lhs, const double bound);
+FrameBound operator<(const FrameBound& lhs, const double bound);
+FrameBound operator<=(const FrameBound& lhs, const double bound);
 
 Expr operator~(const Expr& e);
 Expr operator&(const Expr& lhs, const Expr& rhs);

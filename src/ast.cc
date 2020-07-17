@@ -7,30 +7,44 @@
 namespace percemon {
 namespace ast {
 
-inline TimeBound operator>(const TimeBound& rhs, const double lhs) {
-  return TimeBound{rhs.x, ComparisonOp::GT, lhs};
-};
-inline TimeBound operator>=(const TimeBound& rhs, const double lhs) {
-  return TimeBound{rhs.x, ComparisonOp::GE, lhs};
-};
-inline TimeBound operator<(const TimeBound& rhs, const double lhs) {
-  return TimeBound{rhs.x, ComparisonOp::LT, lhs};
-};
-inline TimeBound operator<=(const TimeBound& rhs, const double lhs) {
-  return TimeBound{rhs.x, ComparisonOp::LE, lhs};
+TimeBound operator-(const Var_x& lhs, C_TIME) {
+  return TimeBound{lhs};
 };
 
-inline FrameBound operator>(const FrameBound& rhs, const double lhs) {
-  return FrameBound{rhs.f, ComparisonOp::GT, lhs};
+FrameBound operator-(const Var_f& lhs, C_FRAME) {
+  return FrameBound{lhs};
 };
-inline FrameBound operator>=(const FrameBound& rhs, const double lhs) {
-  return FrameBound{rhs.f, ComparisonOp::GE, lhs};
+
+TimeBound operator>(const TimeBound& lhs, const double bound) {
+  return TimeBound{lhs.x, ComparisonOp::GT, bound};
 };
-inline FrameBound operator<(const FrameBound& rhs, const double lhs) {
-  return FrameBound{rhs.f, ComparisonOp::LT, lhs};
+
+TimeBound operator>=(const TimeBound& lhs, const double bound) {
+  return TimeBound{lhs.x, ComparisonOp::GE, bound};
 };
-inline FrameBound operator<=(const FrameBound& rhs, const double lhs) {
-  return FrameBound{rhs.f, ComparisonOp::LE, lhs};
+
+TimeBound operator<(const TimeBound& lhs, const double bound) {
+  return TimeBound{lhs.x, ComparisonOp::LT, bound};
+};
+
+TimeBound operator<=(const TimeBound& lhs, const double bound) {
+  return TimeBound{lhs.x, ComparisonOp::LE, bound};
+};
+
+FrameBound operator>(const FrameBound& lhs, const double bound) {
+  return FrameBound{lhs.f, ComparisonOp::GT, bound};
+};
+
+FrameBound operator>=(const FrameBound& lhs, const double bound) {
+  return FrameBound{lhs.f, ComparisonOp::GE, bound};
+};
+
+FrameBound operator<(const FrameBound& lhs, const double bound) {
+  return FrameBound{lhs.f, ComparisonOp::LT, bound};
+};
+
+FrameBound operator<=(const FrameBound& lhs, const double bound) {
+  return FrameBound{lhs.f, ComparisonOp::LE, bound};
 };
 
 namespace {
