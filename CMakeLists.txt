@@ -28,6 +28,8 @@ include(CTest)
 
 # Options
 option(PERCEMON_TEST "Build percemon test suite?" ${PERCEMON_MASTER_PROJECT})
+option(PERCEMON_COVERAGE "Generate coverage.xml for test suite?"
+       ${PERCEMON_MASTER_PROJECT})
 option(PERCEMON_EXAMPLES "Build the examples?" ${PERCEMON_MASTER_PROJECT})
 option(PERCEMON_INSTALL "Install the library and header files?"
        ${PERCEMON_MASTER_PROJECT})

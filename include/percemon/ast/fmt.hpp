@@ -58,20 +58,6 @@ struct fmt::formatter<percemon::ast::Var_x> {
 };
 
 template <>
-struct fmt::formatter<percemon::ast::Pin> {
-  constexpr auto parse(format_parse_context& ctx) {
-    return ctx.begin();
-  }
-
-  template <typename FormatContext>
-  auto format(const percemon::ast::Pin& e, FormatContext& ctx) {
-    auto x = e.x.value_or(percemon::ast::Var_x{"_"});
-    auto f = e.f.value_or(percemon::ast::Var_f{"_"});
-    return format_to(ctx.out(), "{{{0}, {1}}}", x, f);
-  }
-};
-
-template <>
 struct fmt::formatter<percemon::ast::Var_id> {
   constexpr auto parse(format_parse_context& ctx) {
     return ctx.begin();
@@ -84,6 +70,25 @@ struct fmt::formatter<percemon::ast::Var_id> {
 };
 
 template <>
+struct fmt::formatter<percemon::ast::Pin> {
+  constexpr auto parse(format_parse_context& ctx) {
+    return ctx.begin();
+  }
+
+  template <typename FormatContext>
+  auto format(const percemon::ast::Pin& e, FormatContext& ctx) {
+    std::string x = "_", f = "_";
+    if (e.x) {
+      x = fmt::to_string(*e.x);
+    }
+    if (e.f) {
+      f = fmt::to_string(*e.f);
+    }
+    return format_to(ctx.out(), "{{{0}, {1}}}", x, f);
+  }
+};
+
+template <>
 struct fmt::formatter<percemon::ast::Exists> {
   constexpr auto parse(format_parse_context& ctx) {
     return ctx.begin();
@@ -91,6 +96,10 @@ struct fmt::formatter<percemon::ast::Exists> {
 
   template <typename FormatContext>
   auto format(const percemon::ast::Exists& e, FormatContext& ctx) {
+    if (e.pinned_at.has_value()) {
+      return format_to(
+          ctx.out(), "EXISTS {{{0}}} @ {1}", fmt::join(e.ids, ", "), *e.pinned_at);
+    }
     return format_to(ctx.out(), "EXISTS {{{}}}", fmt::join(e.ids, ", "));
   }
 };
@@ -103,6 +112,10 @@ struct fmt::formatter<percemon::ast::Forall> {
 
   template <typename FormatContext>
   auto format(const percemon::ast::Forall& e, FormatContext& ctx) {
+    if (e.pinned_at.has_value()) {
+      return format_to(
+          ctx.out(), "FORALL {{{0}}} @ {1}", fmt::join(e.ids, ", "), *e.pinned_at);
+    }
     return format_to(ctx.out(), "FORALL {{{}}}", fmt::join(e.ids, ", "));
   }
 };

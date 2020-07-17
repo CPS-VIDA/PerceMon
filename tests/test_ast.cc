@@ -31,11 +31,19 @@ TEST_CASE("AST nodes are printed correctly", "[ast][fmt]") {
     REQUIRE("x_1" == fmt::to_string(Var_x{"1"}));
 
     REQUIRE("{x_1, f_1}" == fmt::to_string(Pin{Var_x{"1"}, Var_f{"1"}}));
+    REQUIRE("{_, f_1}" == fmt::to_string(Pin{Var_f{"1"}}));
+    REQUIRE("{x_1, _}" == fmt::to_string(Pin{Var_x{"1"}}));
   }
 
   SECTION("Objects and quantifiers over them") {
     REQUIRE("id_1" == fmt::to_string(Var_id{"1"}));
     REQUIRE("EXISTS {id_1, id_2, id_3}" == fmt::to_string(Exists{{"1"}, {"2"}, {"3"}}));
     REQUIRE("FORALL {id_1, id_2, id_3}" == fmt::to_string(Forall{{"1"}, {"2"}, {"3"}}));
+  }
+
+  SECTION("Quantifiers over objects pinned at frames") {
+    REQUIRE(
+        "EXISTS {id_1, id_2} @ {x_1, f_1}" ==
+        fmt::to_string(Exists{{"1"}, {"2"}}.at(Pin{Var_x{"1"}, Var_f{"1"}})));
   }
 }

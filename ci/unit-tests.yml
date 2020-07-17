@@ -17,5 +17,6 @@ stages:
               buildDirectory: '$(Build.SourcesDirectory)/build'
               cmakeBuildType: 'Debug'
           - script: ctest --output-on-failure
+            displayName: "Run CTest"
             workingDirectory: '$(Build.SourcesDirectory)/build'
 
