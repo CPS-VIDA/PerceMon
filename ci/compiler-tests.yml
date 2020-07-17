@@ -28,7 +28,10 @@ stages:
               export CXX=$(CXX)
             condition: eq( variables['Agent.OS'], 'Linux' )
             displayName: "Set CC and CXX for Linux"
-          - task: CMake@1
+          - task: run-cmake@0
             displayName: "Run CMake"
             inputs:
-              workingDirectory: '$(Build.SourcesDirectory)/build'
+              cmakeListsOrSettingsJson: 'CMakeListsTxtBasic'
+              cmakeListsTxtPath: '$(Build.SourcesDirectory)/CMakeLists.txt'
+              buildDirectory: '$(Build.SourcesDirectory)/build'
+              cmakeBuildType: 'Release'

@@ -9,10 +9,13 @@ stages:
         steps:
           - checkout: self
             submodules: true
-          - task: CMake@1
+          - task: run-cmake@0
             displayName: "Run CMake"
             inputs:
-              workingDirectory: '$(Build.SourcesDirectory)/build'
+              cmakeListsOrSettingsJson: 'CMakeListsTxtBasic'
+              cmakeListsTxtPath: '$(Build.SourcesDirectory)/CMakeLists.txt'
+              buildDirectory: '$(Build.SourcesDirectory)/build'
+              cmakeBuildType: 'Debug'
           - script: ctest --output-on-failure
             workingDirectory: '$(Build.SourcesDirectory)/build'
 
