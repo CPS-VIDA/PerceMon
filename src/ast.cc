@@ -117,6 +117,10 @@ Expr operator~(const Expr& expr) {
   return std::make_shared<Not>(expr);
 }
 
+Expr operator>>(const Expr& lhs, const Expr& rhs) {
+  return ~(lhs) | rhs;
+}
+
 } // namespace ast
 
 } // namespace percemon

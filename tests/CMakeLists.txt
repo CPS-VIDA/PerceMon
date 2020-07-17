@@ -8,3 +8,4 @@ target_link_libraries(percemon_tests PUBLIC PerceMon::PerceMon Catch2::Catch2)
 
 include(Catch)
 catch_discover_tests(percemon_tests)
+target_code_coverage(percemon_tests ALL)

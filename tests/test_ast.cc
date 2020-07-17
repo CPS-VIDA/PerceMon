@@ -20,6 +20,12 @@ TEST_CASE("AST nodes throw exceptions when constructed badly", "[ast][except]") 
 
     REQUIRE_THROWS_AS(Pin({}, {}), std::invalid_argument);
   }
+
+  SECTION("Malformed expressions are caught") {
+    auto phi = Var_x{"1"} - C_TIME{} >= 1.0;
+    auto pin = Pin{Var_x{"1"}}.dot(phi);
+    REQUIRE_THROWS_AS(Forall{{"1"}}.at(pin).dot(phi), std::invalid_argument);
+  }
 }
 
 TEST_CASE("AST nodes are printed correctly", "[ast][fmt]") {
