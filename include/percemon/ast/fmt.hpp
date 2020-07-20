@@ -82,7 +82,7 @@ struct fmt::formatter<percemon::ast::TimeBound>
       case percemon::ast::ComparisonOp::LE: op = "<="; break;
       case percemon::ast::ComparisonOp::LT: op = "<"; break;
     }
-    return format_to(ctx.out(), "{} - C_TIME {} {}", e.x, op, e.bound);
+    return format_to(ctx.out(), "({} - C_TIME {} {})", e.x, op, e.bound);
   };
 };
 
@@ -98,7 +98,7 @@ struct fmt::formatter<percemon::ast::FrameBound>
       case percemon::ast::ComparisonOp::LE: op = "<="; break;
       case percemon::ast::ComparisonOp::LT: op = "<"; break;
     }
-    return format_to(ctx.out(), "{} - C_FRAME {} {}", e.f, op, e.bound);
+    return format_to(ctx.out(), "({} - C_FRAME {} {})", e.f, op, e.bound);
   };
 };
 
@@ -124,7 +124,7 @@ struct fmt::formatter<percemon::ast::Pin>
       f = fmt::to_string(*e.f);
     }
     if (e.phi) {
-      return format_to(ctx.out(), "{{{0}, {1}}} . ({2})", x, f, *e.phi);
+      return format_to(ctx.out(), "{{{0}, {1}}} . {2}", x, f, *e.phi);
     }
     return format_to(ctx.out(), "{{{0}, {1}}}", x, f);
   };
@@ -138,6 +138,9 @@ struct fmt::formatter<percemon::ast::Exists>
     if (e.pinned_at.has_value()) {
       return format_to(
           ctx.out(), "EXISTS {{{0}}} @ {1}", fmt::join(e.ids, ", "), *e.pinned_at);
+    } else if (e.phi.has_value()) {
+      return format_to(
+          ctx.out(), "EXISTS {{{0}}} . {1}", fmt::join(e.ids, ", "), *e.phi);
     }
     return format_to(ctx.out(), "EXISTS {{{}}}", fmt::join(e.ids, ", "));
   };
@@ -151,6 +154,9 @@ struct fmt::formatter<percemon::ast::Forall>
     if (e.pinned_at.has_value()) {
       return format_to(
           ctx.out(), "FORALL {{{0}}} @ {1}", fmt::join(e.ids, ", "), *e.pinned_at);
+    } else if (e.phi.has_value()) {
+      return format_to(
+          ctx.out(), "FORALL {{{0}}} . {1}", fmt::join(e.ids, ", "), *e.phi);
     }
     return format_to(ctx.out(), "FORALL {{{}}}", fmt::join(e.ids, ", "));
   };

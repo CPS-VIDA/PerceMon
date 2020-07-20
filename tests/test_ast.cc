@@ -54,12 +54,18 @@ TEST_CASE("AST nodes are printed correctly", "[ast][fmt]") {
   }
 
   SECTION("Time bounds over frames and time") {
-    REQUIRE("x_1 - C_TIME >= 2.0" == fmt::to_string(Var_x{"1"} - C_TIME{} >= 2.0));
+    REQUIRE("(x_1 - C_TIME >= 2.0)" == fmt::to_string(Var_x{"1"} - C_TIME{} >= 2.0));
 
     {
       auto [x, f] = std::make_tuple(Var_x{"1"}, Var_f{"1"});
       auto phi    = Pin{x, f}.dot(x - C_TIME{} >= 2.0);
       REQUIRE("{x_1, f_1} . (x_1 - C_TIME >= 2.0)" == fmt::to_string(phi));
+    }
+
+    {
+      auto [x, f] = std::make_tuple(Var_x{"1"}, Var_f{"1"});
+      auto phi    = Pin{x, f}.dot((x - C_TIME{} >= 2.0) >> Const{true});
+      REQUIRE("{x_1, f_1} . (~(x_1 - C_TIME >= 2.0) | true)" == fmt::to_string(phi));
     }
   }
 }
