@@ -9,14 +9,24 @@ stages:
         steps:
           - checkout: self
             submodules: true
-          - task: run-cmake@0
-            displayName: "Run CMake"
+          - task: CMake@1
+            displayName: "CMake configure for testing/coverage"
             inputs:
-              cmakeListsOrSettingsJson: 'CMakeListsTxtBasic'
-              cmakeListsTxtPath: '$(Build.SourcesDirectory)/CMakeLists.txt'
-              buildDirectory: '$(Build.SourcesDirectory)/build'
-              cmakeBuildType: 'Debug'
+              workingDirectory: '$(Build.SourcesDirectory)/build'
+              cmakeArgs: '.. -DCMAKE_BUILD_TYPE=Debug -DPERCEMON_COVERAGE=ON'
+          - task: CMake@1
+            displayName: "CMake build"
+            inputs:
+              workingDirectory: '$(Build.SourcesDirectory)/build'
+              cmakeArgs: '--build . --config Debug'
           - script: ctest --output-on-failure
             displayName: "Run CTest"
             workingDirectory: '$(Build.SourcesDirectory)/build'
-
+          - task: CMake@1
+            displayName: "Generate gcov data"
+            inputs:
+              workingDirectory: '$(Build.SourcesDirectory)/build'
+              cmakeArgs: '--build . --config Debug --target gcov'
+          - script: |
+              bash <(curl -s https://codecov.io/bash) -X gcov
+            displayName: 'Upload to codecov.io'

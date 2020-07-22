@@ -1,13 +1,6 @@
 coverage:
   ignore:
-    - "./tests/**"
-    - "./third_party/**"
-    - "**/catch_reporter_tap.hpp"
-    - "**/catch_reporter_automake.hpp"
-    - "**/catch_reporter_teamcity.hpp"
-    - "**/catch_reporter_sonarqube.hpp"
-    - "**/external/clara.hpp"
-
+    - "./tests/**/*"
 
 codecov:
   branch: master
