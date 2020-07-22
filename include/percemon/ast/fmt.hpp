@@ -6,8 +6,7 @@
 #include <fmt/format.h>
 #include <fmt/ostream.h>
 
-#include "percemon/ast/s4u.hpp"
-#include "percemon/ast/tqtl.hpp"
+#include "percemon/ast/ast.hpp"
 
 #include "percemon/utils.hpp"
 
@@ -24,6 +23,24 @@ struct formatter {
 
 } // namespace ast
 } // namespace percemon
+
+template <>
+struct fmt::formatter<percemon::ast::ComparisonOp>
+    : percemon::ast::formatter<percemon::ast::ComparisonOp> {
+  template <typename FormatContext>
+  auto format(const percemon::ast::ComparisonOp& op, FormatContext& ctx) {
+    std::string op_str;
+    switch (op) {
+      case percemon::ast::ComparisonOp::GE: op_str = ">="; break;
+      case percemon::ast::ComparisonOp::GT: op_str = ">"; break;
+      case percemon::ast::ComparisonOp::LE: op_str = "<="; break;
+      case percemon::ast::ComparisonOp::LT: op_str = "<"; break;
+      case percemon::ast::ComparisonOp::EQ: op_str = "=="; break;
+      case percemon::ast::ComparisonOp::NE: op_str = "!="; break;
+    }
+    return format_to(ctx.out(), "{}", op_str);
+  };
+};
 
 template <>
 struct fmt::formatter<percemon::ast::C_TIME>
@@ -71,18 +88,20 @@ struct fmt::formatter<percemon::ast::Var_id>
 };
 
 template <>
+struct fmt::formatter<percemon::ast::Const>
+    : percemon::ast::formatter<percemon::ast::Const> {
+  template <typename FormatContext>
+  auto format(const percemon::ast::Const& e, FormatContext& ctx) {
+    return format_to(ctx.out(), "{}", e.value);
+  };
+};
+
+template <>
 struct fmt::formatter<percemon::ast::TimeBound>
     : percemon::ast::formatter<percemon::ast::TimeBound> {
   template <typename FormatContext>
   auto format(const percemon::ast::TimeBound& e, FormatContext& ctx) {
-    std::string op = ">=";
-    switch (e.op) {
-      case percemon::ast::ComparisonOp::GE: op = ">="; break;
-      case percemon::ast::ComparisonOp::GT: op = ">"; break;
-      case percemon::ast::ComparisonOp::LE: op = "<="; break;
-      case percemon::ast::ComparisonOp::LT: op = "<"; break;
-    }
-    return format_to(ctx.out(), "({} - C_TIME {} {})", e.x, op, e.bound);
+    return format_to(ctx.out(), "({} - C_TIME {} {})", e.x, e.op, e.bound);
   };
 };
 
@@ -91,23 +110,57 @@ struct fmt::formatter<percemon::ast::FrameBound>
     : percemon::ast::formatter<percemon::ast::FrameBound> {
   template <typename FormatContext>
   auto format(const percemon::ast::FrameBound& e, FormatContext& ctx) {
-    std::string op = ">=";
-    switch (e.op) {
-      case percemon::ast::ComparisonOp::GE: op = ">="; break;
-      case percemon::ast::ComparisonOp::GT: op = ">"; break;
-      case percemon::ast::ComparisonOp::LE: op = "<="; break;
-      case percemon::ast::ComparisonOp::LT: op = "<"; break;
-    }
-    return format_to(ctx.out(), "({} - C_FRAME {} {})", e.f, op, e.bound);
+    return format_to(ctx.out(), "({} - C_FRAME {} {})", e.f, e.op, e.bound);
   };
 };
 
 template <>
-struct fmt::formatter<percemon::ast::Const>
-    : percemon::ast::formatter<percemon::ast::Const> {
+struct fmt::formatter<percemon::ast::CompareId>
+    : percemon::ast::formatter<percemon::ast::CompareId> {
   template <typename FormatContext>
-  auto format(const percemon::ast::Const& e, FormatContext& ctx) {
-    return format_to(ctx.out(), "{}", e.value);
+  auto format(const percemon::ast::CompareId& e, FormatContext& ctx) {
+    return format_to(ctx.out(), "({} {} {})", e.lhs, e.op, e.rhs);
+  };
+};
+
+template <>
+struct fmt::formatter<percemon::ast::Class>
+    : percemon::ast::formatter<percemon::ast::Class> {
+  template <typename FormatContext>
+  auto format(const percemon::ast::Class& e, FormatContext& ctx) {
+    return format_to(ctx.out(), "Class({})", e.id);
+  };
+};
+
+template <>
+struct fmt::formatter<percemon::ast::CompareClass>
+    : percemon::ast::formatter<percemon::ast::CompareClass> {
+  template <typename FormatContext>
+  auto format(const percemon::ast::CompareClass& e, FormatContext& ctx) {
+    std::string rhs = std::visit([](auto r) { return fmt::to_string(r); }, e.rhs);
+    return format_to(ctx.out(), "({} {} {})", e.lhs, e.op, rhs);
+  };
+};
+
+template <>
+struct fmt::formatter<percemon::ast::Prob>
+    : percemon::ast::formatter<percemon::ast::Prob> {
+  template <typename FormatContext>
+  auto format(const percemon::ast::Prob& e, FormatContext& ctx) {
+    if (e.scale == 1.0) {
+      return format_to(ctx.out(), "Prob({})", e.id);
+    }
+    return format_to(ctx.out(), "{} * Prob({})", e.scale, e.id);
+  };
+};
+
+template <>
+struct fmt::formatter<percemon::ast::CompareProb>
+    : percemon::ast::formatter<percemon::ast::CompareProb> {
+  template <typename FormatContext>
+  auto format(const percemon::ast::CompareProb& e, FormatContext& ctx) {
+    std::string rhs = std::visit([](auto r) { return fmt::to_string(r); }, e.rhs);
+    return format_to(ctx.out(), "({} {} {})", e.lhs, e.op, rhs);
   };
 };
 
@@ -241,13 +294,15 @@ inline std::ostream& operator<<(std::ostream& os, const percemon::ast::Expr& exp
           [](const percemon::ast::Const& e) { return fmt::to_string(e); },
           [](const percemon::ast::TimeBound& e) { return fmt::to_string(e); },
           [](const percemon::ast::FrameBound& e) { return fmt::to_string(e); },
+          [](const percemon::ast::CompareId& e) { return fmt::to_string(e); },
+          [](const percemon::ast::CompareClass& e) { return fmt::to_string(e); },
           [](const auto e) {
             return fmt::to_string(*e);
           }},
       expr);
 
   return os << s;
-}
+};
 
 template <>
 struct fmt::formatter<percemon::ast::Expr>
@@ -262,6 +317,12 @@ struct fmt::formatter<percemon::ast::Expr>
                                       return format_to(ctx.out(), "{}", e);
                                     },
                                     [&](const percemon::ast::FrameBound& e) {
+                                      return format_to(ctx.out(), "{}", e);
+                                    },
+                                    [&](const percemon::ast::CompareId& e) {
+                                      return format_to(ctx.out(), "{}", e);
+                                    },
+                                    [&](const percemon::ast::CompareClass& e) {
                                       return format_to(ctx.out(), "{}", e);
                                     },
                                     [&](const auto& e) {

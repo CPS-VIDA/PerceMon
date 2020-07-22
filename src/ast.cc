@@ -9,43 +9,108 @@ namespace ast {
 
 TimeBound operator-(const Var_x& lhs, C_TIME) {
   return TimeBound{lhs};
-};
+}
 
 FrameBound operator-(const Var_f& lhs, C_FRAME) {
   return FrameBound{lhs};
-};
+}
 
 TimeBound operator>(const TimeBound& lhs, const double bound) {
   return TimeBound{lhs.x, ComparisonOp::GT, bound};
-};
+}
 
 TimeBound operator>=(const TimeBound& lhs, const double bound) {
   return TimeBound{lhs.x, ComparisonOp::GE, bound};
-};
+}
 
 TimeBound operator<(const TimeBound& lhs, const double bound) {
   return TimeBound{lhs.x, ComparisonOp::LT, bound};
-};
+}
 
 TimeBound operator<=(const TimeBound& lhs, const double bound) {
   return TimeBound{lhs.x, ComparisonOp::LE, bound};
-};
+}
 
 FrameBound operator>(const FrameBound& lhs, const double bound) {
   return FrameBound{lhs.f, ComparisonOp::GT, bound};
-};
+}
 
 FrameBound operator>=(const FrameBound& lhs, const double bound) {
   return FrameBound{lhs.f, ComparisonOp::GE, bound};
-};
+}
 
 FrameBound operator<(const FrameBound& lhs, const double bound) {
   return FrameBound{lhs.f, ComparisonOp::LT, bound};
-};
+}
 
 FrameBound operator<=(const FrameBound& lhs, const double bound) {
   return FrameBound{lhs.f, ComparisonOp::LE, bound};
-};
+}
+
+CompareId operator==(const Var_id& lhs, const Var_id& rhs) {
+  return CompareId{lhs, ComparisonOp::EQ, rhs};
+}
+
+CompareId operator!=(const Var_id& lhs, const Var_id& rhs) {
+  return CompareId{lhs, ComparisonOp::NE, rhs};
+}
+
+CompareClass operator==(const Class& lhs, const int rhs) {
+  return CompareClass{lhs, ComparisonOp::EQ, rhs};
+}
+
+CompareClass operator==(const int lhs, const Class& rhs) {
+  return CompareClass{rhs, ComparisonOp::EQ, lhs};
+}
+
+CompareClass operator==(const Class& lhs, const Class& rhs) {
+  return CompareClass{lhs, ComparisonOp::EQ, rhs};
+}
+
+CompareClass operator!=(const Class& lhs, const int rhs) {
+  return CompareClass{lhs, ComparisonOp::NE, rhs};
+}
+
+CompareClass operator!=(const int lhs, const Class& rhs) {
+  return CompareClass{rhs, ComparisonOp::NE, lhs};
+}
+
+CompareClass operator!=(const Class& lhs, const Class& rhs) {
+  return CompareClass{lhs, ComparisonOp::NE, rhs};
+}
+
+Prob operator*(const Prob& lhs, const double rhs) {
+  return Prob{lhs.id, rhs};
+}
+
+Prob operator*(const double lhs, const Prob& rhs) {
+  return rhs * lhs;
+}
+
+CompareProb operator>(const Prob& lhs, const double rhs) {
+  return CompareProb{lhs, ComparisonOp::GT, rhs};
+}
+CompareProb operator>=(const Prob& lhs, const double rhs) {
+  return CompareProb{lhs, ComparisonOp::GE, rhs};
+}
+CompareProb operator<(const Prob& lhs, const double rhs) {
+  return CompareProb{lhs, ComparisonOp::LT, rhs};
+}
+CompareProb operator<=(const Prob& lhs, const double rhs) {
+  return CompareProb{lhs, ComparisonOp::LE, rhs};
+}
+CompareProb operator>(const Prob& lhs, const Prob& rhs) {
+  return CompareProb{lhs, ComparisonOp::GT, rhs};
+}
+CompareProb operator>=(const Prob& lhs, const Prob& rhs) {
+  return CompareProb{lhs, ComparisonOp::GE, rhs};
+}
+CompareProb operator<(const Prob& lhs, const Prob& rhs) {
+  return CompareProb{lhs, ComparisonOp::LT, rhs};
+}
+CompareProb operator<=(const Prob& lhs, const Prob& rhs) {
+  return CompareProb{lhs, ComparisonOp::LE, rhs};
+}
 
 namespace {
 using percemon::utils::overloaded;

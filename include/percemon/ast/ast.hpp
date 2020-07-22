@@ -1,7 +1,7 @@
 #pragma once
 
-#ifndef __PERCEMON_AST_PRIMITIVES_HH__
-#define __PERCEMON_AST_PRIMITIVES_HH__
+#ifndef __PERCEMON_AST_AST_HPP__
+#define __PERCEMON_AST_AST_HPP__
 
 #include <initializer_list>
 #include <memory>
@@ -12,64 +12,10 @@
 
 #include <exception>
 
+#include "percemon/ast/primitives.hpp"
+
 namespace percemon {
 namespace ast {
-
-/**
- * Placeholder value for Current Time
- */
-struct C_TIME {};
-/**
- * Placeholder value for Current Frame
- */
-struct C_FRAME {};
-
-/**
- * Variable place holder for frames.
- */
-struct Var_f {
-  std::string name;
-
-  inline bool operator==(const Var_f& other) const {
-    return name == other.name;
-  };
-
-  inline bool operator!=(const Var_f& other) const {
-    return !(*this == other);
-  };
-};
-
-/**
- * Variable place holder for timestamps.
- */
-struct Var_x {
-  std::string name;
-
-  inline bool operator==(const Var_x& other) const {
-    return name == other.name;
-  };
-
-  inline bool operator!=(const Var_x& other) const {
-    return !(*this == other);
-  };
-};
-
-/**
- * Variable place holder for object IDs
- */
-struct Var_id {
-  std::string name;
-
-  inline bool operator==(const Var_id& other) const {
-    return name == other.name;
-  };
-
-  inline bool operator!=(const Var_id& other) const {
-    return !(*this == other);
-  };
-};
-
-enum class ComparisonOp { GT, GE, LT, LE };
 
 /**
  * A bound on a Var_x of the form
@@ -88,7 +34,12 @@ struct TimeBound {
       const Var_x& x,
       const ComparisonOp op = ComparisonOp::GE,
       const double bound    = 0.0) :
-      x{x}, op{op}, bound{bound} {};
+      x{x}, op{op}, bound{bound} {
+    if (op == ComparisonOp::EQ || op == ComparisonOp::NE) {
+      throw std::invalid_argument(
+          "Cannot use relational operators ==, != to create Time Bounds");
+    }
+  };
 
   inline bool operator==(const TimeBound& other) const {
     return (x == other.x) && (op == other.op) && (bound == other.bound);
@@ -98,6 +49,11 @@ struct TimeBound {
     return !(*this == other);
   };
 };
+TimeBound operator-(const Var_x& lhs, C_TIME);
+TimeBound operator>(const TimeBound& lhs, const double bound);
+TimeBound operator>=(const TimeBound& lhs, const double bound);
+TimeBound operator<(const TimeBound& lhs, const double bound);
+TimeBound operator<=(const TimeBound& lhs, const double bound);
 
 /**
  * A bound on a Var_f of the form
@@ -116,7 +72,12 @@ struct FrameBound {
       const Var_f& f,
       const ComparisonOp op = ComparisonOp::GE,
       const double bound    = 0.0) :
-      f{f}, op{op}, bound{bound} {};
+      f{f}, op{op}, bound{bound} {
+    if (op == ComparisonOp::EQ || op == ComparisonOp::NE) {
+      throw std::invalid_argument(
+          "Cannot use relational operators ==, != to create Frame Bounds");
+    }
+  };
 
   inline bool operator==(const FrameBound& other) const {
     return (f == other.f) && (op == other.op) && (bound == other.bound);
@@ -126,21 +87,102 @@ struct FrameBound {
     return !(*this == other);
   };
 };
+FrameBound operator-(const Var_f& lhs, C_FRAME);
+FrameBound operator>(const FrameBound& lhs, const double bound);
+FrameBound operator>=(const FrameBound& lhs, const double bound);
+FrameBound operator<(const FrameBound& lhs, const double bound);
+FrameBound operator<=(const FrameBound& lhs, const double bound);
 
-struct Const {
-  bool value;
+/**
+ * Node comparing objects.
+ */
+struct CompareId {
+  Var_id lhs;
+  ComparisonOp op;
+  Var_id rhs;
 
-  Const() = delete;
-  Const(bool value) : value{value} {};
-
-  inline bool operator==(const Const& other) const {
-    return this->value == other.value;
-  };
-
-  inline bool operator!=(const Const& other) const {
-    return !(*this == other);
+  CompareId() = delete;
+  CompareId(Var_id lhs, ComparisonOp op, Var_id rhs) : lhs{lhs}, op{op}, rhs{rhs} {
+    if (op != ComparisonOp::EQ && op != ComparisonOp::NE) {
+      throw std::invalid_argument(
+          "Cannot use relational operators <, >, <=, >= to compare Var_id");
+    }
   };
 };
+CompareId operator==(const Var_id& lhs, const Var_id& rhs);
+CompareId operator!=(const Var_id& lhs, const Var_id& rhs);
+
+/**
+ * Node to represent the Class(id) function.
+ */
+struct Class {
+  Var_id id;
+
+  Class() = delete;
+  Class(Var_id id) : id{id} {}
+};
+
+/**
+ * Node to compare equality of object class between either two IDs or an ID and a class
+ * literal.
+ */
+struct CompareClass {
+  Class lhs;
+  ComparisonOp op;
+  std::variant<int, Class> rhs;
+
+  CompareClass() = delete;
+  CompareClass(Class lhs, ComparisonOp op, std::variant<int, Class> rhs) :
+      lhs{lhs}, op{op}, rhs{rhs} {
+    if (op != ComparisonOp::EQ && op != ComparisonOp::NE) {
+      throw std::invalid_argument(
+          "Cannot use relational operators <, >, <=, >= to compare Class(id)");
+    }
+  };
+};
+CompareClass operator==(const Class& lhs, const int rhs);
+CompareClass operator==(const int lhs, const Class& rhs);
+CompareClass operator==(const Class& lhs, const Class& rhs);
+CompareClass operator!=(const Class& lhs, const int rhs);
+CompareClass operator!=(const int lhs, const Class& rhs);
+CompareClass operator!=(const Class& lhs, const Class& rhs);
+
+/**
+ * Node representing the Prob(id) function. Providing a multiplier is equivalent to
+ * Prob(id) * scale.
+ */
+struct Prob {
+  Var_id id;
+  double scale = 1.0;
+
+  Prob() = delete;
+  Prob(Var_id id, double scale = 1.0) : id{id}, scale{scale} {}
+};
+Prob operator*(const Prob& lhs, const double rhs);
+Prob operator*(const double lhs, const Prob& rhs);
+
+struct CompareProb {
+  Prob lhs;
+  ComparisonOp op;
+  std::variant<double, Prob> rhs;
+
+  CompareProb() = delete;
+  CompareProb(Prob lhs, ComparisonOp op, std::variant<double, Prob> rhs) :
+      lhs{lhs}, op{op}, rhs{rhs} {
+    if (op == ComparisonOp::EQ || op == ComparisonOp::NE) {
+      throw std::invalid_argument(
+          "Cannot use relational operators ==, != to compare Prob(id)");
+    }
+  };
+};
+CompareProb operator>(const Prob& lhs, const double rhs);
+CompareProb operator>=(const Prob& lhs, const double rhs);
+CompareProb operator<(const Prob& lhs, const double rhs);
+CompareProb operator<=(const Prob& lhs, const double rhs);
+CompareProb operator>(const Prob& lhs, const Prob& rhs);
+CompareProb operator>=(const Prob& lhs, const Prob& rhs);
+CompareProb operator<(const Prob& lhs, const Prob& rhs);
+CompareProb operator<=(const Prob& lhs, const Prob& rhs);
 
 struct Exists;
 using ExistsPtr = std::shared_ptr<Exists>;
@@ -166,12 +208,14 @@ struct BackTo;
 using BackToPtr = std::shared_ptr<BackTo>;
 
 using Expr = std::variant<
-    ExistsPtr,
-    AlwaysPtr,
-    PinPtr,
     Const,
     TimeBound,
     FrameBound,
+    CompareId,
+    CompareClass,
+    ExistsPtr,
+    AlwaysPtr,
+    PinPtr,
     NotPtr,
     AndPtr,
     OrPtr,
@@ -353,18 +397,6 @@ struct BackTo {
   BackTo(const Expr& arg0, const Expr& arg1) : args{std::make_pair(arg0, arg1)} {};
 };
 
-TimeBound operator-(const Var_x& lhs, C_TIME);
-FrameBound operator-(const Var_f& lhs, C_FRAME);
-
-TimeBound operator>(const TimeBound& lhs, const double bound);
-TimeBound operator>=(const TimeBound& lhs, const double bound);
-TimeBound operator<(const TimeBound& lhs, const double bound);
-TimeBound operator<=(const TimeBound& lhs, const double bound);
-FrameBound operator>(const FrameBound& lhs, const double bound);
-FrameBound operator>=(const FrameBound& lhs, const double bound);
-FrameBound operator<(const FrameBound& lhs, const double bound);
-FrameBound operator<=(const FrameBound& lhs, const double bound);
-
 Expr operator~(const Expr& e);
 Expr operator&(const Expr& lhs, const Expr& rhs);
 Expr operator|(const Expr& lhs, const Expr& rhs);
@@ -373,4 +405,4 @@ Expr operator>>(const Expr& lhs, const Expr& rhs);
 } // namespace ast
 } // namespace percemon
 
-#endif /* end of include guard: __PERCEMON_AST_PRIMITIVES_HH__ */
+#endif /* end of include guard: __PERCEMON_AST_AST_HPP__ */
