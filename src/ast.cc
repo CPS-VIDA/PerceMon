@@ -79,14 +79,6 @@ CompareClass operator!=(const Class& lhs, const Class& rhs) {
   return CompareClass{lhs, ComparisonOp::NE, rhs};
 }
 
-Prob operator*(const Prob& lhs, const double rhs) {
-  return Prob{lhs.id, rhs};
-}
-
-Prob operator*(const double lhs, const Prob& rhs) {
-  return rhs * lhs;
-}
-
 CompareProb operator>(const Prob& lhs, const double rhs) {
   return CompareProb{lhs, ComparisonOp::GT, rhs};
 }
@@ -120,7 +112,7 @@ Expr AndHelper(const AndPtr& lhs, const Expr& rhs) {
   // TODO(anand): Bounds need to be Minkowski summed
 
   std::visit(
-      overloaded{[&](const auto e) { args.push_back(rhs); },
+      overloaded{[&](const auto) { args.push_back(rhs); },
                  [&args](const Const& e) {
                    if (!e.value) {
                      args = {Expr{e}};
@@ -140,7 +132,7 @@ Expr OrHelper(const OrPtr& lhs, const Expr& rhs) {
   // TODO(anand): Bounds need to be Minkowski summed
 
   std::visit(
-      overloaded{[&](const auto e) { args.push_back(rhs); },
+      overloaded{[&](const auto) { args.push_back(rhs); },
                  [&args](const Const e) {
                    if (e.value) {
                      args = {Expr{e}};

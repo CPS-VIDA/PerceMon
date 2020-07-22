@@ -28,6 +28,12 @@ if(_PERCEMON_BUILD_THE_TESTS)
   endif()
 endif()
 
+if(PERCEMON_COVERAGE)
+  git_submodule(PATH CMake-codecov WORKING_DIRECTORY ${CMAKE_CURRENT_LIST_DIR})
+  list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/CMake-codecov/cmake")
+  find_package(codecov REQUIRED)
+endif()
+
 set(CMAKE_MODULE_PATH
     ${CMAKE_MODULE_PATH}
     PARENT_SCOPE)

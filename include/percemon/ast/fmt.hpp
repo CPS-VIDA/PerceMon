@@ -39,7 +39,7 @@ struct fmt::formatter<percemon::ast::ComparisonOp>
       case percemon::ast::ComparisonOp::NE: op_str = "!="; break;
     }
     return format_to(ctx.out(), "{}", op_str);
-  };
+  }
 };
 
 template <>
@@ -48,7 +48,7 @@ struct fmt::formatter<percemon::ast::C_TIME>
   template <typename FormatContext>
   auto format(const percemon::ast::C_TIME&, FormatContext& ctx) {
     return format_to(ctx.out(), "C_TIME");
-  };
+  }
 };
 
 template <>
@@ -57,7 +57,7 @@ struct fmt::formatter<percemon::ast::C_FRAME>
   template <typename FormatContext>
   auto format(const percemon::ast::C_FRAME&, FormatContext& ctx) {
     return format_to(ctx.out(), "C_FRAME");
-  };
+  }
 };
 
 template <>
@@ -66,7 +66,7 @@ struct fmt::formatter<percemon::ast::Var_f>
   template <typename FormatContext>
   auto format(const percemon::ast::Var_f& e, FormatContext& ctx) {
     return format_to(ctx.out(), "f_{}", e.name);
-  };
+  }
 };
 
 template <>
@@ -75,7 +75,7 @@ struct fmt::formatter<percemon::ast::Var_x>
   template <typename FormatContext>
   auto format(const percemon::ast::Var_x& e, FormatContext& ctx) {
     return format_to(ctx.out(), "x_{}", e.name);
-  };
+  }
 };
 
 template <>
@@ -84,7 +84,7 @@ struct fmt::formatter<percemon::ast::Var_id>
   template <typename FormatContext>
   auto format(const percemon::ast::Var_id& e, FormatContext& ctx) {
     return format_to(ctx.out(), "id_{}", e.name);
-  };
+  }
 };
 
 template <>
@@ -93,7 +93,7 @@ struct fmt::formatter<percemon::ast::Const>
   template <typename FormatContext>
   auto format(const percemon::ast::Const& e, FormatContext& ctx) {
     return format_to(ctx.out(), "{}", e.value);
-  };
+  }
 };
 
 template <>
@@ -102,7 +102,7 @@ struct fmt::formatter<percemon::ast::TimeBound>
   template <typename FormatContext>
   auto format(const percemon::ast::TimeBound& e, FormatContext& ctx) {
     return format_to(ctx.out(), "({} - C_TIME {} {})", e.x, e.op, e.bound);
-  };
+  }
 };
 
 template <>
@@ -111,7 +111,7 @@ struct fmt::formatter<percemon::ast::FrameBound>
   template <typename FormatContext>
   auto format(const percemon::ast::FrameBound& e, FormatContext& ctx) {
     return format_to(ctx.out(), "({} - C_FRAME {} {})", e.f, e.op, e.bound);
-  };
+  }
 };
 
 template <>
@@ -120,7 +120,7 @@ struct fmt::formatter<percemon::ast::CompareId>
   template <typename FormatContext>
   auto format(const percemon::ast::CompareId& e, FormatContext& ctx) {
     return format_to(ctx.out(), "({} {} {})", e.lhs, e.op, e.rhs);
-  };
+  }
 };
 
 template <>
@@ -129,7 +129,7 @@ struct fmt::formatter<percemon::ast::Class>
   template <typename FormatContext>
   auto format(const percemon::ast::Class& e, FormatContext& ctx) {
     return format_to(ctx.out(), "Class({})", e.id);
-  };
+  }
 };
 
 template <>
@@ -139,7 +139,7 @@ struct fmt::formatter<percemon::ast::CompareClass>
   auto format(const percemon::ast::CompareClass& e, FormatContext& ctx) {
     std::string rhs = std::visit([](auto r) { return fmt::to_string(r); }, e.rhs);
     return format_to(ctx.out(), "({} {} {})", e.lhs, e.op, rhs);
-  };
+  }
 };
 
 template <>
@@ -151,7 +151,7 @@ struct fmt::formatter<percemon::ast::Prob>
       return format_to(ctx.out(), "Prob({})", e.id);
     }
     return format_to(ctx.out(), "{} * Prob({})", e.scale, e.id);
-  };
+  }
 };
 
 template <>
@@ -161,7 +161,7 @@ struct fmt::formatter<percemon::ast::CompareProb>
   auto format(const percemon::ast::CompareProb& e, FormatContext& ctx) {
     std::string rhs = std::visit([](auto r) { return fmt::to_string(r); }, e.rhs);
     return format_to(ctx.out(), "({} {} {})", e.lhs, e.op, rhs);
-  };
+  }
 };
 
 template <>
@@ -180,7 +180,7 @@ struct fmt::formatter<percemon::ast::Pin>
       return format_to(ctx.out(), "{{{0}, {1}}} . {2}", x, f, *e.phi);
     }
     return format_to(ctx.out(), "{{{0}, {1}}}", x, f);
-  };
+  }
 };
 
 template <>
@@ -196,7 +196,7 @@ struct fmt::formatter<percemon::ast::Exists>
           ctx.out(), "EXISTS {{{0}}} . {1}", fmt::join(e.ids, ", "), *e.phi);
     }
     return format_to(ctx.out(), "EXISTS {{{}}}", fmt::join(e.ids, ", "));
-  };
+  }
 };
 
 template <>
@@ -212,7 +212,7 @@ struct fmt::formatter<percemon::ast::Forall>
           ctx.out(), "FORALL {{{0}}} . {1}", fmt::join(e.ids, ", "), *e.phi);
     }
     return format_to(ctx.out(), "FORALL {{{}}}", fmt::join(e.ids, ", "));
-  };
+  }
 };
 
 template <>
@@ -221,7 +221,7 @@ struct fmt::formatter<percemon::ast::Not>
   template <typename FormatContext>
   auto format(const percemon::ast::Not& e, FormatContext& ctx) {
     return format_to(ctx.out(), "~{}", e.arg);
-  };
+  }
 };
 
 template <>
@@ -230,7 +230,7 @@ struct fmt::formatter<percemon::ast::And>
   template <typename FormatContext>
   auto format(const percemon::ast::And& e, FormatContext& ctx) {
     return format_to(ctx.out(), "({})", fmt::join(e.args, " & "));
-  };
+  }
 };
 
 template <>
@@ -238,7 +238,7 @@ struct fmt::formatter<percemon::ast::Or> : percemon::ast::formatter<percemon::as
   template <typename FormatContext>
   auto format(const percemon::ast::Or& e, FormatContext& ctx) {
     return format_to(ctx.out(), "({})", fmt::join(e.args, " | "));
-  };
+  }
 };
 
 template <>
@@ -247,7 +247,7 @@ struct fmt::formatter<percemon::ast::Previous>
   template <typename FormatContext>
   auto format(const percemon::ast::Previous& e, FormatContext& ctx) {
     return format_to(ctx.out(), "Prev {}", e.arg);
-  };
+  }
 };
 
 template <>
@@ -256,7 +256,7 @@ struct fmt::formatter<percemon::ast::Always>
   template <typename FormatContext>
   auto format(const percemon::ast::Always& e, FormatContext& ctx) {
     return format_to(ctx.out(), "Alw {}", e.arg);
-  };
+  }
 };
 
 template <>
@@ -265,7 +265,7 @@ struct fmt::formatter<percemon::ast::Sometimes>
   template <typename FormatContext>
   auto format(const percemon::ast::Sometimes& e, FormatContext& ctx) {
     return format_to(ctx.out(), "Sometimes {}", e.arg);
-  };
+  }
 };
 
 template <>
@@ -275,7 +275,7 @@ struct fmt::formatter<percemon::ast::Since>
   auto format(const percemon::ast::Since& e, FormatContext& ctx) {
     const auto [a, b] = e.args;
     return format_to(ctx.out(), "{} S {}", a, b);
-  };
+  }
 };
 
 template <>
@@ -285,7 +285,7 @@ struct fmt::formatter<percemon::ast::BackTo>
   auto format(const percemon::ast::BackTo& e, FormatContext& ctx) {
     const auto [a, b] = e.args;
     return format_to(ctx.out(), "{} B {}", a, b);
-  };
+  }
 };
 
 inline std::ostream& operator<<(std::ostream& os, const percemon::ast::Expr& expr) {
@@ -302,7 +302,7 @@ inline std::ostream& operator<<(std::ostream& os, const percemon::ast::Expr& exp
       expr);
 
   return os << s;
-};
+}
 
 template <>
 struct fmt::formatter<percemon::ast::Expr>
@@ -329,7 +329,7 @@ struct fmt::formatter<percemon::ast::Expr>
                                       return format_to(ctx.out(), "{}", *e);
                                     }},
         expr);
-  };
+  }
 };
 
 #endif /* end of include guard: __PERCEMON_AST_FMT_HPP__ */

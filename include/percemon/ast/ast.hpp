@@ -31,10 +31,10 @@ struct TimeBound {
 
   TimeBound() = delete;
   TimeBound(
-      const Var_x& x,
-      const ComparisonOp op = ComparisonOp::GE,
-      const double bound    = 0.0) :
-      x{x}, op{op}, bound{bound} {
+      const Var_x& x_,
+      const ComparisonOp op_ = ComparisonOp::GE,
+      const double bound_    = 0.0) :
+      x{x_}, op{op_}, bound{bound_} {
     if (op == ComparisonOp::EQ || op == ComparisonOp::NE) {
       throw std::invalid_argument(
           "Cannot use relational operators ==, != to create Time Bounds");
@@ -69,10 +69,10 @@ struct FrameBound {
 
   FrameBound() = delete;
   FrameBound(
-      const Var_f& f,
-      const ComparisonOp op = ComparisonOp::GE,
-      const double bound    = 0.0) :
-      f{f}, op{op}, bound{bound} {
+      const Var_f& f_,
+      const ComparisonOp op_ = ComparisonOp::GE,
+      const double bound_    = 0.0) :
+      f{f_}, op{op_}, bound{bound_} {
     if (op == ComparisonOp::EQ || op == ComparisonOp::NE) {
       throw std::invalid_argument(
           "Cannot use relational operators ==, != to create Frame Bounds");
@@ -102,7 +102,8 @@ struct CompareId {
   Var_id rhs;
 
   CompareId() = delete;
-  CompareId(Var_id lhs, ComparisonOp op, Var_id rhs) : lhs{lhs}, op{op}, rhs{rhs} {
+  CompareId(Var_id lhs_, ComparisonOp op_, Var_id rhs_) :
+      lhs{lhs_}, op{op_}, rhs{rhs_} {
     if (op != ComparisonOp::EQ && op != ComparisonOp::NE) {
       throw std::invalid_argument(
           "Cannot use relational operators <, >, <=, >= to compare Var_id");
@@ -119,7 +120,7 @@ struct Class {
   Var_id id;
 
   Class() = delete;
-  Class(Var_id id) : id{id} {}
+  Class(Var_id id_) : id{id_} {}
 };
 
 /**
@@ -132,8 +133,8 @@ struct CompareClass {
   std::variant<int, Class> rhs;
 
   CompareClass() = delete;
-  CompareClass(Class lhs, ComparisonOp op, std::variant<int, Class> rhs) :
-      lhs{lhs}, op{op}, rhs{rhs} {
+  CompareClass(Class lhs_, ComparisonOp op_, std::variant<int, Class> rhs_) :
+      lhs{lhs_}, op{op_}, rhs{rhs_} {
     if (op != ComparisonOp::EQ && op != ComparisonOp::NE) {
       throw std::invalid_argument(
           "Cannot use relational operators <, >, <=, >= to compare Class(id)");
@@ -156,10 +157,20 @@ struct Prob {
   double scale = 1.0;
 
   Prob() = delete;
-  Prob(Var_id id, double scale = 1.0) : id{id}, scale{scale} {}
+  Prob(Var_id id_, double scale_ = 1.0) : id{id_}, scale{scale_} {}
+
+  Prob& operator*=(const double rhs) {
+    this->scale *= rhs;
+    return *this;
+  };
+  friend Prob operator*(Prob lhs, const double rhs) {
+    return Prob{lhs.id, lhs.scale * rhs};
+  }
+
+  friend Prob operator*(const double lhs, const Prob& rhs) {
+    return rhs * lhs;
+  }
 };
-Prob operator*(const Prob& lhs, const double rhs);
-Prob operator*(const double lhs, const Prob& rhs);
 
 struct CompareProb {
   Prob lhs;
@@ -167,8 +178,8 @@ struct CompareProb {
   std::variant<double, Prob> rhs;
 
   CompareProb() = delete;
-  CompareProb(Prob lhs, ComparisonOp op, std::variant<double, Prob> rhs) :
-      lhs{lhs}, op{op}, rhs{rhs} {
+  CompareProb(Prob lhs_, ComparisonOp op_, std::variant<double, Prob> rhs_) :
+      lhs{lhs_}, op{op_}, rhs{rhs_} {
     if (op == ComparisonOp::EQ || op == ComparisonOp::NE) {
       throw std::invalid_argument(
           "Cannot use relational operators ==, != to compare Prob(id)");
@@ -335,14 +346,14 @@ struct Not {
   Expr arg;
 
   Not() = delete;
-  Not(const Expr& arg) : arg{arg} {};
+  Not(const Expr& arg_) : arg{arg_} {};
 };
 
 struct And {
   std::vector<Expr> args;
 
   And() = delete;
-  And(std::vector<Expr> args) : args{args} {
+  And(std::vector<Expr> args_) : args{args_} {
     if (args.size() < 2) {
       throw std::invalid_argument(
           "It doesn't make sense to have an And operator with < 2 operands");
@@ -354,7 +365,7 @@ struct Or {
   std::vector<Expr> args;
 
   Or() = delete;
-  Or(std::vector<Expr> args) : args{args} {
+  Or(std::vector<Expr> args_) : args{args_} {
     if (args.size() < 2) {
       throw std::invalid_argument(
           "It doesn't make sense to have an Or operator with < 2 operands");
@@ -366,21 +377,21 @@ struct Previous {
   Expr arg;
 
   Previous() = delete;
-  Previous(const Expr& arg) : arg{arg} {};
+  Previous(const Expr& arg_) : arg{arg_} {};
 };
 
 struct Always {
   Expr arg;
 
   Always() = delete;
-  Always(const Expr& arg) : arg{arg} {};
+  Always(const Expr& arg_) : arg{arg_} {};
 };
 
 struct Sometimes {
   Expr arg;
 
   Sometimes() = delete;
-  Sometimes(const Expr& arg) : arg{arg} {};
+  Sometimes(const Expr& arg_) : arg{arg_} {};
 };
 
 struct Since {

@@ -41,11 +41,15 @@ if((PERCEMON_MASTER_PROJECT OR PERCEMON_TEST) AND BUILD_TESTING)
   set(_PERCEMON_BUILD_THE_TESTS
       ON
       CACHE INTERNAL "Easy option to build the tests")
+endif()
 
+if(PERCEMON_COVERAGE)
+  set(ENABLE_COVERAGE
+      ON
+      CACHE BOOL "Enable coverage build." FORCE)
 endif()
 
 set(CMAKE_CXX_EXTENSIONS ON)
-
 # Third party libraries and dependencies
 include(ThirdPartyLibs)
 add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/third_party)
@@ -61,7 +65,22 @@ target_include_directories(
 target_compile_features(PerceMon PUBLIC cxx_std_17)
 target_link_libraries(PerceMon PRIVATE mono_wedge::mono_wedge)
 target_link_libraries(PerceMon PUBLIC fmt::fmt)
+if(MSVC)
+  target_compile_options(PerceMon PRIVATE /W4 /WX /utf-8)
+else()
+  target_compile_options(PerceMon PRIVATE -pedantic -Wall -Wextra -Werror)
+endif()
+
+if(PERCEMON_COVERAGE)
+  add_coverage(PerceMon)
+endif()
 
 if(_PERCEMON_BUILD_THE_TESTS)
   add_subdirectory(tests)
+endif()
+
+if(PERCEMON_COVERAGE)
+  # list(APPEND LCOV_REMOVE_PATTERNS "'${PROJECT_SOURCE_DIR}/third_party/*'")
+  # list(APPEND LCOV_REMOVE_PATTERNS "'/usr/*'")
+  coverage_evaluate()
 endif()
