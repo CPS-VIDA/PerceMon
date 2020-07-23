@@ -19,14 +19,12 @@ stages:
             inputs:
               workingDirectory: '$(Build.SourcesDirectory)/build'
               cmakeArgs: '--build . --config Debug'
-          - script: ctest --output-on-failure
+          - script: ctest -no-compress-output -T Test
             displayName: "Run CTest"
             workingDirectory: '$(Build.SourcesDirectory)/build'
-          - task: CMake@1
-            displayName: "Generate gcov data"
+          - task: PublishTestResults@2
             inputs:
-              workingDirectory: '$(Build.SourcesDirectory)/build'
-              cmakeArgs: '--build . --config Debug --target gcov'
-          - script: |
-              bash <(curl -s https://codecov.io/bash) -X gcov
-            displayName: 'Upload to codecov.io'
+              testResultsFormat: 'cTest'
+              testResultsFiles: '**/Test*.xml' 
+              searchFolder: '$(Build.SourcesDirectory)/build'
+              configuration: Debug
