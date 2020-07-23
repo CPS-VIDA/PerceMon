@@ -73,6 +73,20 @@ TEST_CASE("AST nodes throw exceptions when constructed badly", "[ast][except]") 
     }
   }
 
+  SECTION("CompareProb is constructed with proper relational operators") {
+    const auto id1 = Prob(Var_id{"1"});
+    const auto id2 = Prob(Var_id{"2"});
+
+    REQUIRE_NOTHROW(id1 > 0.2);
+    REQUIRE_NOTHROW(id1 >= 0.3);
+    REQUIRE_NOTHROW(id2 < 0.5);
+    REQUIRE_NOTHROW(id2 <= 1.0);
+    REQUIRE_NOTHROW(id1 > id2);
+    REQUIRE_NOTHROW(id1 >= id2);
+    REQUIRE_NOTHROW(id1 < id2);
+    REQUIRE_NOTHROW(id1 <= id2);
+  }
+
   SECTION("Pins have either Var_x or Var_f or both") {
     REQUIRE_NOTHROW(Pin{Var_f{"f1"}});
     REQUIRE_NOTHROW(Pin{Var_x{"x1"}});
@@ -86,27 +100,63 @@ TEST_CASE("AST nodes throw exceptions when constructed badly", "[ast][except]") 
   SECTION("Cannot have an expression attached to the Pin and the Quantifier too") {
     auto phi = Var_x{"1"} - C_TIME{} >= 1.0;
     auto pin = Pin{Var_x{"1"}}.dot(phi);
+    REQUIRE_NOTHROW(Exists{{"1"}}.at({Var_x{"1"}}).dot(phi));
     REQUIRE_THROWS_AS(Forall{{"1"}}.at(pin).dot(phi), std::invalid_argument);
   }
 }
 
 TEST_CASE("AST nodes are printed correctly", "[ast][fmt]") {
-  REQUIRE("C_TIME" == fmt::to_string(C_TIME{}));
-  REQUIRE("C_FRAME" == fmt::to_string(C_FRAME{}));
-
-  SECTION("Pinned variables") {
+  SECTION("Primitives in the syntax") {
+    REQUIRE("true" == fmt::to_string(Const{true}));
+    REQUIRE("false" == fmt::to_string(Const{false}));
+    REQUIRE("C_TIME" == fmt::to_string(C_TIME{}));
+    REQUIRE("C_FRAME" == fmt::to_string(C_FRAME{}));
     REQUIRE("f_1" == fmt::to_string(Var_f{"1"}));
     REQUIRE("x_1" == fmt::to_string(Var_x{"1"}));
+    REQUIRE("id_1" == fmt::to_string(Var_id{"1"}));
+  }
 
-    REQUIRE("{x_1, f_1}" == fmt::to_string(Pin{Var_x{"1"}, Var_f{"1"}}));
-    REQUIRE("{_, f_1}" == fmt::to_string(Pin{Var_f{"1"}}));
-    REQUIRE("{x_1, _}" == fmt::to_string(Pin{Var_x{"1"}}));
+  const auto x1  = Var_x{"1"};
+  const auto f1  = Var_f{"1"};
+  const auto id1 = Var_id{"1"};
+  const auto x2  = Var_x{"2"};
+  const auto f2  = Var_f{"2"};
+  const auto id2 = Var_id{"2"};
+
+  SECTION("Functions on Var_id") {
+    REQUIRE("Prob(id_1)" == fmt::to_string(Prob(id1)));
+    REQUIRE("4.0 * Prob(id_1)" == fmt::to_string(4.0 * Prob(id1)));
+
+    REQUIRE("Class(id_2)" == fmt::to_string(Class(id2)));
+  }
+
+  SECTION("TimeBounds, FrameBounds, and other Comparisons") {
+    REQUIRE("(x_1 - C_TIME >= 1.0)" == fmt::to_string(x1 - C_TIME{} >= 1.0));
+    REQUIRE("(x_2 - C_TIME > 1.0)" == fmt::to_string(x2 - C_TIME{} > 1.0));
+    REQUIRE("(f_1 - C_FRAME <= 1.0)" == fmt::to_string(f1 - C_FRAME{} <= 1.0));
+    REQUIRE("(f_2 - C_FRAME < 1.0)" == fmt::to_string(f2 - C_FRAME{} < 1.0));
+    REQUIRE("(id_1 == id_1)" == fmt::to_string(id1 == id1));
+    REQUIRE("(id_1 != id_2)" == fmt::to_string(id1 != id2));
+    REQUIRE("(Class(id_1) == Class(id_2))" == fmt::to_string(Class(id1) == Class(id2)));
+    REQUIRE("(Class(id_1) != Class(id_2))" == fmt::to_string(Class(id1) != Class(id2)));
+    REQUIRE("(Prob(id_1) >= Prob(id_2))" == fmt::to_string(Prob(id1) >= Prob(id2)));
+    REQUIRE("(Prob(id_1) > Prob(id_2))" == fmt::to_string(Prob(id1) > Prob(id2)));
+    REQUIRE("(Prob(id_1) <= Prob(id_2))" == fmt::to_string(Prob(id1) <= Prob(id2)));
+    REQUIRE("(Prob(id_1) < Prob(id_2))" == fmt::to_string(Prob(id1) < Prob(id2)));
   }
 
   SECTION("Objects and quantifiers over them") {
-    REQUIRE("id_1" == fmt::to_string(Var_id{"1"}));
     REQUIRE("EXISTS {id_1, id_2, id_3}" == fmt::to_string(Exists{{"1"}, {"2"}, {"3"}}));
     REQUIRE("FORALL {id_1, id_2, id_3}" == fmt::to_string(Forall{{"1"}, {"2"}, {"3"}}));
+  }
+
+  SECTION("Pinned variables") {
+    REQUIRE("{x_1, f_1}" == fmt::to_string(Pin{Var_x{"1"}, Var_f{"1"}}));
+    REQUIRE("{_, f_1}" == fmt::to_string(Pin{Var_f{"1"}}));
+    REQUIRE("{x_1, _}" == fmt::to_string(Pin{Var_x{"1"}}));
+    REQUIRE(
+        "{x_1, _} . (x_1 - C_TIME > 10.0)" ==
+        fmt::to_string(Pin{Var_x{"1"}}.dot(x1 - C_TIME{} > 10.0)));
   }
 
   SECTION("Quantifiers over objects pinned at frames") {

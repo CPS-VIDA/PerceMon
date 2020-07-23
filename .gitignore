@@ -1,4 +1,5 @@
-
+.clangd/
+.ccls-cache/
 # Created by https://www.toptal.com/developers/gitignore/api/c++,python,cmake,gcov
 # Edit at https://www.toptal.com/developers/gitignore?templates=c++,python,cmake,gcov
 
