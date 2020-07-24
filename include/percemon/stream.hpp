@@ -19,6 +19,7 @@
 #define __PERCEMON_STREAM_HH__
 
 #include <map>
+#include <string>
 
 namespace percemon {
 namespace stream {
@@ -44,7 +45,6 @@ struct Object {
   const BoundingBox bbox;
 };
 
-template <typename T>
 struct Frame {
   /**
    * Number of seconds elapsed
@@ -60,7 +60,7 @@ struct Frame {
    */
   size_t size_x, size_y;
 
-  std::map<T, Object> objects;
+  std::map<std::string, Object> objects;
 };
 
 } // namespace stream

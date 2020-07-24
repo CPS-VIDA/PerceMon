@@ -7,6 +7,8 @@
 
 namespace percemon {
 namespace ast {
+namespace primitives {
+
 enum class ComparisonOp { GT, GE, LT, LE, EQ, NE };
 
 /**
@@ -82,6 +84,7 @@ struct Var_id {
   Var_id(const std::string& name_) : name{name_} {}
 };
 
+} // namespace primitives
 } // namespace ast
 } // namespace percemon
 

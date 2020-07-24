@@ -55,7 +55,7 @@ include(ThirdPartyLibs)
 add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/third_party)
 
 # Add library and module
-set(PERCEMON_SOURCES src/ast.cc)
+set(PERCEMON_SOURCES src/ast.cc src/monitoring/horizon.cc)
 
 add_library(PerceMon ${PERCEMON_SOURCES})
 add_library(PerceMon::PerceMon ALIAS PerceMon)

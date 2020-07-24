@@ -23,28 +23,28 @@ TimeBound operator>=(const TimeBound& lhs, const double bound) {
   return TimeBound{lhs.x, ComparisonOp::GE, bound};
 }
 
-TimeBound operator<(const TimeBound& lhs, const double bound) {
-  return TimeBound{lhs.x, ComparisonOp::LT, bound};
+TimeBound operator<(const double bound, const TimeBound& rhs) {
+  return rhs > bound;
 }
 
-TimeBound operator<=(const TimeBound& lhs, const double bound) {
-  return TimeBound{lhs.x, ComparisonOp::LE, bound};
+TimeBound operator<=(const double bound, const TimeBound& rhs) {
+  return rhs >= bound;
 }
 
-FrameBound operator>(const FrameBound& lhs, const double bound) {
+FrameBound operator>(const FrameBound& lhs, const size_t bound) {
   return FrameBound{lhs.f, ComparisonOp::GT, bound};
 }
 
-FrameBound operator>=(const FrameBound& lhs, const double bound) {
+FrameBound operator>=(const FrameBound& lhs, const size_t bound) {
   return FrameBound{lhs.f, ComparisonOp::GE, bound};
 }
 
-FrameBound operator<(const FrameBound& lhs, const double bound) {
-  return FrameBound{lhs.f, ComparisonOp::LT, bound};
+FrameBound operator<(const size_t bound, const FrameBound& rhs) {
+  return rhs > bound;
 }
 
-FrameBound operator<=(const FrameBound& lhs, const double bound) {
-  return FrameBound{lhs.f, ComparisonOp::LE, bound};
+FrameBound operator<=(const size_t bound, const FrameBound& rhs) {
+  return rhs >= bound;
 }
 
 CompareId operator==(const Var_id& lhs, const Var_id& rhs) {

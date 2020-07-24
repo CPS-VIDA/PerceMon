@@ -10,12 +10,12 @@
 #include <variant>
 #include <vector>
 
-#include <exception>
-
 #include "percemon/ast/primitives.hpp"
+#include <exception>
 
 namespace percemon {
 namespace ast {
+using namespace primitives;
 
 /**
  * A bound on a Var_x of the form
@@ -35,9 +35,14 @@ struct TimeBound {
       const ComparisonOp op_ = ComparisonOp::GE,
       const double bound_    = 0.0) :
       x{x_}, op{op_}, bound{bound_} {
-    if (op == ComparisonOp::EQ || op == ComparisonOp::NE) {
+    if (op != ComparisonOp::GE && op != ComparisonOp::GT) {
       throw std::invalid_argument(
-          "Cannot use relational operators ==, != to create Time Bounds");
+          "For past-time operations, TimeBound has to be of the form Var_x - C_TIME ~ c where ~ is > or >=.");
+    }
+
+    if (bound < 0.0) {
+      throw std::invalid_argument(
+          "For past-time operations, TimeBound has to be of the form Var_x - C_TIME > c where c > 0.0");
     }
   };
 
@@ -52,8 +57,8 @@ struct TimeBound {
 TimeBound operator-(const Var_x& lhs, C_TIME);
 TimeBound operator>(const TimeBound& lhs, const double bound);
 TimeBound operator>=(const TimeBound& lhs, const double bound);
-TimeBound operator<(const TimeBound& lhs, const double bound);
-TimeBound operator<=(const TimeBound& lhs, const double bound);
+TimeBound operator<(const double bound, const TimeBound& rhs);
+TimeBound operator<=(const double bound, const TimeBound& rhs);
 
 /**
  * A bound on a Var_f of the form
@@ -65,17 +70,17 @@ TimeBound operator<=(const TimeBound& lhs, const double bound);
 struct FrameBound {
   Var_f f;
   ComparisonOp op = ComparisonOp::GE;
-  double bound    = 0.0;
+  size_t bound    = 0;
 
   FrameBound() = delete;
   FrameBound(
       const Var_f& f_,
       const ComparisonOp op_ = ComparisonOp::GE,
-      const double bound_    = 0.0) :
+      const size_t bound_    = 0) :
       f{f_}, op{op_}, bound{bound_} {
-    if (op == ComparisonOp::EQ || op == ComparisonOp::NE) {
+    if (op != ComparisonOp::GE && op != ComparisonOp::GT) {
       throw std::invalid_argument(
-          "Cannot use relational operators ==, != to create Frame Bounds");
+          "For past-time operations, FrameBound has to be of the form Var_f - C_FRAME ~ c where ~ is > or >=.");
     }
   };
 
@@ -88,10 +93,10 @@ struct FrameBound {
   };
 };
 FrameBound operator-(const Var_f& lhs, C_FRAME);
-FrameBound operator>(const FrameBound& lhs, const double bound);
-FrameBound operator>=(const FrameBound& lhs, const double bound);
-FrameBound operator<(const FrameBound& lhs, const double bound);
-FrameBound operator<=(const FrameBound& lhs, const double bound);
+FrameBound operator>(const FrameBound& lhs, const size_t bound);
+FrameBound operator>=(const FrameBound& lhs, const size_t bound);
+FrameBound operator<(const size_t bound, const FrameBound& rhs);
+FrameBound operator<=(const size_t bound, const FrameBound& rhs);
 
 /**
  * Node comparing objects.
@@ -124,8 +129,8 @@ struct Class {
 };
 
 /**
- * Node to compare equality of object class between either two IDs or an ID and a class
- * literal.
+ * Node to compare equality of object class between either two IDs or an ID and a
+ * class literal.
  */
 struct CompareClass {
   Class lhs;
