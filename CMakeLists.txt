@@ -1,6 +1,5 @@
 cmake_minimum_required(VERSION 3.5.0)
 
-list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
 file(
   STRINGS ${CMAKE_CURRENT_LIST_DIR}/VERSION PERCEMON_VERSION
   LIMIT_COUNT 1
@@ -50,37 +49,20 @@ if(PERCEMON_COVERAGE)
 endif()
 
 set(CMAKE_CXX_EXTENSIONS ON)
+
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
+
 # Third party libraries and dependencies
 include(ThirdPartyLibs)
-add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/third_party)
+add_subdirectory(third_party)
 
-# Add library and module
-set(PERCEMON_SOURCES src/ast.cc src/monitoring/horizon.cc)
-
-add_library(PerceMon ${PERCEMON_SOURCES})
-add_library(PerceMon::PerceMon ALIAS PerceMon)
-target_include_directories(
-  PerceMon PUBLIC $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
-                  $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include>)
-target_compile_features(PerceMon PUBLIC cxx_std_17)
-target_link_libraries(PerceMon PRIVATE mono_wedge::mono_wedge)
-target_link_libraries(PerceMon PUBLIC fmt::fmt)
-if(MSVC)
-  target_compile_options(PerceMon PRIVATE /W4 /WX /utf-8)
-else()
-  target_compile_options(PerceMon PRIVATE -pedantic -Wall -Wextra -Werror)
-endif()
-
-if(PERCEMON_COVERAGE)
-  add_coverage(PerceMon)
-endif()
+# Sources and actual library
+add_subdirectory(src)
 
 if(_PERCEMON_BUILD_THE_TESTS)
   add_subdirectory(tests)
 endif()
 
 if(PERCEMON_COVERAGE)
-  # list(APPEND LCOV_REMOVE_PATTERNS "'${PROJECT_SOURCE_DIR}/third_party/*'")
-  # list(APPEND LCOV_REMOVE_PATTERNS "'/usr/*'")
   coverage_evaluate()
 endif()

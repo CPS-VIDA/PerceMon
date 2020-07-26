@@ -223,6 +223,9 @@ using SincePtr = std::shared_ptr<Since>;
 struct BackTo;
 using BackToPtr = std::shared_ptr<BackTo>;
 
+struct BoundingImplies;
+using BoundingImpliesPtr = std::shared_ptr<BoundingImplies>;
+
 using Expr = std::variant<
     Const,
     TimeBound,
@@ -230,7 +233,7 @@ using Expr = std::variant<
     CompareId,
     CompareClass,
     ExistsPtr,
-    AlwaysPtr,
+    ForallPtr,
     PinPtr,
     NotPtr,
     AndPtr,
@@ -239,7 +242,8 @@ using Expr = std::variant<
     AlwaysPtr,
     SometimesPtr,
     SincePtr,
-    BackToPtr>;
+    BackToPtr,
+    BoundingImpliesPtr>;
 
 /**
  * Datastructure to pin frames
@@ -411,6 +415,17 @@ struct BackTo {
 
   BackTo() = delete;
   BackTo(const Expr& arg0, const Expr& arg1) : args{std::make_pair(arg0, arg1)} {};
+};
+
+using TemporalBoundExpr = std::variant<TimeBound, FrameBound>;
+
+struct BoundingImplies {
+  TemporalBoundExpr condition;
+  Expr phi;
+
+  BoundingImplies() = delete;
+  BoundingImplies(const TemporalBoundExpr& lhs, const Expr& rhs) :
+      condition(lhs), phi(rhs){};
 };
 
 Expr operator~(const Expr& e);

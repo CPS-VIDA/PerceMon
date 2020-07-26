@@ -104,6 +104,10 @@ CompareProb operator<=(const Prob& lhs, const Prob& rhs) {
   return CompareProb{lhs, ComparisonOp::LE, rhs};
 }
 
+BoundingImplies operator>>(const TemporalBoundExpr& lhs, const Expr& rhs) {
+  return BoundingImplies{lhs, rhs};
+}
+
 namespace {
 using percemon::utils::overloaded;
 
@@ -175,6 +179,11 @@ Expr operator~(const Expr& expr) {
 }
 
 Expr operator>>(const Expr& lhs, const Expr& rhs) {
+  if (auto timebound_ptr = std::get_if<TimeBound>(&lhs)) {
+    return std::make_shared<BoundingImplies>(*timebound_ptr, rhs);
+  } else if (auto framebound_ptr = std::get_if<FrameBound>(&rhs)) {
+    return std::make_shared<BoundingImplies>(*framebound_ptr, rhs);
+  }
   return ~(lhs) | rhs;
 }
 

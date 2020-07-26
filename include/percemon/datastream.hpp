@@ -22,7 +22,7 @@
 #include <string>
 
 namespace percemon {
-namespace stream {
+namespace datastream {
 
 /**
  * A bounding box data structure that follows the Pascal VOC Bounding box format
@@ -58,12 +58,13 @@ struct Frame {
   /**
    * The size of the frame/image in pixels
    */
+  // TODO: Should this be doubles?
   size_t size_x, size_y;
 
   std::map<std::string, Object> objects;
 };
 
-} // namespace stream
+} // namespace datastream
 } // namespace percemon
 
 #endif /* end of include guard: __PERCEMON_STREAM_HH__ */

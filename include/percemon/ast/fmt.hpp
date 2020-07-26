@@ -288,6 +288,17 @@ struct fmt::formatter<percemon::ast::BackTo>
   }
 };
 
+template <>
+struct fmt::formatter<percemon::ast::BoundingImplies>
+    : percemon::ast::formatter<percemon::ast::BoundingImplies> {
+  template <typename FormatContext>
+  auto format(const percemon::ast::BoundingImplies& e, FormatContext& ctx) {
+    std::string condition_fmt =
+        std::visit([](auto&& cond) { return fmt::to_string(cond); }, e.condition);
+    return format_to(ctx.out(), "{} => {}", condition_fmt, e.phi);
+  }
+};
+
 inline std::ostream& operator<<(std::ostream& os, const percemon::ast::Expr& expr) {
   std::string s = std::visit(
       percemon::utils::overloaded{
