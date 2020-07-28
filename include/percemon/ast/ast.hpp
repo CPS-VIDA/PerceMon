@@ -35,14 +35,22 @@ struct TimeBound {
       const ComparisonOp op_ = ComparisonOp::GE,
       const double bound_    = 0.0) :
       x{x_}, op{op_}, bound{bound_} {
-    if (op != ComparisonOp::GE && op != ComparisonOp::GT) {
+    if (op == ComparisonOp::EQ || op == ComparisonOp::NE) {
       throw std::invalid_argument(
-          "For past-time operations, TimeBound has to be of the form Var_x - C_TIME ~ c where ~ is > or >=.");
+          "TimeBound (Var_x - C_TIME ~ c) cannot have == and != constraints.");
     }
-
-    if (bound < 0.0) {
-      throw std::invalid_argument(
-          "For past-time operations, TimeBound has to be of the form Var_x - C_TIME > c where c > 0.0");
+    if (bound_ <= 0.0) {
+      bound = -bound_;
+      switch (op_) {
+        case ComparisonOp::GE: op = ComparisonOp::LE; break;
+        case ComparisonOp::GT: op = ComparisonOp::LT; break;
+        case ComparisonOp::LE: op = ComparisonOp::GE; break;
+        case ComparisonOp::LT: op = ComparisonOp::GT; break;
+        default: {
+          throw std::invalid_argument(
+              "TimeBound (Var_x - C_TIME ~ c) cannot have == and != constraints.");
+        }
+      }
     }
   };
 
@@ -57,6 +65,10 @@ struct TimeBound {
 TimeBound operator-(const Var_x& lhs, C_TIME);
 TimeBound operator>(const TimeBound& lhs, const double bound);
 TimeBound operator>=(const TimeBound& lhs, const double bound);
+TimeBound operator<(const TimeBound& lhs, const double bound);
+TimeBound operator<=(const TimeBound& lhs, const double bound);
+TimeBound operator>(const double bound, const TimeBound& rhs);
+TimeBound operator>=(const double bound, const TimeBound& rhs);
 TimeBound operator<(const double bound, const TimeBound& rhs);
 TimeBound operator<=(const double bound, const TimeBound& rhs);
 
@@ -78,9 +90,9 @@ struct FrameBound {
       const ComparisonOp op_ = ComparisonOp::GE,
       const size_t bound_    = 0) :
       f{f_}, op{op_}, bound{bound_} {
-    if (op != ComparisonOp::GE && op != ComparisonOp::GT) {
+    if (op == ComparisonOp::EQ || op == ComparisonOp::NE) {
       throw std::invalid_argument(
-          "For past-time operations, FrameBound has to be of the form Var_f - C_FRAME ~ c where ~ is > or >=.");
+          "FrameBound (Var_f - C_FRAME ~ c) cannot have == and != constraints.");
     }
   };
 
@@ -95,8 +107,14 @@ struct FrameBound {
 FrameBound operator-(const Var_f& lhs, C_FRAME);
 FrameBound operator>(const FrameBound& lhs, const size_t bound);
 FrameBound operator>=(const FrameBound& lhs, const size_t bound);
+FrameBound operator<(const FrameBound& lhs, const size_t bound);
+FrameBound operator<=(const FrameBound& lhs, const size_t bound);
+FrameBound operator>(const size_t bound, const FrameBound& rhs);
+FrameBound operator>=(const size_t bound, const FrameBound& rhs);
 FrameBound operator<(const size_t bound, const FrameBound& rhs);
 FrameBound operator<=(const size_t bound, const FrameBound& rhs);
+
+using TemporalBoundExpr = std::variant<TimeBound, FrameBound>;
 
 /**
  * Node comparing objects.
@@ -223,9 +241,6 @@ using SincePtr = std::shared_ptr<Since>;
 struct BackTo;
 using BackToPtr = std::shared_ptr<BackTo>;
 
-struct BoundingImplies;
-using BoundingImpliesPtr = std::shared_ptr<BoundingImplies>;
-
 using Expr = std::variant<
     Const,
     TimeBound,
@@ -242,8 +257,7 @@ using Expr = std::variant<
     AlwaysPtr,
     SometimesPtr,
     SincePtr,
-    BackToPtr,
-    BoundingImpliesPtr>;
+    BackToPtr>;
 
 /**
  * Datastructure to pin frames
@@ -360,6 +374,7 @@ struct Not {
 
 struct And {
   std::vector<Expr> args;
+  std::vector<TemporalBoundExpr> temporal_bound_args;
 
   And() = delete;
   And(std::vector<Expr> args_) : args{args_} {
@@ -367,17 +382,36 @@ struct And {
       throw std::invalid_argument(
           "It doesn't make sense to have an And operator with < 2 operands");
     }
+    for (auto&& e : args_) {
+      if (auto tb_ptr = std::get_if<TimeBound>(&e)) {
+        temporal_bound_args.push_back(*tb_ptr);
+      } else if (auto fb_ptr = std::get_if<FrameBound>(&e)) {
+        temporal_bound_args.push_back(*fb_ptr);
+      } else {
+        args.push_back(e);
+      }
+    }
   };
 };
 
 struct Or {
   std::vector<Expr> args;
+  std::vector<TemporalBoundExpr> temporal_bound_args;
 
   Or() = delete;
-  Or(std::vector<Expr> args_) : args{args_} {
-    if (args.size() < 2) {
+  Or(std::vector<Expr> args_) {
+    if (args_.size() < 2) {
       throw std::invalid_argument(
           "It doesn't make sense to have an Or operator with < 2 operands");
+    }
+    for (auto&& e : args_) {
+      if (auto tb_ptr = std::get_if<TimeBound>(&e)) {
+        temporal_bound_args.push_back(*tb_ptr);
+      } else if (auto fb_ptr = std::get_if<FrameBound>(&e)) {
+        temporal_bound_args.push_back(*fb_ptr);
+      } else {
+        args.push_back(e);
+      }
     }
   };
 };
@@ -415,17 +449,6 @@ struct BackTo {
 
   BackTo() = delete;
   BackTo(const Expr& arg0, const Expr& arg1) : args{std::make_pair(arg0, arg1)} {};
-};
-
-using TemporalBoundExpr = std::variant<TimeBound, FrameBound>;
-
-struct BoundingImplies {
-  TemporalBoundExpr condition;
-  Expr phi;
-
-  BoundingImplies() = delete;
-  BoundingImplies(const TemporalBoundExpr& lhs, const Expr& rhs) :
-      condition(lhs), phi(rhs){};
 };
 
 Expr operator~(const Expr& e);

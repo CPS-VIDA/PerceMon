@@ -9,10 +9,20 @@ else()
   git_submodule(PATH fmt WORKING_DIRECTORY ${CMAKE_CURRENT_LIST_DIR})
   # NOTE: Workaround when building SIGNALTL
   set(FMT_INSTALL
-      ${SIGNALTL_INSTALL}
+      ${PERCEMON_INSTALL}
       CACHE BOOL "")
-  add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/fmt)
+  add_subdirectory(fmt)
   set_target_properties(fmt PROPERTIES POSITION_INDEPENDENT_CODE ON)
+endif()
+
+# cppitertools
+find_package(cppitertools QUIET)
+if(cppitertools_FOUND)
+  message(STATUS "System installation of cppitertools found")
+else()
+  message(STATUS "Using bundled third_party/cppitertools.")
+  git_submodule(PATH cppitertools WORKING_DIRECTORY ${CMAKE_CURRENT_LIST_DIR})
+  add_subdirectory(cppitertools)
 endif()
 
 # Catch2
@@ -23,7 +33,7 @@ if(_PERCEMON_BUILD_THE_TESTS)
   else()
     message(STATUS "Using bundled third_party/Catch2.")
     git_submodule(PATH Catch2 WORKING_DIRECTORY ${CMAKE_CURRENT_LIST_DIR})
-    add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/Catch2)
+    add_subdirectory(Catch2)
     list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/Catch2/contrib")
   endif()
 endif()

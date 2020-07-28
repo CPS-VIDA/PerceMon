@@ -56,8 +56,28 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
 include(ThirdPartyLibs)
 add_subdirectory(third_party)
 
-# Sources and actual library
-add_subdirectory(src)
+# Sources and actual library Add library and module
+set(PERCEMON_SOURCES src/ast.cc src/monitoring/default_monitor.cc
+                     src/monitoring/horizon.cc)
+
+add_library(PerceMon ${PERCEMON_SOURCES})
+add_library(PerceMon::PerceMon ALIAS PerceMon)
+target_include_directories(
+  PerceMon PUBLIC $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+                  $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>)
+target_include_directories(PerceMon PRIVATE ${PROJECT_SOURCE_DIR}/src)
+target_compile_features(PerceMon PUBLIC cxx_std_17)
+target_link_libraries(PerceMon PRIVATE mono_wedge::mono_wedge)
+target_link_libraries(PerceMon PUBLIC fmt::fmt cppitertools::cppitertools)
+if(MSVC)
+  target_compile_options(PerceMon PRIVATE /W4 /WX /utf-8)
+else()
+  target_compile_options(PerceMon PRIVATE -pedantic -Wall -Wextra -Werror)
+endif()
+
+if(PERCEMON_COVERAGE)
+  add_coverage(PerceMon)
+endif()
 
 if(_PERCEMON_BUILD_THE_TESTS)
   add_subdirectory(tests)

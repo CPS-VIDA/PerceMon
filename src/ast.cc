@@ -23,12 +23,28 @@ TimeBound operator>=(const TimeBound& lhs, const double bound) {
   return TimeBound{lhs.x, ComparisonOp::GE, bound};
 }
 
+TimeBound operator<(const TimeBound& lhs, const double bound) {
+  return TimeBound{lhs.x, ComparisonOp::LT, bound};
+}
+
+TimeBound operator<=(const TimeBound& lhs, const double bound) {
+  return TimeBound{lhs.x, ComparisonOp::LE, bound};
+}
+
 TimeBound operator<(const double bound, const TimeBound& rhs) {
   return rhs > bound;
 }
 
 TimeBound operator<=(const double bound, const TimeBound& rhs) {
   return rhs >= bound;
+}
+
+TimeBound operator>(const double bound, const TimeBound& rhs) {
+  return rhs < bound;
+}
+
+TimeBound operator>=(const double bound, const TimeBound& rhs) {
+  return rhs <= bound;
 }
 
 FrameBound operator>(const FrameBound& lhs, const size_t bound) {
@@ -39,12 +55,28 @@ FrameBound operator>=(const FrameBound& lhs, const size_t bound) {
   return FrameBound{lhs.f, ComparisonOp::GE, bound};
 }
 
+FrameBound operator<(const FrameBound& lhs, const size_t bound) {
+  return FrameBound{lhs.f, ComparisonOp::LT, bound};
+}
+
+FrameBound operator<=(const FrameBound& lhs, const size_t bound) {
+  return FrameBound{lhs.f, ComparisonOp::LE, bound};
+}
+
 FrameBound operator<(const size_t bound, const FrameBound& rhs) {
   return rhs > bound;
 }
 
 FrameBound operator<=(const size_t bound, const FrameBound& rhs) {
   return rhs >= bound;
+}
+
+FrameBound operator>(const size_t bound, const FrameBound& rhs) {
+  return rhs < bound;
+}
+
+FrameBound operator>=(const size_t bound, const FrameBound& rhs) {
+  return rhs <= bound;
 }
 
 CompareId operator==(const Var_id& lhs, const Var_id& rhs) {
@@ -102,10 +134,6 @@ CompareProb operator<(const Prob& lhs, const Prob& rhs) {
 }
 CompareProb operator<=(const Prob& lhs, const Prob& rhs) {
   return CompareProb{lhs, ComparisonOp::LE, rhs};
-}
-
-BoundingImplies operator>>(const TemporalBoundExpr& lhs, const Expr& rhs) {
-  return BoundingImplies{lhs, rhs};
 }
 
 namespace {
@@ -179,11 +207,6 @@ Expr operator~(const Expr& expr) {
 }
 
 Expr operator>>(const Expr& lhs, const Expr& rhs) {
-  if (auto timebound_ptr = std::get_if<TimeBound>(&lhs)) {
-    return std::make_shared<BoundingImplies>(*timebound_ptr, rhs);
-  } else if (auto framebound_ptr = std::get_if<FrameBound>(&rhs)) {
-    return std::make_shared<BoundingImplies>(*framebound_ptr, rhs);
-  }
   return ~(lhs) | rhs;
 }
 

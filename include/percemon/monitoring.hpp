@@ -39,7 +39,7 @@ size_t get_horizon(const percemon::ast::Expr& expr, double fps);
 struct OnlineMonitor {
  public:
   OnlineMonitor() = delete;
-  OnlineMonitor(const ast::Expr& phi_);
+  OnlineMonitor(const ast::Expr& phi_, const double fps_);
 
   /**
    * Add a new frame to the monitor buffer
@@ -67,10 +67,13 @@ struct OnlineMonitor {
 
   // Extra data used for book-keeping.
   /**
-   * Table maintaining horizon for each sub-formula for efficient lookup.
+   * Frames per second for the datastream
    */
-  std::map<std::shared_ptr<const ast::Expr>, size_t>
-      horizon_table; // TODO: verify correctness.
+  double fps;
+  /**
+   * Maximum width of buffer.
+   */
+  size_t max_horizon;
 };
 
 } // namespace monitoring

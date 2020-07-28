@@ -12,7 +12,9 @@
 
 namespace percemon {
 namespace ast {
-std::ostream& operator<<(std::ostream& os, const percemon::ast::Expr& expr);
+// std::ostream& operator<<(std::ostream& os, const percemon::ast::Expr& expr);
+// std::ostream&
+// operator<<(std::ostream& os, const percemon::ast::TemporalBoundExpr& expr);
 
 template <typename Node>
 struct formatter {
@@ -229,7 +231,17 @@ struct fmt::formatter<percemon::ast::And>
     : percemon::ast::formatter<percemon::ast::And> {
   template <typename FormatContext>
   auto format(const percemon::ast::And& e, FormatContext& ctx) {
-    return format_to(ctx.out(), "({})", fmt::join(e.args, " & "));
+    if (e.temporal_bound_args.empty()) {
+      return format_to(ctx.out(), "({})", fmt::join(e.args, " & "));
+    } else if (e.args.empty()) {
+      return format_to(ctx.out(), "({})", fmt::join(e.temporal_bound_args, " & "));
+    } else {
+      return format_to(
+          ctx.out(),
+          "({} & {})",
+          fmt::join(e.temporal_bound_args, " & "),
+          fmt::join(e.args, " & "));
+    }
   }
 };
 
@@ -237,7 +249,17 @@ template <>
 struct fmt::formatter<percemon::ast::Or> : percemon::ast::formatter<percemon::ast::Or> {
   template <typename FormatContext>
   auto format(const percemon::ast::Or& e, FormatContext& ctx) {
-    return format_to(ctx.out(), "({})", fmt::join(e.args, " | "));
+    if (e.temporal_bound_args.empty()) {
+      return format_to(ctx.out(), "({})", fmt::join(e.args, " | "));
+    } else if (e.args.empty()) {
+      return format_to(ctx.out(), "({})", fmt::join(e.temporal_bound_args, " | "));
+    } else {
+      return format_to(
+          ctx.out(),
+          "({} | {})",
+          fmt::join(e.temporal_bound_args, " | "),
+          fmt::join(e.args, " | "));
+    }
   }
 };
 
@@ -288,32 +310,37 @@ struct fmt::formatter<percemon::ast::BackTo>
   }
 };
 
+// inline std::ostream& operator<<(std::ostream& os, const percemon::ast::Expr& expr) {
+// std::string s = std::visit(
+// percemon::utils::overloaded{
+// [](const percemon::ast::Const& e) { return fmt::to_string(e); },
+// [](const percemon::ast::TimeBound& e) { return fmt::to_string(e); },
+// [](const percemon::ast::FrameBound& e) { return fmt::to_string(e); },
+// [](const percemon::ast::CompareId& e) { return fmt::to_string(e); },
+// [](const percemon::ast::CompareClass& e) { return fmt::to_string(e); },
+// [](const auto e) {
+// return fmt::to_string(*e);
+// }},
+// expr);
+
+// return os << s;
+// }
+
+// inline std::ostream&
+// operator<<(std::ostream& os, const percemon::ast::TemporalBoundExpr& expr) {
+// std::string s = std::visit([](const auto e) { return fmt::to_string(e); }, expr);
+// return os << s;
+// }
+
 template <>
-struct fmt::formatter<percemon::ast::BoundingImplies>
-    : percemon::ast::formatter<percemon::ast::BoundingImplies> {
+struct fmt::formatter<percemon::ast::TemporalBoundExpr>
+    : percemon::ast::formatter<percemon::ast::TemporalBoundExpr> {
   template <typename FormatContext>
-  auto format(const percemon::ast::BoundingImplies& e, FormatContext& ctx) {
-    std::string condition_fmt =
-        std::visit([](auto&& cond) { return fmt::to_string(cond); }, e.condition);
-    return format_to(ctx.out(), "{} => {}", condition_fmt, e.phi);
+  auto format(const percemon::ast::TemporalBoundExpr& expr, FormatContext& ctx) {
+    return std::visit(
+        [&](const auto& e) { return format_to(ctx.out(), "{}", e); }, expr);
   }
 };
-
-inline std::ostream& operator<<(std::ostream& os, const percemon::ast::Expr& expr) {
-  std::string s = std::visit(
-      percemon::utils::overloaded{
-          [](const percemon::ast::Const& e) { return fmt::to_string(e); },
-          [](const percemon::ast::TimeBound& e) { return fmt::to_string(e); },
-          [](const percemon::ast::FrameBound& e) { return fmt::to_string(e); },
-          [](const percemon::ast::CompareId& e) { return fmt::to_string(e); },
-          [](const percemon::ast::CompareClass& e) { return fmt::to_string(e); },
-          [](const auto e) {
-            return fmt::to_string(*e);
-          }},
-      expr);
-
-  return os << s;
-}
 
 template <>
 struct fmt::formatter<percemon::ast::Expr>

@@ -8,10 +8,17 @@ using namespace percemon::ast;
 TEST_CASE("AST nodes throw exceptions when constructed badly", "[ast][except]") {
   SECTION("TimeBounds are constructed with proper relational operators") {
     REQUIRE_NOTHROW(Var_x{"1"} - C_TIME{});
+
     REQUIRE_NOTHROW(Var_x{"1"} - C_TIME{} > 1.0);
     REQUIRE_NOTHROW(Var_x{"1"} - C_TIME{} >= 1.0);
+    REQUIRE_NOTHROW(Var_x{"1"} - C_TIME{} < 1.0);
+    REQUIRE_NOTHROW(Var_x{"1"} - C_TIME{} <= 1.0);
+
+    REQUIRE_NOTHROW(1.0 >= Var_x{"1"} - C_TIME{});
+    REQUIRE_NOTHROW(1.0 > Var_x{"1"} - C_TIME{});
     REQUIRE_NOTHROW(1.0 <= Var_x{"1"} - C_TIME{});
     REQUIRE_NOTHROW(1.0 < Var_x{"1"} - C_TIME{});
+
     REQUIRE_THROWS(TimeBound{Var_x{"1"}, ComparisonOp::EQ, 1.0});
     REQUIRE_THROWS(TimeBound{Var_x{"1"}, ComparisonOp::NE, 1.0});
     REQUIRE_THROWS(Var_x{"1"} - C_TIME{} > -1.0);
@@ -19,10 +26,17 @@ TEST_CASE("AST nodes throw exceptions when constructed badly", "[ast][except]") 
 
   SECTION("FrameBounds are constructed with proper relational operators") {
     REQUIRE_NOTHROW(Var_f{"1"} - C_FRAME{});
+
     REQUIRE_NOTHROW(Var_f{"1"} - C_FRAME{} > 4);
     REQUIRE_NOTHROW(Var_f{"1"} - C_FRAME{} >= 4);
+    REQUIRE_NOTHROW(Var_f{"1"} - C_FRAME{} < 4);
+    REQUIRE_NOTHROW(Var_f{"1"} - C_FRAME{} <= 4);
+
     REQUIRE_NOTHROW(4 < Var_f{"1"} - C_FRAME{});
     REQUIRE_NOTHROW(4 <= Var_f{"1"} - C_FRAME{});
+    REQUIRE_NOTHROW(4 > Var_f{"1"} - C_FRAME{});
+    REQUIRE_NOTHROW(4 >= Var_f{"1"} - C_FRAME{});
+
     REQUIRE_THROWS(FrameBound{Var_f{"1"}, ComparisonOp::EQ, 4});
     REQUIRE_THROWS(FrameBound{Var_f{"1"}, ComparisonOp::NE, 4});
   }
@@ -134,8 +148,14 @@ TEST_CASE("AST nodes are printed correctly", "[ast][fmt]") {
   SECTION("TimeBounds, FrameBounds, and other Comparisons") {
     REQUIRE("(x_1 - C_TIME >= 1.0)" == fmt::to_string(x1 - C_TIME{} >= 1.0));
     REQUIRE("(x_2 - C_TIME > 1.0)" == fmt::to_string(x2 - C_TIME{} > 1.0));
+    REQUIRE("(x_1 - C_TIME <= 1.0)" == fmt::to_string(x1 - C_TIME{} <= 1.0));
+    REQUIRE("(x_2 - C_TIME < 1.0)" == fmt::to_string(x2 - C_TIME{} < 1.0));
+
     REQUIRE("(f_1 - C_FRAME >= 5)" == fmt::to_string(f1 - C_FRAME{} >= 5));
     REQUIRE("(f_2 - C_FRAME > 5)" == fmt::to_string(f2 - C_FRAME{} > 5));
+    REQUIRE("(f_1 - C_FRAME <= 5)" == fmt::to_string(f1 - C_FRAME{} <= 5));
+    REQUIRE("(f_2 - C_FRAME < 5)" == fmt::to_string(f2 - C_FRAME{} < 5));
+
     REQUIRE("(id_1 == id_1)" == fmt::to_string(id1 == id1));
     REQUIRE("(id_1 != id_2)" == fmt::to_string(id1 != id2));
     REQUIRE("(Class(id_1) == Class(id_2))" == fmt::to_string(Class(id1) == Class(id2)));
