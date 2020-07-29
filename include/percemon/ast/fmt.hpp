@@ -178,10 +178,7 @@ struct fmt::formatter<percemon::ast::Pin>
     if (e.f) {
       f = fmt::to_string(*e.f);
     }
-    if (e.phi) {
-      return format_to(ctx.out(), "{{{0}, {1}}} . {2}", x, f, *e.phi);
-    }
-    return format_to(ctx.out(), "{{{0}, {1}}}", x, f);
+    return format_to(ctx.out(), "{{{0}, {1}}} . {2}", x, f, e.phi);
   }
 };
 

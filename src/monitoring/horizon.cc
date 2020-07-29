@@ -13,7 +13,7 @@ namespace utils = percemon::utils;
 
 namespace {
 
-std::optional<size_t> max(std::optional<size_t> x, std::optional<size_t> y) {
+constexpr std::optional<size_t> max(std::optional<size_t> x, std::optional<size_t> y) {
   if (x.has_value() && y.has_value()) {
     return std::make_optional(std::max(*x, *y));
   } else {
@@ -21,7 +21,7 @@ std::optional<size_t> max(std::optional<size_t> x, std::optional<size_t> y) {
   }
 }
 
-std::optional<size_t>
+constexpr std::optional<size_t>
 interval_intersection(std::optional<size_t> x, std::optional<size_t> y) {
   if (x.has_value() && y.has_value()) {
     // NOTE: max is a safe/conservative bet, instead of computing
@@ -39,10 +39,40 @@ interval_intersection(std::optional<size_t> x, std::optional<size_t> y) {
   return {};
 }
 
-std::optional<size_t> interval_union(std::optional<size_t> x, std::optional<size_t> y) {
+constexpr std::optional<size_t>
+interval_union(std::optional<size_t> x, std::optional<size_t> y) {
   // Same as max.
   return max(x, y);
 }
+
+constexpr std::optional<size_t>
+add_horizons(std::optional<size_t> x, std::optional<size_t> y) {
+  // Adds horizon lengths
+  // TODO: verify...
+  if (x.has_value() && y.has_value()) {
+    // if both are bounded, just add them
+    return std::make_optional(*x + *y);
+  } else if (x.has_value()) {
+    // Example of x => y or x & y, should bound the horizon with x
+    return x;
+  } else if (y.has_value()) {
+    // Example of y => x or y & x, should bound the horizon with y
+    return y;
+  }
+  // Both are unbounded.
+  return {};
+}
+
+// TODO: Revisit this to see if this sound.
+// Monitorable formula is, implicitly, G(phi)
+//
+// {x,f} . G( c1 < x - CTIME < c2 => phi )
+// --> Pin(x,f) -> Always -> OR(phi, ~(x-CTIME < c2 & x - CTIME > c1))
+// --> Horizon = c2
+//
+// {x,f} . ( x - CTIME < c3 => phi1 )
+// --> Horizon should be 0
+// --> Outputted horizon should be c2
 
 struct HorizonCompute {
   std::optional<double> fps = {};
@@ -131,7 +161,8 @@ struct HorizonCompute {
           const auto rhrz = this->eval(e);
           return interval_intersection(acc, rhrz);
         });
-    return max(hrz1, hrz2); // TODO: Will it be intersection here? I think yes.
+    // TODO: verify...
+    return add_horizons(hrz1, hrz2);
   }
 
   std::optional<size_t> operator()(const OrPtr& expr) {
@@ -152,7 +183,7 @@ struct HorizonCompute {
           const auto rhrz = this->eval(e);
           return interval_union(acc, rhrz);
         });
-    return max(hrz1, hrz2);
+    return add_horizons(hrz1, hrz2);
   }
 
   std::optional<size_t> operator()(const PreviousPtr& e) {

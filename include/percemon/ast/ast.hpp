@@ -266,7 +266,7 @@ struct Pin {
   std::optional<Var_x> x;
   std::optional<Var_f> f;
 
-  std::optional<Expr> phi = {};
+  Expr phi = {};
 
   Pin(std::optional<Var_x> x_, std::optional<Var_f> f_) : x{x_}, f{f_} {
     if (!x_.has_value() and !f_.has_value()) {
@@ -326,7 +326,7 @@ struct Exists {
   };
 
   Exists& dot(const Expr& e) {
-    if (this->pinned_at && this->pinned_at->phi) {
+    if (this->pinned_at) {
       throw std::invalid_argument(
           "An expression is already being used by the pinned subexpression. Malformed formula construction!");
     }
@@ -356,7 +356,7 @@ struct Forall {
   };
 
   Forall& dot(const Expr& e) {
-    if (this->pinned_at && this->pinned_at->phi) {
+    if (this->pinned_at) {
       throw std::invalid_argument(
           "An expression is already being used by the pinned subexpression. Malformed formula construction!");
     }

@@ -1,8 +1,10 @@
 #include "percemon/ast.hpp"
 #include "percemon/utils.hpp"
 
+#include <algorithm>
 #include <iterator>
 #include <memory>
+#include <numeric>
 
 namespace percemon {
 namespace ast {
@@ -140,50 +142,54 @@ namespace {
 using percemon::utils::overloaded;
 
 Expr AndHelper(const AndPtr& lhs, const Expr& rhs) {
-  std::vector<Expr> args{lhs->args};
-  // TODO(anand): Bounds need to be Minkowski summed
+  if (const Const* c_ptr = std::get_if<Const>(&rhs)) {
+    return (c_ptr->value) ? Expr{lhs}
+                          : Expr{*c_ptr}; // If True, return lhs, else return False
+  }
 
-  std::visit(
-      overloaded{[&](const auto) { args.push_back(rhs); },
-                 [&args](const Const& e) {
-                   if (!e.value) {
-                     args = {Expr{e}};
-                   }
-                 },
-                 [&args](const AndPtr e) {
-                   args.reserve(
-                       args.size() + std::distance(e->args.begin(), e->args.end()));
-                   args.insert(args.end(), e->args.begin(), e->args.end());
-                 }},
-      rhs);
+  auto args = lhs->args;
+  for (auto& e : lhs->temporal_bound_args) {
+    args.push_back(std::visit([](auto&& c) { return Expr{c}; }, e));
+  }
+
+  if (const AndPtr* e_ptr = std::get_if<AndPtr>(&rhs)) {
+    args.insert(args.end(), std::begin((*e_ptr)->args), std::end((*e_ptr)->args));
+    for (auto& e : (*e_ptr)->temporal_bound_args) {
+      args.push_back(std::visit([](auto&& c) { return Expr{c}; }, e));
+    }
+  } else {
+    args.insert(args.end(), rhs);
+  }
   return std::make_shared<And>(args);
 }
 
 Expr OrHelper(const OrPtr& lhs, const Expr& rhs) {
-  std::vector<Expr> args{lhs->args};
-  // TODO(anand): Bounds need to be Minkowski summed
+  if (const Const* c_ptr = std::get_if<Const>(&rhs)) {
+    return (!c_ptr->value) ? Expr{lhs}
+                           : Expr{*c_ptr}; // If False, return lhs, else return True
+  }
 
-  std::visit(
-      overloaded{[&](const auto) { args.push_back(rhs); },
-                 [&args](const Const e) {
-                   if (e.value) {
-                     args = {Expr{e}};
-                   }
-                 },
-                 [&args](const OrPtr e) {
-                   args.reserve(
-                       args.size() + std::distance(e->args.begin(), e->args.end()));
-                   args.insert(args.end(), e->args.begin(), e->args.end());
-                 }},
-      rhs);
+  std::vector<Expr> args{lhs->args};
+  for (auto& e : lhs->temporal_bound_args) {
+    args.push_back(std::visit([](auto&& c) { return Expr{c}; }, e));
+  }
+
+  if (const OrPtr* e_ptr = std::get_if<OrPtr>(&rhs)) {
+    args.insert(args.end(), std::begin((*e_ptr)->args), std::end((*e_ptr)->args));
+    for (auto& e : (*e_ptr)->temporal_bound_args) {
+      args.push_back(std::visit([](auto&& c) { return Expr{c}; }, e));
+    }
+  } else {
+    args.insert(args.end(), rhs);
+  }
   return std::make_shared<Or>(args);
 }
 
 } // namespace
 
 Expr operator&(const Expr& lhs, const Expr& rhs) {
-  if (const auto e_ptr = std::get_if<Const>(&lhs)) {
-    return (e_ptr->value) ? rhs : *e_ptr;
+  if (const Const* c_ptr = std::get_if<Const>(&lhs)) {
+    return (c_ptr->value) ? rhs : *c_ptr;
   } else if (const AndPtr* e_ptr = std::get_if<AndPtr>(&lhs)) {
     return AndHelper(*e_ptr, rhs);
   }

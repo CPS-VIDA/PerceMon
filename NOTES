@@ -1,0 +1,10 @@
+{x,f} . G( c1 < x - CTIME < c2 => phi )
+
+--> Pin(x,f) -> Always -> OR(phi, ~(x-CTIME < c2 & x - CTIME > c1))
+
+phi = {x,f} . ( x - CTIME < c3 => phi1 )
+
+G(phi)
+
+
+get_horizon --> hrz' >= actual hrz

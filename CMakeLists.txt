@@ -42,6 +42,17 @@ if((PERCEMON_MASTER_PROJECT OR PERCEMON_TEST) AND BUILD_TESTING)
       CACHE INTERNAL "Easy option to build the tests")
 endif()
 
+if(PERCEMON_MASTER_PROJECT)
+  # Force color in compiler output as it will be easier to debug...
+  if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    # using Clang
+    add_compile_options(-fcolor-diagnostics)
+  elseif(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    # using GCC
+    add_compile_options(-fdiagnostics-color=always)
+  endif()
+endif()
+
 if(PERCEMON_COVERAGE)
   set(ENABLE_COVERAGE
       ON
