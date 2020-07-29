@@ -356,9 +356,9 @@ std::vector<double> RobustnessOp::operator()(const ast::AlwaysPtr e) {
   auto rho = this->eval(e->arg);
   // DP-style min, start from the front
   double running_min = TOP;
-  for (auto i = std::begin(rho); i != std::end(rho); i++) {
-    running_min = std::min(*i, running_min);
-    *i          = running_min;
+  for (auto&& i : rho) {
+    running_min = std::min(i, running_min);
+    i           = running_min;
   }
   return rho;
 }
@@ -369,9 +369,9 @@ std::vector<double> RobustnessOp::operator()(const ast::SometimesPtr e) {
   auto rho = this->eval(e->arg);
   // DP-style max, start from the front
   double running_max = BOTTOM;
-  for (auto i = std::begin(rho); i != std::end(rho); i++) {
-    running_max = std::max(*i, running_max);
-    *i          = running_max;
+  for (auto&& i : rho) {
+    running_max = std::max(i, running_max);
+    i           = running_max;
   }
   return rho;
 }
@@ -389,11 +389,9 @@ std::vector<double> RobustnessOp::operator()(const ast::SincePtr e) {
   double prev      = TOP;
   double max_right = BOTTOM;
 
-  for (auto [i, j] = std::make_tuple(x.begin(), y.begin());
-       i != x.end() && j != y.end();
-       i++, j++) {
-    max_right = std::max(max_right, *j);
-    prev      = std::max({*j, std::min(*i, prev), -max_right});
+  for (auto&& [i, j] : iter::zip(x, y)) {
+    max_right = std::max(max_right, j);
+    prev      = std::max({j, std::min(i, prev), -max_right});
     rob.push_back(prev);
   }
 
