@@ -8,6 +8,7 @@
 #include <map>
 #include <numeric>
 
+#include "percemon/utils.hpp"
 #include <itertools.hpp>
 
 using namespace percemon;
@@ -249,20 +250,110 @@ std::vector<double> RobustnessOp::operator()(const ast::CompareClass e) {
   return ret;
 }
 
-std::vector<double> RobustnessOp::operator()(const ast::ExistsPtr) {
+std::vector<double> RobustnessOp::operator()(const ast::ExistsPtr e) {
   // This is hard...
-  // Need to iterate over all k-sized, repeated permutations of IDs in the Frame,
-  // where
-  // k = number of IDs in the Exists quantifier.
-  // Moreover, I need to assign the Var_id to each permutation in the map.
-  // This cannot be parallelized yet as the current class holds the context for
-  // sub-formulas. Look into Task Graph for parallelization.
+  // Need to iterate over all k-sized, repeated permutations of IDs in the Frame, where
+  // k = number of IDs in the Exists quantifier.  Moreover, I need to assign the Var_id
+  // to each permutation in the map.  This cannot be parallelized yet as the current
+  // class holds the context for sub-formulas. Look into Task Graph for parallelization.
 
-  return {};
+  // Overview:
+  //
+  // For each permutation of id values:
+  //    Update the obj_var map
+  //    Compute robustness vector for sub-formula.
+  //    Maintain a running element-wise max
+
+  // Get the list of variable names
+  const auto& ids = e->ids;
+  // Check if they are already in the map. This will imply that someone is using the
+  // same variable name again. This is an error.
+  for (auto&& id : ids) {
+    if (this->obj_map.find(fmt::to_string(id)) != std::end(this->obj_map)) {
+      throw std::invalid_argument(fmt::format(
+          "{} seems to be created multiple times in the formula. This is not valid.",
+          id));
+    }
+  }
+
+  const size_t n = std::size(trace);
+  const size_t k = std::size(ids); // Number of Var_id declared in this scope.
+
+  auto rob         = std::vector<double>{};
+  auto running_max = std::vector<double>(n, BOTTOM);
+
+  const auto& cur_frame = this->trace.back(); // Reference to the current frame.
+  for (const auto permutation : utils::product(
+           cur_frame.objects,
+           k)) { // For every k-sized permutation (with repetition) of objects in frame
+    // Populate the obj_map
+    for (auto&& [i, entry] : iter::enumerate(permutation)) {
+      this->obj_map[fmt::to_string(ids.at(i))] = entry.first;
+    }
+    // Compute robustness of subformula.
+    auto sub_rob =
+        (e->pinned_at.has_value())
+            ? this->eval(ast::Expr{std::make_shared<ast::Pin>(*(e->pinned_at))})
+            : this->eval(*(e->phi));
+    // Do elementwise max with running_max
+    std::transform(
+        std::begin(running_max),
+        std::end(running_max),
+        std::begin(sub_rob),
+        std::begin(running_max),
+        [](const double a, const double b) { return std::max(a, b); });
+  }
+
+  // Remove the Var_id in obj_map as they are out of scope.
+  for (auto&& id : ids) { obj_map.erase(fmt::to_string(id)); }
+  return rob;
 }
 
-std::vector<double> RobustnessOp::operator()(const ast::ForallPtr) {
-  return {};
+std::vector<double> RobustnessOp::operator()(const ast::ForallPtr e) {
+  // See notes in Exists, and replace any reference to "max" with "min".
+  // Get the list of variable names
+  const auto& ids = e->ids;
+  // Check if they are already in the map. This will imply that someone is using the
+  // same variable name again. This is an error.
+  for (auto&& id : ids) {
+    if (this->obj_map.find(fmt::to_string(id)) != std::end(this->obj_map)) {
+      throw std::invalid_argument(fmt::format(
+          "{} seems to be created multiple times in the formula. This is not valid.",
+          id));
+    }
+  }
+
+  const size_t n = std::size(trace);
+  const size_t k = std::size(ids); // Number of Var_id declared in this scope.
+
+  auto rob         = std::vector<double>{};
+  auto running_min = std::vector<double>(n, TOP);
+
+  const auto& cur_frame = this->trace.back(); // Reference to the current frame.
+  for (const auto permutation : utils::product(
+           cur_frame.objects,
+           k)) { // For every k-sized permutation (with repetition) of objects in frame
+    // Populate the obj_map
+    for (auto&& [i, entry] : iter::enumerate(permutation)) {
+      this->obj_map[fmt::to_string(ids.at(i))] = entry.first;
+    }
+    // Compute robustness of subformula.
+    auto sub_rob =
+        (e->pinned_at.has_value())
+            ? this->eval(ast::Expr{std::make_shared<ast::Pin>(*(e->pinned_at))})
+            : this->eval(*(e->phi));
+    // Do elementwise min with running_min
+    std::transform(
+        std::begin(running_min),
+        std::end(running_min),
+        std::begin(sub_rob),
+        std::begin(running_min),
+        [](const double a, const double b) { return std::min(a, b); });
+  }
+
+  // Remove the Var_id in obj_map as they are out of scope.
+  for (auto&& id : ids) { obj_map.erase(fmt::to_string(id)); }
+  return rob;
 };
 
 std::vector<double> RobustnessOp::operator()(const ast::PinPtr e) {

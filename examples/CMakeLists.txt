@@ -1,0 +1,2 @@
+add_executable(test_permutations test_permutations.cc)
+target_link_libraries(test_permutations PRIVATE PerceMon::PerceMon)

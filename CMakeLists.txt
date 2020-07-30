@@ -94,6 +94,10 @@ if(_PERCEMON_BUILD_THE_TESTS)
   add_subdirectory(tests)
 endif()
 
+if(PERCEMON_EXAMPLES)
+  add_subdirectory(examples)
+endif()
+
 if(PERCEMON_COVERAGE)
   coverage_evaluate()
 endif()
