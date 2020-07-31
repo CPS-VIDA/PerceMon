@@ -1,19 +1,19 @@
-#include "percemon/monitoring.hpp"
-
-#include "percemon/fmt.hpp"
-
 #include "percemon/exception.hh"
+#include "percemon/fmt.hpp"
+#include "percemon/iter.hpp"
+#include "percemon/monitoring.hpp"
+#include "percemon/utils.hpp"
 
 #include <algorithm>
+#include <deque>
+#include <itertools.hpp>
 #include <map>
 #include <numeric>
 
-#include "percemon/utils.hpp"
-#include <itertools.hpp>
-
 using namespace percemon;
 using namespace percemon::monitoring;
-namespace ds = percemon::datastream;
+namespace ds     = percemon::datastream;
+namespace utiter = percemon::iter_helpers;
 
 namespace {
 
@@ -283,7 +283,7 @@ std::vector<double> RobustnessOp::operator()(const ast::ExistsPtr e) {
   auto running_max = std::vector<double>(n, BOTTOM);
 
   const auto& cur_frame = this->trace.back(); // Reference to the current frame.
-  for (const auto permutation : utils::product(
+  for (const auto permutation : utiter::product(
            cur_frame.objects,
            k)) { // For every k-sized permutation (with repetition) of objects in frame
     // Populate the obj_map
@@ -330,7 +330,7 @@ std::vector<double> RobustnessOp::operator()(const ast::ForallPtr e) {
   auto running_min = std::vector<double>(n, TOP);
 
   const auto& cur_frame = this->trace.back(); // Reference to the current frame.
-  for (const auto permutation : utils::product(
+  for (const auto permutation : utiter::product(
            cur_frame.objects,
            k)) { // For every k-sized permutation (with repetition) of objects in frame
     // Populate the obj_map
@@ -354,7 +354,7 @@ std::vector<double> RobustnessOp::operator()(const ast::ForallPtr e) {
   // Remove the Var_id in obj_map as they are out of scope.
   for (auto&& id : ids) { obj_map.erase(fmt::to_string(id)); }
   return rob;
-};
+}
 
 std::vector<double> RobustnessOp::operator()(const ast::PinPtr e) {
   // Just update the Var_x and/or Var_f.

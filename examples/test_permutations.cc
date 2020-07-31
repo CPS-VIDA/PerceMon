@@ -1,4 +1,4 @@
-#include "percemon/utils.hpp"
+#include "percemon/iter.hpp"
 
 #include <fmt/format.h>
 #include <fmt/ranges.h>
@@ -8,7 +8,7 @@
 #include <typeinfo>
 #include <vector>
 
-namespace utils = percemon::utils;
+namespace utiter = percemon::iter_helpers;
 
 int main() {
   std::map<std::string, int> m = {{"a", 2}, {"b", 4}, {"c", 10}};
@@ -18,7 +18,7 @@ int main() {
   std::vector<std::string> ids = {"Var_1", "Var_2"};
   std::map<std::string, std::string> var_map;
 
-  for (auto p : utils::product(m, std::size(ids))) {
+  for (auto p : utiter::product(m, std::size(ids))) {
     for (auto&& [i, kv] : iter::enumerate(p)) { var_map[ids.at(i)] = kv.first; }
     fmt::print("-- var_map = {}\n", var_map);
   }

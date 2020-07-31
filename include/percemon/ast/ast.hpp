@@ -326,11 +326,11 @@ struct Exists {
   };
 
   Exists& dot(const Expr& e) {
-    if (this->pinned_at) {
-      throw std::invalid_argument(
-          "An expression is already being used by the pinned subexpression. Malformed formula construction!");
+    if (auto& pin = this->pinned_at) {
+      pin->dot(e);
+    } else {
+      this->phi = e;
     }
-    this->phi = e;
     return *this;
   };
 };
@@ -356,11 +356,11 @@ struct Forall {
   };
 
   Forall& dot(const Expr& e) {
-    if (this->pinned_at) {
-      throw std::invalid_argument(
-          "An expression is already being used by the pinned subexpression. Malformed formula construction!");
+    if (auto& pin = this->pinned_at) {
+      pin->dot(e);
+    } else {
+      this->phi = e;
     }
-    this->phi = e;
     return *this;
   };
 };

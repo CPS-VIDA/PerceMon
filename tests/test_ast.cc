@@ -21,7 +21,6 @@ TEST_CASE("AST nodes throw exceptions when constructed badly", "[ast][except]") 
 
     REQUIRE_THROWS(TimeBound{Var_x{"1"}, ComparisonOp::EQ, 1.0});
     REQUIRE_THROWS(TimeBound{Var_x{"1"}, ComparisonOp::NE, 1.0});
-    REQUIRE_THROWS(Var_x{"1"} - C_TIME{} > -1.0);
   }
 
   SECTION("FrameBounds are constructed with proper relational operators") {
@@ -111,13 +110,6 @@ TEST_CASE("AST nodes throw exceptions when constructed badly", "[ast][except]") 
 
     REQUIRE_THROWS_AS(Pin({}, {}), std::invalid_argument);
   }
-
-  SECTION("Cannot have an expression attached to the Pin and the Quantifier too") {
-    auto phi = Var_x{"1"} - C_TIME{} >= 1.0;
-    auto pin = Pin{Var_x{"1"}}.dot(phi);
-    REQUIRE_NOTHROW(Exists{{"1"}}.at({Var_x{"1"}}).dot(phi));
-    REQUIRE_THROWS_AS(Forall{{"1"}}.at(pin).dot(phi), std::invalid_argument);
-  }
 }
 
 TEST_CASE("AST nodes are printed correctly", "[ast][fmt]") {
@@ -172,9 +164,9 @@ TEST_CASE("AST nodes are printed correctly", "[ast][fmt]") {
   }
 
   SECTION("Pinned variables") {
-    REQUIRE("{x_1, f_1}" == fmt::to_string(Pin{Var_x{"1"}, Var_f{"1"}}));
-    REQUIRE("{_, f_1}" == fmt::to_string(Pin{Var_f{"1"}}));
-    REQUIRE("{x_1, _}" == fmt::to_string(Pin{Var_x{"1"}}));
+    REQUIRE("{x_1, f_1} . false" == fmt::to_string(Pin{Var_x{"1"}, Var_f{"1"}}));
+    REQUIRE("{_, f_1} . false" == fmt::to_string(Pin{Var_f{"1"}}));
+    REQUIRE("{x_1, _} . false" == fmt::to_string(Pin{Var_x{"1"}}));
     REQUIRE(
         "{x_1, _} . (x_1 - C_TIME > 10.0)" ==
         fmt::to_string(Pin{Var_x{"1"}}.dot(x1 - C_TIME{} > 10.0)));
@@ -182,7 +174,7 @@ TEST_CASE("AST nodes are printed correctly", "[ast][fmt]") {
 
   SECTION("Quantifiers over objects pinned at frames") {
     REQUIRE(
-        "EXISTS {id_1, id_2} @ {x_1, f_1}" ==
+        "EXISTS {id_1, id_2} @ {x_1, f_1} . false" ==
         fmt::to_string(Exists{{"1"}, {"2"}}.at(Pin{Var_x{"1"}, Var_f{"1"}})));
   }
 
