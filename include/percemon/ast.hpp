@@ -17,55 +17,21 @@ using ast::Expr;
 
 using ast::Pin;
 
-ast::PinPtr Pinned(Var_x x, Var_f f) {
-  return std::make_shared<Pin>(x, f);
-}
-ast::PinPtr Pinned(Var_x x) {
-  return std::make_shared<Pin>(x);
-}
-ast::PinPtr Pinned(Var_f f) {
-  return std::make_shared<Pin>(f);
-}
+ast::PinPtr Pinned(Var_x x, Var_f f);
+ast::PinPtr Pinned(Var_x x);
+ast::PinPtr Pinned(Var_f f);
 
-ast::ExistsPtr Exists(std::initializer_list<Var_id> id_list) {
-  return std::make_shared<ast::Exists>(id_list);
-}
+ast::ExistsPtr Exists(std::initializer_list<Var_id> id_list);
+ast::ForallPtr Forall(std::initializer_list<Var_id> id_list);
 
-ast::ForallPtr Forall(std::initializer_list<Var_id> id_list) {
-  return std::make_shared<ast::Forall>(id_list);
-}
-
-ast::NotPtr Not(const Expr& arg) {
-  return std::make_shared<ast::Not>(arg);
-}
-
-ast::AndPtr And(const std::vector<Expr>& args) {
-  return std::make_shared<ast::And>(args);
-}
-
-ast::OrPtr Or(const std::vector<Expr>& args) {
-  return std::make_shared<ast::Or>(args);
-}
-
-ast::PreviousPtr Previous(const Expr& arg) {
-  return std::make_shared<ast::Previous>(arg);
-}
-
-ast::AlwaysPtr Always(const Expr& arg) {
-  return std::make_shared<ast::Always>(arg);
-}
-
-ast::SometimesPtr Sometimes(const Expr& arg) {
-  return std::make_shared<ast::Sometimes>(arg);
-}
-
-ast::SincePtr Since(const Expr& a, const Expr& b) {
-  return std::make_shared<ast::Since>(a, b);
-}
-
-ast::BackToPtr BackTo(const Expr& a, const Expr& b) {
-  return std::make_shared<ast::BackTo>(a, b);
-}
+ast::NotPtr Not(const Expr& arg);
+ast::AndPtr And(const std::vector<Expr>& args);
+ast::OrPtr Or(const std::vector<Expr>& args);
+ast::PreviousPtr Previous(const Expr& arg);
+ast::AlwaysPtr Always(const Expr& arg);
+ast::SometimesPtr Sometimes(const Expr& arg);
+ast::SincePtr Since(const Expr& a, const Expr& b);
+ast::BackToPtr BackTo(const Expr& a, const Expr& b);
 
 } // namespace percemon
 

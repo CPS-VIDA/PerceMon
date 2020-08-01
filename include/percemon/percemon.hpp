@@ -1,3 +1,5 @@
+#pragma once
+
 #ifndef __PERCEMON_PERCEMON_HPP__
 #define __PERCEMON_PERCEMON_HPP__
 
