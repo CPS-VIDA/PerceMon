@@ -80,11 +80,12 @@ struct Exists {
   ExistsPtr dot(const Expr& e) {
     auto ret = std::make_shared<Exists>(ids);
     if (auto& pin = this->pinned_at) {
-      return (ret->at(*pin))->dot(e);
+      ret->pinned_at      = pin;
+      ret->pinned_at->phi = e;
     } else {
       ret->phi = e;
-      return ret;
     }
+    return ret;
   };
 };
 
@@ -113,11 +114,12 @@ struct Forall {
   ForallPtr dot(const Expr& e) {
     auto ret = std::make_shared<Forall>(ids);
     if (auto& pin = this->pinned_at) {
-      return (ret->at(*pin))->dot(e);
+      ret->pinned_at      = pin;
+      ret->pinned_at->phi = e;
     } else {
       ret->phi = e;
-      return ret;
     }
+    return ret;
   };
 };
 
@@ -133,8 +135,8 @@ struct And {
   std::vector<TemporalBoundExpr> temporal_bound_args;
 
   And() = delete;
-  And(const std::vector<Expr>& args_) : args{args_} {
-    if (args.size() < 2) {
+  And(const std::vector<Expr>& args_) {
+    if (args_.size() < 2) {
       throw std::invalid_argument(
           "It doesn't make sense to have an And operator with < 2 operands");
     }

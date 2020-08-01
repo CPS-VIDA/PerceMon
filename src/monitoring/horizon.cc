@@ -22,6 +22,24 @@ constexpr std::optional<size_t> max(std::optional<size_t> x, std::optional<size_
 }
 
 constexpr std::optional<size_t>
+add_horizons(std::optional<size_t> x, std::optional<size_t> y) {
+  // Adds horizon lengths
+  // TODO: verify...
+  if (x.has_value() && y.has_value()) {
+    // if both are bounded, just add them
+    return std::make_optional(*x + *y);
+  } else if (x.has_value()) {
+    // Example of x => y or x & y, should bound the horizon with x
+    return x;
+  } else if (y.has_value()) {
+    // Example of y => x or y & x, should bound the horizon with y
+    return y;
+  }
+  // Both are unbounded.
+  return {};
+}
+
+constexpr std::optional<size_t>
 interval_intersection(std::optional<size_t> x, std::optional<size_t> y) {
   if (x.has_value() && y.has_value()) {
     // NOTE: max is a safe/conservative bet, instead of computing
@@ -43,24 +61,6 @@ constexpr std::optional<size_t>
 interval_union(std::optional<size_t> x, std::optional<size_t> y) {
   // Same as max.
   return max(x, y);
-}
-
-constexpr std::optional<size_t>
-add_horizons(std::optional<size_t> x, std::optional<size_t> y) {
-  // Adds horizon lengths
-  // TODO: verify...
-  if (x.has_value() && y.has_value()) {
-    // if both are bounded, just add them
-    return std::make_optional(*x + *y);
-  } else if (x.has_value()) {
-    // Example of x => y or x & y, should bound the horizon with x
-    return x;
-  } else if (y.has_value()) {
-    // Example of y => x or y & x, should bound the horizon with y
-    return y;
-  }
-  // Both are unbounded.
-  return {};
 }
 
 // TODO: Revisit this to see if this sound.
@@ -130,59 +130,57 @@ struct HorizonCompute {
   std::optional<size_t> operator()(const CompareClass&) {
     return 0;
   }
-  std::optional<size_t> operator()(const ExistsPtr&) {
-    return 0;
+  std::optional<size_t> operator()(const ExistsPtr& expr) {
+    if (auto& pin = expr->pinned_at) {
+      return this->eval(pin->phi);
+    } else {
+      return this->eval(*(expr->phi));
+    }
   }
-  std::optional<size_t> operator()(const ForallPtr&) {
-    return 0;
+  std::optional<size_t> operator()(const ForallPtr& expr) {
+    if (auto& pin = expr->pinned_at) {
+      return this->eval(pin->phi);
+    } else {
+      return this->eval(*(expr->phi));
+    }
   }
-  std::optional<size_t> operator()(const PinPtr&) {
-    return 0;
+  std::optional<size_t> operator()(const PinPtr& expr) {
+    return this->eval(expr->phi);
   }
   std::optional<size_t> operator()(const NotPtr& e) {
     return this->eval(e->arg);
   }
   std::optional<size_t> operator()(const AndPtr& expr) {
-    auto hrz1 = std::accumulate(
-        std::begin(expr->args),
-        std::end(expr->args),
-        std::make_optional(0),
-        [&](const std::optional<size_t> acc, const Expr e) -> std::optional<size_t> {
-          const auto rhrz = this->eval(e);
-          return max(acc, rhrz);
-        });
+    auto hrz1 = std::optional<size_t>{};
+    for (const auto& e : expr->args) {
+      const auto rhrz = this->eval(e);
+      hrz1            = max(hrz1, rhrz);
+    }
+
     // Does an intersection of the intervals from each temporal bound
-    auto hrz2 = std::accumulate(
-        std::begin(expr->temporal_bound_args),
-        std::end(expr->temporal_bound_args),
-        std::make_optional(0),
-        [&](const std::optional<size_t> acc,
-            const TemporalBoundExpr e) -> std::optional<size_t> {
-          const auto rhrz = this->eval(e);
-          return interval_intersection(acc, rhrz);
-        });
+    auto hrz2 = std::optional<size_t>{};
+    for (const auto& e : expr->temporal_bound_args) {
+      const auto rhrz = this->eval(e);
+      hrz2            = interval_intersection(hrz2, rhrz);
+    }
+
     // TODO: verify...
     return add_horizons(hrz1, hrz2);
   }
 
   std::optional<size_t> operator()(const OrPtr& expr) {
-    auto hrz1 = std::accumulate(
-        std::begin(expr->args),
-        std::end(expr->args),
-        std::make_optional(0),
-        [&](const std::optional<size_t> acc, const Expr e) -> std::optional<size_t> {
-          const auto rhrz = this->eval(e);
-          return max(acc, rhrz);
-        });
-    auto hrz2 = std::accumulate(
-        std::begin(expr->temporal_bound_args),
-        std::end(expr->temporal_bound_args),
-        std::make_optional(0),
-        [&](const std::optional<size_t> acc,
-            const TemporalBoundExpr e) -> std::optional<size_t> {
-          const auto rhrz = this->eval(e);
-          return interval_union(acc, rhrz);
-        });
+    auto hrz1 = std::optional<size_t>{};
+    for (const auto& e : expr->args) {
+      const auto rhrz = this->eval(e);
+      hrz1            = add_horizons(hrz1, rhrz);
+    }
+
+    auto hrz2 = std::optional<size_t>{};
+    for (const auto& e : expr->temporal_bound_args) {
+      const auto rhrz = this->eval(e);
+      hrz2            = interval_union(hrz2, rhrz);
+    }
+
     return add_horizons(hrz1, hrz2);
   }
 
@@ -214,22 +212,12 @@ struct HorizonCompute {
 };
 } // namespace
 
-size_t percemon::monitoring::get_horizon(const Expr& expr) {
+std::optional<size_t> percemon::monitoring::get_horizon(const Expr& expr) {
   auto hrz_op = HorizonCompute{};
-  if (auto opt_hrz = hrz_op.eval(expr)) {
-    return *opt_hrz;
-  } else {
-    throw std::invalid_argument(
-        "Given STQL expression doesn't have a bounded horizon. Cannot perform online monitoring for this formula.");
-  }
+  return hrz_op.eval(expr);
 }
 
-size_t percemon::monitoring::get_horizon(const Expr& expr, double fps) {
+std::optional<size_t> percemon::monitoring::get_horizon(const Expr& expr, double fps) {
   auto hrz_op = HorizonCompute{fps};
-  if (auto opt_hrz = hrz_op.eval(expr)) {
-    return *opt_hrz;
-  } else {
-    throw std::invalid_argument(
-        "Given STQL expression doesn't have a bounded horizon. Cannot perform online monitoring for this formula.");
-  }
+  return hrz_op.eval(expr);
 }

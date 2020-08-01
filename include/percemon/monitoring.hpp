@@ -14,6 +14,8 @@
 // TODO: Consider performance/space efficiency of deque vs vector.
 #include <deque>
 
+#include <optional>
+
 namespace percemon {
 namespace monitoring {
 
@@ -29,19 +31,28 @@ namespace monitoring {
  * Get the horizon for a formula in number of frames.  This function will throw an
  * exception if there are TimeBound constraints in the formula.
  */
-size_t get_horizon(const percemon::ast::Expr& expr);
+std::optional<size_t> get_horizon(const percemon::ast::Expr& expr);
 
 /**
  * Get the horizon for a formula in number of frames. This uses the frames per second of
  * the stream to convert TimeBound constraints to FrameBound constraints.
  */
-size_t get_horizon(const percemon::ast::Expr& expr, double fps);
+std::optional<size_t> get_horizon(const percemon::ast::Expr& expr, double fps);
 
 /**
  * Object representing the online monitor.
  */
 struct OnlineMonitor {
  public:
+  /**
+   * The formula being monitored
+   */
+  const ast::Expr phi;
+  /**
+   * Frames per second for the datastream
+   */
+  const double fps;
+
   OnlineMonitor() = delete;
   OnlineMonitor(const ast::Expr& phi_, const double fps_);
 
@@ -56,12 +67,12 @@ struct OnlineMonitor {
    */
   double eval() const;
 
+  size_t getHorizon() const {
+    return max_horizon;
+  }
+
  private:
   // Primary data
-  /**
-   * The formula being monitored
-   */
-  const ast::Expr phi;
 
   /**
    * A buffer containing the history of Frames required to compute robustness of phi
@@ -69,11 +80,6 @@ struct OnlineMonitor {
    */
   std::deque<datastream::Frame> buffer;
 
-  // Extra data used for book-keeping.
-  /**
-   * Frames per second for the datastream
-   */
-  double fps;
   /**
    * Maximum width of buffer.
    */

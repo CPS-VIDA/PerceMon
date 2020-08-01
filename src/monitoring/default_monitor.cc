@@ -96,7 +96,13 @@ struct RobustnessOp {
 OnlineMonitor::OnlineMonitor(const ast::Expr& phi_, const double fps_) :
     phi{phi_}, fps{fps_} {
   // Set up the horizon. This will throw if phi is unbounded.
-  this->max_horizon = get_horizon(phi, fps);
+  if (auto opt_hrz = get_horizon(phi, fps)) {
+    this->max_horizon = (*opt_hrz == 0) ? 1 : *opt_hrz;
+  } else {
+    throw std::invalid_argument(fmt::format(
+        "Given STQL expression doesn't have a bounded horizon. Cannot perform online monitoring for this formula.\n\tphi := {}",
+        phi));
+  }
 }
 
 void OnlineMonitor::add_frame(const datastream::Frame& frame) {
@@ -129,124 +135,142 @@ std::vector<double> RobustnessOp::operator()(const ast::Const e) {
 std::vector<double> RobustnessOp::operator()(const ast::TimeBound e) {
   auto ret = std::vector<double>{};
   ret.reserve(this->trace.size());
-  // TODO: Parallelize
-  std::transform( // Iterate the trace in reverse order.
-      std::rbegin(this->trace),
-      std::rend(this->trace),
-      std::back_inserter(ret),
-      [&](const ds::Frame& f) {
-        // TODO: Check if evaluating against timestamp is correct.
-        // TODO: Timestamp should be elapsed time from beginning of monitoring.
-        switch (e.op) {
-          case ast::ComparisonOp::LT:
-            return bool_to_robustness(
-                this->var_map.at(fmt::to_string(e.x)) - f.timestamp < e.bound);
-          case ast::ComparisonOp::LE:
-            return bool_to_robustness(
-                this->var_map.at(fmt::to_string(e.x)) - f.timestamp <= e.bound);
-          case ast::ComparisonOp::GT:
-            return bool_to_robustness(
-                this->var_map.at(fmt::to_string(e.x)) - f.timestamp > e.bound);
-          case ast::ComparisonOp::GE:
-            return bool_to_robustness(
-                this->var_map.at(fmt::to_string(e.x)) - f.timestamp >= e.bound);
-          default: throw std::logic_error("unreachable as EQ and NE are not possible");
-        }
-      });
-  // And reverse the vector to preserve order
-  std::reverse(std::begin(ret), std::end(ret));
+  for (const ds::Frame& f : this->trace) {
+    // TODO: Check if evaluating against timestamp is correct.
+    // TODO: Timestamp should be elapsed time from beginning of monitoring.
+    switch (e.op) {
+      case ast::ComparisonOp::LT:
+        ret.push_back(bool_to_robustness(
+            this->var_map.at(fmt::to_string(e.x)) - f.timestamp < e.bound));
+        break;
+      case ast::ComparisonOp::LE:
+        ret.push_back(bool_to_robustness(
+            this->var_map.at(fmt::to_string(e.x)) - f.timestamp <= e.bound));
+        break;
+      case ast::ComparisonOp::GT:
+        ret.push_back(bool_to_robustness(
+            this->var_map.at(fmt::to_string(e.x)) - f.timestamp > e.bound));
+        break;
+      case ast::ComparisonOp::GE:
+        ret.push_back(bool_to_robustness(
+            this->var_map.at(fmt::to_string(e.x)) - f.timestamp >= e.bound));
+        break;
+      default: throw std::logic_error("unreachable as EQ and NE are not possible");
+    }
+  }
   return ret;
 }
 
 std::vector<double> RobustnessOp::operator()(const ast::FrameBound e) {
   auto ret = std::vector<double>{};
   ret.reserve(this->trace.size());
-  // TODO: Parallelize
-  std::transform( // Iterate the trace in reverse order.
-      std::rbegin(this->trace),
-      std::rend(this->trace),
-      std::back_inserter(ret),
-      [&](const ds::Frame& f) {
-        // TODO: Check if evaluating against frame_num is correct.
-        switch (e.op) {
-          case ast::ComparisonOp::LT:
-            return bool_to_robustness(
-                this->var_map.at(fmt::to_string(e.f)) - f.frame_num < e.bound);
-          case ast::ComparisonOp::LE:
-            return bool_to_robustness(
-                this->var_map.at(fmt::to_string(e.f)) - f.frame_num <= e.bound);
-          case ast::ComparisonOp::GT:
-            return bool_to_robustness(
-                this->var_map.at(fmt::to_string(e.f)) - f.frame_num > e.bound);
-          case ast::ComparisonOp::GE:
-            return bool_to_robustness(
-                this->var_map.at(fmt::to_string(e.f)) - f.frame_num >= e.bound);
-          default: throw std::logic_error("unreachable as EQ and NE are not possible");
-        }
-      });
-  // And reverse the vector to preserve order
-  std::reverse(std::begin(ret), std::end(ret));
+
+  for (const ds::Frame& f : this->trace) {
+    // TODO: Check if evaluating against frame_num is correct.
+    switch (e.op) {
+      case ast::ComparisonOp::LT:
+        ret.push_back(bool_to_robustness(
+            this->var_map.at(fmt::to_string(e.f)) - f.frame_num < e.bound));
+        break;
+      case ast::ComparisonOp::LE:
+        ret.push_back(bool_to_robustness(
+            this->var_map.at(fmt::to_string(e.f)) - f.frame_num <= e.bound));
+        break;
+      case ast::ComparisonOp::GT:
+        ret.push_back(bool_to_robustness(
+            this->var_map.at(fmt::to_string(e.f)) - f.frame_num > e.bound));
+        break;
+      case ast::ComparisonOp::GE:
+        ret.push_back(bool_to_robustness(
+            this->var_map.at(fmt::to_string(e.f)) - f.frame_num >= e.bound));
+        break;
+      default: throw std::logic_error("unreachable as EQ and NE are not possible");
+    }
+  }
   return ret;
 }
 
 std::vector<double> RobustnessOp::operator()(const ast::CompareId e) {
   auto ret = std::vector<double>{};
   ret.reserve(this->trace.size());
-  // TODO: Parallelize
-  std::transform( // Iterate the trace in reverse order.
-      std::rbegin(this->trace),
-      std::rend(this->trace),
-      std::back_inserter(ret),
-      [&](const ds::Frame&) {
-        // Get the object ID associated with each ID ins CompareId.
-        const auto obj_id1 = this->obj_map.at(fmt::to_string(e.lhs));
-        const auto obj_id2 = this->obj_map.at(fmt::to_string(e.rhs));
-        // TODO: Ask Mohammad if the ID constraints are correctly evaluated. Paper is
-        // vague. Do I have to check bounding boxes and other things too?
-        switch (e.op) {
-          case ast::ComparisonOp::EQ: return bool_to_robustness(obj_id1 == obj_id2);
-          case ast::ComparisonOp::NE: return bool_to_robustness(obj_id1 != obj_id2);
-          default:
-            throw std::logic_error("unreachable as constraint can only be EQ and NE");
-        }
-      });
-  // And reverse the vector to preserve order
-  std::reverse(std::begin(ret), std::end(ret));
+
+  for ([[maybe_unused]] const auto& f : this->trace) {
+    // Get the object ID associated with each ID ins CompareId.
+    const auto obj_id1 = this->obj_map.at(fmt::to_string(e.lhs));
+    const auto obj_id2 = this->obj_map.at(fmt::to_string(e.rhs));
+    // TODO: Ask Mohammad if the ID constraints are correctly evaluated. Paper is
+    // vague. Do I have to check bounding boxes and other things too?
+    switch (e.op) {
+      case ast::ComparisonOp::EQ:
+        ret.push_back(bool_to_robustness(obj_id1 == obj_id2));
+        break;
+      case ast::ComparisonOp::NE:
+        ret.push_back(bool_to_robustness(obj_id1 != obj_id2));
+        break;
+      default:
+        throw std::logic_error("unreachable as constraint can only be EQ and NE");
+    }
+  }
+
   return ret;
 }
 
 std::vector<double> RobustnessOp::operator()(const ast::CompareClass e) {
+  using variant_id = std::variant<int, std::string>;
+
   auto ret = std::vector<double>{};
   ret.reserve(this->trace.size());
-  // TODO: Parallelize
-  std::transform( // Iterate the trace in reverse order.
-      std::rbegin(this->trace),
-      std::rend(this->trace),
-      std::back_inserter(ret),
-      [&](const ds::Frame& f) {
-        // Get the object ID associated with each ID ins CompareId.
 
-        const auto class1 =
-            f.objects.at(this->obj_map.at(fmt::to_string(e.lhs.id))).object_class;
+  // Get tentative IDs to lookup for each frame.
+  const std::string& id1 = this->obj_map.at(fmt::to_string(e.lhs.id));
+  const variant_id id2   = std::visit(
+      utils::overloaded{[](const int i) -> variant_id { return i; },
+                        [&](const ast::Class& c) -> variant_id {
+                          return this->obj_map.at(fmt::to_string(c.id));
+                        }},
+      e.rhs);
 
-        const auto class2 = std::visit(
-            utils::overloaded{[](int i) { return i; },
-                              [&](ast::Class c) {
-                                return f.objects
-                                    .at(this->obj_map.at(fmt::to_string(c.id)))
-                                    .object_class;
-                              }},
-            e.rhs);
+  for (const auto& f : this->trace) { // For each frame in trace,
 
-        switch (e.op) {
-          case ast::ComparisonOp::EQ: return bool_to_robustness(class1 == class2);
-          case ast::ComparisonOp::NE: return bool_to_robustness(class1 != class2);
-          default:
-            throw std::logic_error("unreachable as constraint can only be EQ and NE");
-        }
-      });
-  // And reverse the vector to preserve order
-  std::reverse(std::begin(ret), std::end(ret));
+    // Check if ID1 is there in the frame.
+    const auto class1_it = f.objects.find(id1);
+    if (class1_it == f.objects.end()) { // If ID isn't in the frame: -inf
+      ret.push_back(BOTTOM);
+      continue;
+    }
+    // Get the class of the ID1 if it is there in frame.
+    int class1 = class1_it->second.object_class;
+
+    // Check if ID2 is there in the frame.
+    int class2 = -1;
+    if (auto p_int = std::get_if<int>(&id2)) {
+      // If we are comparing against a class literal, just assign it.
+      class2 = *p_int;
+    } else if (auto p_str = std::get_if<std::string>(&id2)) {
+      // If we are comparing against another class function, check if ID2 is there in
+      // the frame.
+      const auto class2_it = f.objects.find(*p_str);
+      if (class2_it == f.objects.end()) { // ID2 not in frame: -inf
+        ret.push_back(BOTTOM);
+        continue;
+      } else {
+        class2 = class2_it->second.object_class;
+      }
+    }
+
+    switch (e.op) {
+      case ast::ComparisonOp::EQ:
+        ret.push_back(bool_to_robustness(class1 == class2));
+        break;
+      case ast::ComparisonOp::NE:
+        ret.push_back(bool_to_robustness(class1 != class2));
+        break;
+      default:
+        throw std::logic_error("unreachable as constraint can only be EQ and NE");
+    }
+  }
+
+  assert(ret.size() == this->trace.size());
   return ret;
 }
 
@@ -279,7 +303,6 @@ std::vector<double> RobustnessOp::operator()(const ast::ExistsPtr e) {
   const size_t n = std::size(trace);
   const size_t k = std::size(ids); // Number of Var_id declared in this scope.
 
-  auto rob         = std::vector<double>{};
   auto running_max = std::vector<double>(n, BOTTOM);
 
   const auto& cur_frame = this->trace.back(); // Reference to the current frame.
@@ -296,17 +319,12 @@ std::vector<double> RobustnessOp::operator()(const ast::ExistsPtr e) {
             ? this->eval(ast::Expr{std::make_shared<ast::Pin>(*(e->pinned_at))})
             : this->eval(*(e->phi));
     // Do elementwise max with running_max
-    std::transform(
-        std::begin(running_max),
-        std::end(running_max),
-        std::begin(sub_rob),
-        std::begin(running_max),
-        [](const double a, const double b) { return std::max(a, b); });
+    for (auto&& [a, b] : iter::zip(running_max, sub_rob)) { a = std::max(a, b); }
   }
 
   // Remove the Var_id in obj_map as they are out of scope.
   for (auto&& id : ids) { obj_map.erase(fmt::to_string(id)); }
-  return rob;
+  return running_max;
 }
 
 std::vector<double> RobustnessOp::operator()(const ast::ForallPtr e) {
@@ -326,7 +344,6 @@ std::vector<double> RobustnessOp::operator()(const ast::ForallPtr e) {
   const size_t n = std::size(trace);
   const size_t k = std::size(ids); // Number of Var_id declared in this scope.
 
-  auto rob         = std::vector<double>{};
   auto running_min = std::vector<double>(n, TOP);
 
   const auto& cur_frame = this->trace.back(); // Reference to the current frame.
@@ -343,17 +360,12 @@ std::vector<double> RobustnessOp::operator()(const ast::ForallPtr e) {
             ? this->eval(ast::Expr{std::make_shared<ast::Pin>(*(e->pinned_at))})
             : this->eval(*(e->phi));
     // Do elementwise min with running_min
-    std::transform(
-        std::begin(running_min),
-        std::end(running_min),
-        std::begin(sub_rob),
-        std::begin(running_min),
-        [](const double a, const double b) { return std::min(a, b); });
+    for (auto&& [a, b] : iter::zip(running_min, sub_rob)) { a = std::min(a, b); }
   }
 
   // Remove the Var_id in obj_map as they are out of scope.
   for (auto&& id : ids) { obj_map.erase(fmt::to_string(id)); }
-  return rob;
+  return running_min;
 }
 
 std::vector<double> RobustnessOp::operator()(const ast::PinPtr e) {
@@ -369,24 +381,21 @@ std::vector<double> RobustnessOp::operator()(const ast::PinPtr e) {
 
 std::vector<double> RobustnessOp::operator()(const ast::NotPtr e) {
   auto rob = this->eval(e->arg);
-  std::transform(
-      std::begin(rob), std::end(rob), std::begin(rob), [](double r) { return -1 * r; });
+  for (auto&& r : rob) { r = -1 * r; }
   return rob;
 }
 
 std::vector<double> RobustnessOp::operator()(const ast::AndPtr e) {
   // Populate robustness signals of sub formulas
   auto subformula_robs = std::vector<std::vector<double>>{};
-  std::transform(
-      std::begin(e->temporal_bound_args),
-      std::end(e->temporal_bound_args),
-      std::back_inserter(subformula_robs),
-      [&](const ast::TemporalBoundExpr sub_expr) { return this->eval(sub_expr); });
-  std::transform(
-      std::begin(e->args),
-      std::end(e->args),
-      std::back_inserter(subformula_robs),
-      [&](const ast::Expr sub_expr) { return this->eval(sub_expr); });
+  for (const auto& sub_expr : e->temporal_bound_args) {
+    auto sub_rho = this->eval(sub_expr);
+    subformula_robs.push_back(sub_rho);
+  }
+  for (const auto& sub_expr : e->args) {
+    auto sub_rho = this->eval(sub_expr);
+    subformula_robs.push_back(sub_rho);
+  }
 
   // Compute min across the returned robustness values.
   auto ret       = std::vector<double>{};
@@ -403,22 +412,20 @@ std::vector<double> RobustnessOp::operator()(const ast::AndPtr e) {
 std::vector<double> RobustnessOp::operator()(const ast::OrPtr e) {
   // Populate robustness signals of sub formulas
   auto subformula_robs = std::vector<std::vector<double>>{};
-  std::transform(
-      std::begin(e->temporal_bound_args),
-      std::end(e->temporal_bound_args),
-      std::back_inserter(subformula_robs),
-      [&](const ast::TemporalBoundExpr sub_expr) { return this->eval(sub_expr); });
-  std::transform(
-      std::begin(e->args),
-      std::end(e->args),
-      std::back_inserter(subformula_robs),
-      [&](const ast::Expr sub_expr) { return this->eval(sub_expr); });
+  for (const auto& sub_expr : e->temporal_bound_args) {
+    auto sub_rho = this->eval(sub_expr);
+    subformula_robs.push_back(sub_rho);
+  }
+  for (const auto& sub_expr : e->args) {
+    auto sub_rho = this->eval(sub_expr);
+    subformula_robs.push_back(sub_rho);
+  }
 
   // Compute max across the returned robustness values.
   auto ret       = std::vector<double>{};
   const size_t n = std::size(this->trace);
   for (const size_t i : iter::range(n)) {
-    double rval_i = TOP;
+    double rval_i = BOTTOM;
     for (const auto& rvec : subformula_robs) { rval_i = std::max(rvec.at(i), rval_i); }
     ret.push_back(rval_i);
   }
@@ -480,7 +487,7 @@ std::vector<double> RobustnessOp::operator()(const ast::SincePtr e) {
   double prev      = TOP;
   double max_right = BOTTOM;
 
-  for (auto&& [i, j] : iter::zip(x, y)) {
+  for (const auto&& [i, j] : iter::zip(x, y)) {
     max_right = std::max(max_right, j);
     prev      = std::max({j, std::min(i, prev), -max_right});
     rob.push_back(prev);
@@ -493,18 +500,11 @@ std::vector<double> RobustnessOp::operator()(const ast::BackToPtr e) {
   // phi1 BackTo phi2 is the dual for Since.
   // phi1 B phi1 === ~(~phi1 S ~phi2)
   // TODO: VERIFY!!!
-  auto x = this->eval(e->args.first); // Get rho(phi1)
-  std::transform(                     // Get rho(~phi1)
-      std::begin(x),
-      std::end(x),
-      std::begin(x),
-      [](double r) { return -1 * r; });
-  auto y = this->eval(e->args.second); // Get rho(phi2)
-  std::transform(                      // Get rho(~phi2)
-      std::begin(y),
-      std::end(y),
-      std::begin(y),
-      [](double r) { return -1 * r; });
+  auto x = this->eval(e->args.first);      // Get rho(phi1)
+  for (auto&& rob : x) { rob = -1 * rob; } // Get rho(~phi1)
+
+  auto y = this->eval(e->args.second);     // Get rho(phi2)
+  for (auto&& rob : y) { rob = -1 * rob; } // Get rho(~phi2)
 
   // Get since.
   auto rob = std::vector<double>{};
@@ -512,7 +512,7 @@ std::vector<double> RobustnessOp::operator()(const ast::BackToPtr e) {
   double prev      = TOP;
   double max_right = BOTTOM;
 
-  for (auto&& [i, j] : iter::zip(x, y)) {
+  for (const auto&& [i, j] : iter::zip(x, y)) {
     max_right = std::max(max_right, j);
     prev      = std::max({j, std::min(i, prev), -max_right});
     rob.push_back(-prev); // Negate on the fly
