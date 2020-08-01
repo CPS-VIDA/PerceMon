@@ -59,7 +59,7 @@ if(PERCEMON_COVERAGE)
       CACHE BOOL "Enable coverage build." FORCE)
 endif()
 
-set(CMAKE_CXX_EXTENSIONS ON)
+# set(CMAKE_CXX_EXTENSIONS ON)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
 
@@ -80,11 +80,6 @@ target_include_directories(PerceMon PRIVATE ${PROJECT_SOURCE_DIR}/src)
 target_compile_features(PerceMon PUBLIC cxx_std_17)
 target_link_libraries(PerceMon PRIVATE mono_wedge::mono_wedge)
 target_link_libraries(PerceMon PUBLIC fmt::fmt cppitertools::cppitertools)
-if(MSVC)
-  target_compile_options(PerceMon PRIVATE /W4 /WX /utf-8)
-else()
-  target_compile_options(PerceMon PRIVATE -pedantic -Wall -Wextra -Werror)
-endif()
 
 # if(PERCEMON_COVERAGE) add_coverage(PerceMon) endif()
 

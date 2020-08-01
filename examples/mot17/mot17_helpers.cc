@@ -1,7 +1,6 @@
 #include "mot17_helpers.hpp"
 
 #include <algorithm>
-#include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <set>
@@ -16,7 +15,15 @@
 
 #include <cassert>
 
+#if defined(__cpp_lib_filesystem) || __has_include(<filesystem>)
+#include <filesystem>
 namespace fs = std::filesystem;
+#elif __cpp_lib_experimental_filesystem || __has_include(<experimental/filesystem>)
+#include <experimental/filesystem>
+namespace fs = std::experimental::filesystem;
+#else
+#error "no <filesystem> support"
+#endif
 
 using namespace percemon;
 namespace ds = percemon::datastream;
@@ -183,7 +190,7 @@ std::vector<percemon::datastream::Frame> mot17::parse_results(
   const size_t last_frame = std::prev(results.end())->frame;
   auto stream             = std::vector<ds::Frame>{};
   for (auto i : iter::range(last_frame)) {
-    auto frame = ds::Frame{fps * i, i + 1, frame_width, frame_height};
+    auto frame = ds::Frame{fps * i, i + 1, frame_width, frame_height, {}};
     stream.push_back(frame);
   }
 

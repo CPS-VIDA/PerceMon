@@ -17,7 +17,7 @@ percemon::Expr get_phi1() {
   // There exists at least two unique objects from the same class
   auto id1 = Var_id{"1"};
   auto id2 = Var_id{"2"};
-  Expr phi = Exists({id1, id2})->dot(Expr{(id1 == id2)} & Class(id1) == Class(id2));
+  Expr phi = Exists({id1, id2})->dot((id1 == id2) & Expr{Class(id1) == Class(id2)});
 
   return phi;
 }
@@ -29,7 +29,7 @@ percemon::Expr get_phi2() {
   auto id2 = Var_id{"2"};
   Expr phi = Forall({id1})->dot(
       Expr{Previous(Const{true})} >>
-      Exists({id2})->dot(Expr{id1 == id2} & Class(id1) == Class(id2)));
+      Exists({id2})->dot((id1 == id2) & Expr{Class(id1) == Class(id2)}));
 
   return phi;
 }
@@ -43,7 +43,7 @@ percemon::Expr get_phi3() {
   auto f   = Var_f{"1"};
 
   Expr phi1 = And({1 <= f - C_FRAME{}, f - C_FRAME{} <= 2});
-  Expr phi2 = Exists({id2})->dot(Expr{id1 == id2} & Class(id1) == Class(id2));
+  Expr phi2 = Exists({id2})->dot((id1 == id2) & Expr{Class(id1) == Class(id2)});
 
   Expr phi = Forall({id1})->at({x, f})->dot(Always(phi1 >> phi2));
   return phi;
@@ -55,6 +55,7 @@ percemon::Expr get_phi(PhiNumber opt) {
     case PhiNumber::Example2: return get_phi2();
     case PhiNumber::Example3: return get_phi3();
   }
+  return {};
 }
 
 void compute(
