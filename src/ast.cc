@@ -1,4 +1,8 @@
-#include "percemon/ast.hpp"
+#include "percemon/ast/ast.hpp"
+#include "percemon/ast/functions.hpp"
+#include "percemon/ast/primitives.hpp"
+#include "percemon/ast/s4u.hpp"
+#include "percemon/ast/tqtl.hpp"
 #include "percemon/utils.hpp"
 
 #include <algorithm>
@@ -8,6 +12,8 @@
 
 namespace percemon {
 namespace ast {
+
+namespace functions {
 
 TimeBound operator-(const Var_x& lhs, C_TIME) {
   return TimeBound{lhs};
@@ -137,6 +143,7 @@ CompareProb operator<(const Prob& lhs, const Prob& rhs) {
 CompareProb operator<=(const Prob& lhs, const Prob& rhs) {
   return CompareProb{lhs, ComparisonOp::LE, rhs};
 }
+} // namespace functions
 
 namespace {
 using percemon::utils::overloaded;

@@ -5,6 +5,9 @@
 
 #include <string>
 
+#include "percemon/datastream.hpp"
+#include <vector>
+
 namespace mot17 {
 
 enum class Labels {
@@ -22,17 +25,12 @@ enum class Labels {
   Reflection          = 12
 };
 
-/**
- * A row from the MOT17 CSV evaluation file.
- */
-struct ResultsRow {
-  size_t frame;
-  std::string id;
-  double bb_left, bb_top, bb_width, bb_height;
-  double confidence;
-  int label;
-  double visibility;
-};
+std::vector<percemon::datastream::Frame> parse_results(
+    const std::string& file,
+    const double fps,
+    const size_t frame_width,
+    const size_t frame_height);
+
 } // namespace mot17
 
 #endif /* end of include guard: __PERCEMON_MOT17_HELPERS_HPP__ */

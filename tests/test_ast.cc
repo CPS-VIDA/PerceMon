@@ -3,7 +3,7 @@
 #include "percemon/ast.hpp"
 #include "percemon/fmt.hpp"
 
-using namespace percemon::ast;
+using namespace percemon;
 
 TEST_CASE("AST nodes throw exceptions when constructed badly", "[ast][except]") {
   SECTION("TimeBounds are constructed with proper relational operators") {
@@ -159,8 +159,10 @@ TEST_CASE("AST nodes are printed correctly", "[ast][fmt]") {
   }
 
   SECTION("Objects and quantifiers over them") {
-    REQUIRE("EXISTS {id_1, id_2, id_3}" == fmt::to_string(Exists{{"1"}, {"2"}, {"3"}}));
-    REQUIRE("FORALL {id_1, id_2, id_3}" == fmt::to_string(Forall{{"1"}, {"2"}, {"3"}}));
+    REQUIRE(
+        "EXISTS {id_1, id_2, id_3}" == fmt::to_string(*Exists({{"1"}, {"2"}, {"3"}})));
+    REQUIRE(
+        "FORALL {id_1, id_2, id_3}" == fmt::to_string(*Forall({{"1"}, {"2"}, {"3"}})));
   }
 
   SECTION("Pinned variables") {
@@ -169,13 +171,13 @@ TEST_CASE("AST nodes are printed correctly", "[ast][fmt]") {
     REQUIRE("{x_1, _} . false" == fmt::to_string(Pin{Var_x{"1"}}));
     REQUIRE(
         "{x_1, _} . (x_1 - C_TIME > 10.0)" ==
-        fmt::to_string(Pin{Var_x{"1"}}.dot(x1 - C_TIME{} > 10.0)));
+        fmt::to_string(*(Pin{Var_x{"1"}}.dot(x1 - C_TIME{} > 10.0))));
   }
 
   SECTION("Quantifiers over objects pinned at frames") {
     REQUIRE(
         "EXISTS {id_1, id_2} @ {x_1, f_1} . false" ==
-        fmt::to_string(Exists{{"1"}, {"2"}}.at(Pin{Var_x{"1"}, Var_f{"1"}})));
+        fmt::to_string(*Exists({{"1"}, {"2"}})->at(Pin{Var_x{"1"}, Var_f{"1"}})));
   }
 
   SECTION("Time bounds over frames and time") {
@@ -184,12 +186,12 @@ TEST_CASE("AST nodes are printed correctly", "[ast][fmt]") {
     {
       auto [x, f] = std::make_tuple(Var_x{"1"}, Var_f{"1"});
       auto phi    = Pin{x, f}.dot(x - C_TIME{} >= 2.0);
-      REQUIRE("{x_1, f_1} . (x_1 - C_TIME >= 2.0)" == fmt::to_string(phi));
+      REQUIRE("{x_1, f_1} . (x_1 - C_TIME >= 2.0)" == fmt::to_string(*phi));
     }
 
     {
       auto [x, f] = std::make_tuple(Var_x{"1"}, Var_f{"1"});
-      auto phi    = Pin{x, f}.dot((x - C_TIME{} >= 2.0) >> Const{true});
+      Expr phi    = Pin{x, f}.dot(Expr{x - C_TIME{} >= 2.0} >> Const{true});
       REQUIRE("{x_1, f_1} . (~(x_1 - C_TIME >= 2.0) | true)" == fmt::to_string(phi));
     }
   }

@@ -1,7 +1,11 @@
 #ifndef __PERCEMON_MONITORING_HPP__
 #define __PERCEMON_MONITORING_HPP__
 
-#include "percemon/ast.hpp"
+#include "percemon/ast/ast.hpp"
+#include "percemon/ast/functions.hpp"
+#include "percemon/ast/primitives.hpp"
+#include "percemon/ast/s4u.hpp"
+#include "percemon/ast/tqtl.hpp"
 #include "percemon/datastream.hpp"
 
 // TODO: Consider unordered_map if memory and hashing isn't an issue.

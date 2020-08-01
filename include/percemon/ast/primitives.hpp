@@ -3,11 +3,17 @@
 #ifndef __PERCEMON_AST_PRIMITIVES_HPP__
 #define __PERCEMON_AST_PRIMITIVES_HPP__
 
+#include <exception>
+#include <memory>
+#include <optional>
 #include <string>
+#include <variant>
 
 namespace percemon {
 namespace ast {
 namespace primitives {
+
+// Some basic primitives
 
 enum class ComparisonOp { GT, GE, LT, LE, EQ, NE };
 
@@ -84,7 +90,17 @@ struct Var_id {
   Var_id(const std::string& name_) : name{name_} {}
 };
 
+// Spatial primitives.
+
+struct EmptySet {};
+struct UniverseSet {};
+
+// Topological identifiers.
+
+enum struct CRT { LM, RM, TM, BM, CT };
+
 } // namespace primitives
+
 } // namespace ast
 } // namespace percemon
 

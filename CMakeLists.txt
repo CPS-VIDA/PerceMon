@@ -86,9 +86,7 @@ else()
   target_compile_options(PerceMon PRIVATE -pedantic -Wall -Wextra -Werror)
 endif()
 
-if(PERCEMON_COVERAGE)
-  add_coverage(PerceMon)
-endif()
+# if(PERCEMON_COVERAGE) add_coverage(PerceMon) endif()
 
 if(_PERCEMON_BUILD_THE_TESTS)
   add_subdirectory(tests)

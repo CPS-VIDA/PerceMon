@@ -42,6 +42,32 @@ if(_PERCEMON_BUILD_THE_TESTS)
   endif()
 endif()
 
+# CLI args
+if(PERCEMON_EXAMPLES)
+  find_package(CLI11 QUIET)
+  if(CLI11_FOUND)
+    message(STATUS "System installation of CLI11 found")
+  else()
+    message(STATUS "Using bundled third_party/CLI11.")
+    git_submodule(PATH CLI11 WORKING_DIRECTORY ${CMAKE_CURRENT_LIST_DIR})
+    add_subdirectory(CLI11)
+  endif()
+
+  find_package(spdlog QUIET)
+  if(spdlog_FOUND)
+    message(STATUS "System installation of spdlog found")
+  else()
+    message(STATUS "Using bundled third_party/spdlog.")
+    git_submodule(PATH spdlog WORKING_DIRECTORY ${CMAKE_CURRENT_LIST_DIR})
+
+    set(SPDLOG_FMT_EXTERNAL
+        ON
+        CACHE BOOL "")
+    add_subdirectory(spdlog)
+  endif()
+
+endif()
+
 if(PERCEMON_COVERAGE)
   git_submodule(PATH CMake-codecov WORKING_DIRECTORY ${CMAKE_CURRENT_LIST_DIR})
   list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/CMake-codecov/cmake")

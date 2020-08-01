@@ -204,8 +204,8 @@ std::vector<double> RobustnessOp::operator()(const ast::CompareId e) {
         // TODO: Ask Mohammad if the ID constraints are correctly evaluated. Paper is
         // vague. Do I have to check bounding boxes and other things too?
         switch (e.op) {
-          case ComparisonOp::EQ: return bool_to_robustness(obj_id1 == obj_id2);
-          case ComparisonOp::NE: return bool_to_robustness(obj_id1 != obj_id2);
+          case ast::ComparisonOp::EQ: return bool_to_robustness(obj_id1 == obj_id2);
+          case ast::ComparisonOp::NE: return bool_to_robustness(obj_id1 != obj_id2);
           default:
             throw std::logic_error("unreachable as constraint can only be EQ and NE");
         }
@@ -239,8 +239,8 @@ std::vector<double> RobustnessOp::operator()(const ast::CompareClass e) {
             e.rhs);
 
         switch (e.op) {
-          case ComparisonOp::EQ: return bool_to_robustness(class1 == class2);
-          case ComparisonOp::NE: return bool_to_robustness(class1 != class2);
+          case ast::ComparisonOp::EQ: return bool_to_robustness(class1 == class2);
+          case ast::ComparisonOp::NE: return bool_to_robustness(class1 != class2);
           default:
             throw std::logic_error("unreachable as constraint can only be EQ and NE");
         }
@@ -489,7 +489,34 @@ std::vector<double> RobustnessOp::operator()(const ast::SincePtr e) {
   return rob;
 }
 
-std::vector<double> RobustnessOp::operator()(const ast::BackToPtr) {
-  throw percemon::not_implemented_error(
-      "Robustness for BackTo has not been implemented yet.");
+std::vector<double> RobustnessOp::operator()(const ast::BackToPtr e) {
+  // phi1 BackTo phi2 is the dual for Since.
+  // phi1 B phi1 === ~(~phi1 S ~phi2)
+  // TODO: VERIFY!!!
+  auto x = this->eval(e->args.first); // Get rho(phi1)
+  std::transform(                     // Get rho(~phi1)
+      std::begin(x),
+      std::end(x),
+      std::begin(x),
+      [](double r) { return -1 * r; });
+  auto y = this->eval(e->args.second); // Get rho(phi2)
+  std::transform(                      // Get rho(~phi2)
+      std::begin(y),
+      std::end(y),
+      std::begin(y),
+      [](double r) { return -1 * r; });
+
+  // Get since.
+  auto rob = std::vector<double>{};
+
+  double prev      = TOP;
+  double max_right = BOTTOM;
+
+  for (auto&& [i, j] : iter::zip(x, y)) {
+    max_right = std::max(max_right, j);
+    prev      = std::max({j, std::min(i, prev), -max_right});
+    rob.push_back(-prev); // Negate on the fly
+  }
+
+  return rob;
 }

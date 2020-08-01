@@ -40,9 +40,9 @@ struct BoundingBox {
 // TODO: Lat and Lon distances between boxes.
 
 struct Object {
-  const int object_class;
-  const double probability;
-  const BoundingBox bbox;
+  int object_class;
+  double probability;
+  BoundingBox bbox;
 };
 
 struct Frame {
