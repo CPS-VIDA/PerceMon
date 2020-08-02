@@ -9,9 +9,7 @@
 #include <string>
 #include <variant>
 
-namespace percemon {
-namespace ast {
-namespace primitives {
+namespace percemon::ast::primitives {
 
 // Some basic primitives
 
@@ -30,9 +28,7 @@ struct Const {
     return this->value == other.value;
   };
 
-  inline bool operator!=(const Const& other) const {
-    return !(*this == other);
-  };
+  inline bool operator!=(const Const& other) const { return !(*this == other); };
 };
 
 /**
@@ -51,15 +47,11 @@ struct Var_f {
   std::string name;
 
   Var_f() = delete;
-  Var_f(const std::string& name_) : name{name_} {}
+  Var_f(std::string name_) : name{std::move(name_)} {}
 
-  inline bool operator==(const Var_f& other) const {
-    return name == other.name;
-  };
+  inline bool operator==(const Var_f& other) const { return name == other.name; };
 
-  inline bool operator!=(const Var_f& other) const {
-    return !(*this == other);
-  };
+  inline bool operator!=(const Var_f& other) const { return !(*this == other); };
 };
 
 /**
@@ -69,15 +61,11 @@ struct Var_x {
   std::string name;
 
   Var_x() = delete;
-  Var_x(const std::string& name_) : name{name_} {}
+  Var_x(std::string name_) : name{std::move(name_)} {}
 
-  inline bool operator==(const Var_x& other) const {
-    return name == other.name;
-  };
+  inline bool operator==(const Var_x& other) const { return name == other.name; };
 
-  inline bool operator!=(const Var_x& other) const {
-    return !(*this == other);
-  };
+  inline bool operator!=(const Var_x& other) const { return !(*this == other); };
 };
 
 /**
@@ -87,7 +75,7 @@ struct Var_id {
   std::string name;
 
   Var_id() = delete;
-  Var_id(const std::string& name_) : name{name_} {}
+  Var_id(std::string name_) : name{std::move(name_)} {}
 };
 
 // Spatial primitives.
@@ -99,9 +87,6 @@ struct UniverseSet {};
 
 enum struct CRT { LM, RM, TM, BM, CT };
 
-} // namespace primitives
-
-} // namespace ast
-} // namespace percemon
+} // namespace percemon::ast::primitives
 
 #endif /* end of include guard: __PERCEMON_AST_PRIMITIVES_HPP__ */

@@ -4,6 +4,7 @@ coverage:
     - "tests/test_*.cc"
     - "tests/**/*"
     - "third_party/**/*"
+    - "examples/**/*"
 
 codecov:
   branch: master

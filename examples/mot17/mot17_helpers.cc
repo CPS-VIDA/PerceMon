@@ -36,9 +36,7 @@ class CSVRow {
     return std::string_view(
         &m_line[m_data[index] + 1], m_data[index + 1] - (m_data[index] + 1));
   }
-  std::size_t size() const {
-    return m_data.size() - 1;
-  }
+  size_t size() const { return m_data.size() - 1; }
   void readNextRow(std::istream& str) {
     std::getline(str, m_line);
 
@@ -72,17 +70,13 @@ class CSVIterator {
   typedef CSVRow* pointer;
   typedef CSVRow& reference;
 
-  CSVIterator(std::istream& str) : m_str(str.good() ? &str : NULL) {
-    ++(*this);
-  }
+  CSVIterator(std::istream& str) : m_str(str.good() ? &str : NULL) { ++(*this); }
   CSVIterator() : m_str(NULL) {}
 
   // Pre Increment
   CSVIterator& operator++() {
     if (m_str) {
-      if (!((*m_str) >> m_row)) {
-        m_str = NULL;
-      }
+      if (!((*m_str) >> m_row)) { m_str = NULL; }
     }
     return *this;
   }
@@ -92,19 +86,13 @@ class CSVIterator {
     ++(*this);
     return tmp;
   }
-  CSVRow const& operator*() const {
-    return m_row;
-  }
-  CSVRow const* operator->() const {
-    return &m_row;
-  }
+  CSVRow const& operator*() const { return m_row; }
+  CSVRow const* operator->() const { return &m_row; }
 
   bool operator==(CSVIterator const& rhs) {
     return ((this == &rhs) || ((this->m_str == NULL) && (rhs.m_str == NULL)));
   }
-  bool operator!=(CSVIterator const& rhs) {
-    return !((*this) == rhs);
-  }
+  bool operator!=(CSVIterator const& rhs) { return !((*this) == rhs); }
 
  private:
   std::istream* m_str;
@@ -116,12 +104,8 @@ class CSVRange {
 
  public:
   CSVRange(std::istream& str) : stream(str) {}
-  CSVIterator begin() const {
-    return CSVIterator{stream};
-  }
-  CSVIterator end() const {
-    return CSVIterator{};
-  }
+  CSVIterator begin() const { return CSVIterator{stream}; }
+  CSVIterator end() const { return CSVIterator{}; }
 };
 
 /**

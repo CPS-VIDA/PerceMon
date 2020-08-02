@@ -9,6 +9,7 @@ namespace percemon {
 namespace ast {
 namespace functions {
 using namespace primitives;
+
 // Primitive operations on Time/Frames
 
 /**
@@ -52,9 +53,7 @@ struct TimeBound {
     return (x == other.x) && (op == other.op) && (bound == other.bound);
   };
 
-  inline bool operator!=(const TimeBound& other) const {
-    return !(*this == other);
-  };
+  inline bool operator!=(const TimeBound& other) const { return !(*this == other); };
 };
 TimeBound operator-(const Var_x& lhs, C_TIME);
 TimeBound operator>(const TimeBound& lhs, const double bound);
@@ -94,9 +93,7 @@ struct FrameBound {
     return (f == other.f) && (op == other.op) && (bound == other.bound);
   };
 
-  inline bool operator!=(const FrameBound& other) const {
-    return !(*this == other);
-  };
+  inline bool operator!=(const FrameBound& other) const { return !(*this == other); };
 };
 FrameBound operator-(const Var_f& lhs, C_FRAME);
 FrameBound operator>(const FrameBound& lhs, const size_t bound);
@@ -186,9 +183,7 @@ struct Prob {
     return Prob{lhs.id, lhs.scale * rhs};
   }
 
-  friend Prob operator*(const double lhs, const Prob& rhs) {
-    return rhs * lhs;
-  }
+  friend Prob operator*(const double lhs, const Prob& rhs) { return rhs * lhs; }
 };
 
 struct CompareProb {
@@ -238,9 +233,7 @@ struct ED {
     return ED{lhs.id1, lhs.crt1, lhs.id2, lhs.crt2, lhs.scale * rhs};
   }
 
-  friend ED operator*(const double lhs, const ED& rhs) {
-    return rhs * lhs;
-  }
+  friend ED operator*(const double lhs, const ED& rhs) { return rhs * lhs; }
 };
 
 struct CompareED {
@@ -250,17 +243,22 @@ struct CompareED {
 
   CompareED() = delete;
   CompareED(ED lhs_, ComparisonOp op_, std::variant<double, ED> rhs_) :
-      lhs{lhs_}, op{op_}, rhs{rhs_} {
+      lhs{std::move(lhs_)}, op{op_}, rhs{std::move(rhs_)} {
     if (op == ComparisonOp::EQ || op == ComparisonOp::NE) {
       throw std::invalid_argument(
           "Cannot use relational operators ==, != to compare Euclidean Distance");
     }
   };
 };
+
 CompareED operator>(const ED& lhs, const double rhs);
 CompareED operator>=(const ED& lhs, const double rhs);
 CompareED operator<(const ED& lhs, const double rhs);
 CompareED operator<=(const ED& lhs, const double rhs);
+CompareED operator>(const double lhs, const ED& rhs);
+CompareED operator>=(const double lhs, const ED& rhs);
+CompareED operator<(const double lhs, const ED& rhs);
+CompareED operator<=(const double lhs, const ED& rhs);
 CompareED operator>(const ED& lhs, const ED& rhs);
 CompareED operator>=(const ED& lhs, const ED& rhs);
 CompareED operator<(const ED& lhs, const ED& rhs);
@@ -268,31 +266,51 @@ CompareED operator<=(const ED& lhs, const ED& rhs);
 
 struct Lat {
   Var_id id;
+  CRT crt;
   double scale = 1.0;
 
   Lat() = delete;
-  Lat(Var_id id_, double scale_ = 1.0) : id{id_}, scale{scale_} {}
+  Lat(Var_id id_, CRT crt_, double scale_ = 1.0) : id{id_}, crt{crt_}, scale{scale_} {}
 
   Lat& operator*=(const double rhs) {
     this->scale *= rhs;
     return *this;
   };
   friend Lat operator*(Lat lhs, const double rhs) {
-    return Lat{lhs.id, lhs.scale * rhs};
+    lhs *= rhs;
+    return lhs;
   }
 
-  friend Lat operator*(const double lhs, const Lat& rhs) {
-    return rhs * lhs;
+  friend Lat operator*(const double lhs, const Lat& rhs) { return rhs * lhs; }
+};
+
+struct Lon {
+  Var_id id;
+  CRT crt;
+  double scale = 1.0;
+
+  Lon() = delete;
+  Lon(Var_id id_, CRT crt_, double scale_ = 1.0) : id{id_}, crt{crt_}, scale{scale_} {}
+
+  Lon& operator*=(const double rhs) {
+    this->scale *= rhs;
+    return *this;
+  };
+  friend Lon operator*(Lon lhs, const double rhs) {
+    lhs *= rhs;
+    return lhs;
   }
+
+  friend Lon operator*(const double lhs, const Lon& rhs) { return rhs * lhs; }
 };
 
 struct CompareLat {
   Lat lhs;
   ComparisonOp op;
-  std::variant<double, Lat> rhs;
+  std::variant<double, Lat, Lon> rhs;
 
   CompareLat() = delete;
-  CompareLat(Lat lhs_, ComparisonOp op_, std::variant<double, Lat> rhs_) :
+  CompareLat(Lat lhs_, ComparisonOp op_, std::variant<double, Lat, Lon> rhs_) :
       lhs{lhs_}, op{op_}, rhs{rhs_} {
     if (op == ComparisonOp::EQ || op == ComparisonOp::NE) {
       throw std::invalid_argument(
@@ -300,6 +318,26 @@ struct CompareLat {
     }
   };
 };
+
+struct CompareLon {
+  Lon lhs;
+  ComparisonOp op;
+  std::variant<double, Lat, Lon> rhs;
+
+  CompareLon() = delete;
+  CompareLon(Lon lhs_, ComparisonOp op_, std::variant<double, Lat, Lon> rhs_) :
+      lhs{lhs_}, op{op_}, rhs{rhs_} {
+    if (op == ComparisonOp::EQ || op == ComparisonOp::NE) {
+      throw std::invalid_argument(
+          "Cannot use relational operators ==, != to compare Lon(id)");
+    }
+  };
+};
+
+CompareLat operator>(const double lhs, const Lat& rhs);
+CompareLat operator>=(const double lhs, const Lat& rhs);
+CompareLat operator<(const double lhs, const Lat& rhs);
+CompareLat operator<=(const double lhs, const Lat& rhs);
 CompareLat operator>(const Lat& lhs, const double rhs);
 CompareLat operator>=(const Lat& lhs, const double rhs);
 CompareLat operator<(const Lat& lhs, const double rhs);
@@ -308,41 +346,15 @@ CompareLat operator>(const Lat& lhs, const Lat& rhs);
 CompareLat operator>=(const Lat& lhs, const Lat& rhs);
 CompareLat operator<(const Lat& lhs, const Lat& rhs);
 CompareLat operator<=(const Lat& lhs, const Lat& rhs);
+CompareLat operator>(const Lat& lhs, const Lon& rhs);
+CompareLat operator>=(const Lat& lhs, const Lon& rhs);
+CompareLat operator<(const Lat& lhs, const Lon& rhs);
+CompareLat operator<=(const Lat& lhs, const Lon& rhs);
 
-struct Lon {
-  Var_id id;
-  double scale = 1.0;
-
-  Lon() = delete;
-  Lon(Var_id id_, double scale_ = 1.0) : id{id_}, scale{scale_} {}
-
-  Lon& operator*=(const double rhs) {
-    this->scale *= rhs;
-    return *this;
-  };
-  friend Lon operator*(Lon lhs, const double rhs) {
-    return Lon{lhs.id, lhs.scale * rhs};
-  }
-
-  friend Lon operator*(const double lhs, const Lon& rhs) {
-    return rhs * lhs;
-  }
-};
-
-struct CompareLon {
-  Lon lhs;
-  ComparisonOp op;
-  std::variant<double, Lon> rhs;
-
-  CompareLon() = delete;
-  CompareLon(Lon lhs_, ComparisonOp op_, std::variant<double, Lon> rhs_) :
-      lhs{lhs_}, op{op_}, rhs{rhs_} {
-    if (op == ComparisonOp::EQ || op == ComparisonOp::NE) {
-      throw std::invalid_argument(
-          "Cannot use relational operators ==, != to compare Lon(id)");
-    }
-  };
-};
+CompareLon operator>(const double lhs, const Lon& rhs);
+CompareLon operator>=(const double lhs, const Lon& rhs);
+CompareLon operator<(const double lhs, const Lon& rhs);
+CompareLon operator<=(const double lhs, const Lon& rhs);
 CompareLon operator>(const Lon& lhs, const double rhs);
 CompareLon operator>=(const Lon& lhs, const double rhs);
 CompareLon operator<(const Lon& lhs, const double rhs);
@@ -351,6 +363,10 @@ CompareLon operator>(const Lon& lhs, const Lon& rhs);
 CompareLon operator>=(const Lon& lhs, const Lon& rhs);
 CompareLon operator<(const Lon& lhs, const Lon& rhs);
 CompareLon operator<=(const Lon& lhs, const Lon& rhs);
+CompareLon operator>(const Lon& lhs, const Lat& rhs);
+CompareLon operator>=(const Lon& lhs, const Lat& rhs);
+CompareLon operator<(const Lon& lhs, const Lat& rhs);
+CompareLon operator<=(const Lon& lhs, const Lat& rhs);
 
 struct Area {
   Var_id id;
@@ -367,9 +383,7 @@ struct Area {
     return Area{lhs.id, lhs.scale * rhs};
   }
 
-  friend Area operator*(const double lhs, const Area& rhs) {
-    return rhs * lhs;
-  }
+  friend Area operator*(const double lhs, const Area& rhs) { return rhs * lhs; }
 };
 
 struct CompareArea {
@@ -390,6 +404,10 @@ CompareArea operator>(const Area& lhs, const double rhs);
 CompareArea operator>=(const Area& lhs, const double rhs);
 CompareArea operator<(const Area& lhs, const double rhs);
 CompareArea operator<=(const Area& lhs, const double rhs);
+CompareArea operator>(const double lhs, const Area& rhs);
+CompareArea operator>=(const double lhs, const Area& rhs);
+CompareArea operator<(const double lhs, const Area& rhs);
+CompareArea operator<=(const double lhs, const Area& rhs);
 CompareArea operator>(const Area& lhs, const Area& rhs);
 CompareArea operator>=(const Area& lhs, const Area& rhs);
 CompareArea operator<(const Area& lhs, const Area& rhs);

@@ -21,8 +21,10 @@
 #include <map>
 #include <string>
 
-namespace percemon {
-namespace datastream {
+namespace percemon::datastream {
+
+// TODO: Euclidean Distance between boxes
+// TODO: Lat and Lon distances between boxes.
 
 /**
  * A bounding box data structure that follows the Pascal VOC Bounding box format
@@ -35,9 +37,6 @@ struct BoundingBox {
   size_t ymin;
   size_t ymax;
 };
-
-// TODO: Euclidean Distance between boxes
-// TODO: Lat and Lon distances between boxes.
 
 struct Object {
   int object_class;
@@ -64,7 +63,6 @@ struct Frame {
   std::map<std::string, Object> objects;
 };
 
-} // namespace datastream
-} // namespace percemon
+} // namespace percemon::datastream
 
 #endif /* end of include guard: __PERCEMON_STREAM_HH__ */

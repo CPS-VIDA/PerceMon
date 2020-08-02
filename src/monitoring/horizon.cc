@@ -88,9 +88,6 @@ struct HorizonCompute {
     return std::visit([&](const auto e) { return (*this)(e); }, expr);
   }
 
-  std::optional<size_t> operator()(const Const&) {
-    return 0;
-  }
   std::optional<size_t> operator()(const TimeBound& expr) {
     if (!fps.has_value()) {
       throw std::invalid_argument(
@@ -103,11 +100,8 @@ struct HorizonCompute {
         return std::make_optional(size_t(expr.bound * fps_val));
       case ComparisonOp::LE: // x - CTIME <= c ===> c + 1
         return std::make_optional(1 + size_t(expr.bound * fps_val));
-      case ComparisonOp::GE:
-      case ComparisonOp::GT: // c <= x - CTIME or c < x - CTIME ===> Unbounded
-        return {};           // TODO: Check
-
-      default: return {};
+      default: // c <= x - CTIME or c < x - CTIME ===> Unbounded
+        return {};
     }
   }
   std::optional<size_t> operator()(const FrameBound& expr) {
@@ -117,18 +111,9 @@ struct HorizonCompute {
         return std::make_optional(expr.bound);
       case ComparisonOp::LE: // f - CFRAME <= c ===> c + 1
         return std::make_optional(1 + expr.bound);
-      case ComparisonOp::GE:
-      case ComparisonOp::GT: // c <= f - CFRANE or c < f - CFRAME ===> Unbounded
-        return {};           // TODO: Check
-
-      default: return {};
+      default: // c <= f - CFRANE or c < f - CFRAME ===> Unbounded
+        return {};
     }
-  }
-  std::optional<size_t> operator()(const CompareId&) {
-    return 0;
-  }
-  std::optional<size_t> operator()(const CompareClass&) {
-    return 0;
   }
   std::optional<size_t> operator()(const ExistsPtr& expr) {
     if (auto& pin = expr->pinned_at) {
@@ -144,12 +129,8 @@ struct HorizonCompute {
       return this->eval(*(expr->phi));
     }
   }
-  std::optional<size_t> operator()(const PinPtr& expr) {
-    return this->eval(expr->phi);
-  }
-  std::optional<size_t> operator()(const NotPtr& e) {
-    return this->eval(e->arg);
-  }
+  std::optional<size_t> operator()(const PinPtr& expr) { return this->eval(expr->phi); }
+  std::optional<size_t> operator()(const NotPtr& e) { return this->eval(e->arg); }
   std::optional<size_t> operator()(const AndPtr& expr) {
     auto hrz1 = std::optional<size_t>{};
     for (const auto& e : expr->args) {
@@ -208,6 +189,12 @@ struct HorizonCompute {
     const auto lhrz = this->eval(a);
     const auto rhrz = this->eval(b);
     return max(lhrz, rhrz);
+  }
+
+  // Set default horizon to 0
+  template <typename T>
+  std::optional<size_t> operator()(const T& expr) {
+    return 0;
   }
 };
 } // namespace

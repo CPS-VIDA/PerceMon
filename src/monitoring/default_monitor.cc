@@ -21,9 +21,7 @@ namespace {
 constexpr double TOP    = std::numeric_limits<double>::infinity();
 constexpr double BOTTOM = -TOP;
 
-constexpr double bool_to_robustness(const bool v) {
-  return (v) ? TOP : BOTTOM;
-}
+constexpr double bool_to_robustness(const bool v) { return (v) ? TOP : BOTTOM; }
 
 struct RobustnessOp {
   // This version will be incredibly inefficient runtime-wise but will probably be very
@@ -66,9 +64,7 @@ struct RobustnessOp {
   RobustnessOp(const std::deque<ds::Frame>& buffer, const double fps_) :
       trace{buffer}, fps{fps_} {};
 
-  std::vector<double> eval(const ast::Expr e) {
-    return std::visit(*this, e);
-  }
+  std::vector<double> eval(const ast::Expr e) { return std::visit(*this, e); }
 
   std::vector<double> eval(const ast::TemporalBoundExpr e) {
     return std::visit(*this, e);
@@ -90,6 +86,11 @@ struct RobustnessOp {
   std::vector<double> operator()(const ast::SometimesPtr e);
   std::vector<double> operator()(const ast::SincePtr e);
   std::vector<double> operator()(const ast::BackToPtr e);
+
+  std::vector<double> operator()(const ast::CompareED e);
+  std::vector<double> operator()(const ast::CompareLat e);
+  std::vector<double> operator()(const ast::CompareLon e);
+  std::vector<double> operator()(const ast::CompareArea e);
 };
 } // namespace
 
@@ -107,15 +108,11 @@ OnlineMonitor::OnlineMonitor(const ast::Expr& phi_, const double fps_) :
 
 void OnlineMonitor::add_frame(const datastream::Frame& frame) {
   this->buffer.push_back(frame);
-  if (this->buffer.size() > this->max_horizon) {
-    this->buffer.pop_front();
-  }
+  if (this->buffer.size() > this->max_horizon) { this->buffer.pop_front(); }
 }
 void OnlineMonitor::add_frame(datastream::Frame&& frame) {
   this->buffer.push_back(std::move(frame));
-  if (this->buffer.size() > this->max_horizon) {
-    this->buffer.pop_front();
-  }
+  if (this->buffer.size() > this->max_horizon) { this->buffer.pop_front(); }
 }
 
 double OnlineMonitor::eval() const {
@@ -273,6 +270,11 @@ std::vector<double> RobustnessOp::operator()(const ast::CompareClass e) {
   assert(ret.size() == this->trace.size());
   return ret;
 }
+
+std::vector<double> RobustnessOp::operator()(const ast::CompareArea e) {}
+std::vector<double> RobustnessOp::operator()(const ast::CompareED e) {}
+std::vector<double> RobustnessOp::operator()(const ast::CompareLat e);
+std::vector<double> RobustnessOp::operator()(const ast::CompareLon e);
 
 std::vector<double> RobustnessOp::operator()(const ast::ExistsPtr e) {
   // This is hard...
@@ -438,9 +440,7 @@ std::vector<double> RobustnessOp::operator()(const ast::PreviousPtr e) {
   auto rho = this->eval(e->arg);
   // Iterate from the back and keep updating
   for (auto i = std::rbegin(rho); i != std::rend(rho); i++) {
-    if (std::next(i) != std::rend(rho)) {
-      *i = *std::next(i);
-    }
+    if (std::next(i) != std::rend(rho)) { *i = *std::next(i); }
     // Else don't do anything. This will not mess up mins or maxs.
     // TODO: Is this correct? Any parent temporal operator should not
     // evaluate this as it should exceed bounds.

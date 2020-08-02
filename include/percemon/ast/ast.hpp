@@ -15,8 +15,8 @@
 #include <variant>
 #include <vector>
 
-namespace percemon {
-namespace ast {
+namespace percemon::ast {
+
 using namespace primitives;
 using namespace functions;
 
@@ -61,16 +61,22 @@ struct SpForall;
 using SpForallPtr = std::shared_ptr<SpForall>;
 
 using Expr = std::variant<
-    // TQTL Primitives.
+    // Primitives.
     Const,
+    // Functions on Primitives
     TimeBound,
     FrameBound,
     CompareId,
     CompareClass,
-    // TQTL Operations.
+    CompareED,
+    CompareLat,
+    CompareLon,
+    CompareArea,
+    // Quantifiers
     ExistsPtr,
     ForallPtr,
     PinPtr,
+    // Temporal Operators
     NotPtr,
     AndPtr,
     OrPtr,
@@ -78,33 +84,13 @@ using Expr = std::variant<
     AlwaysPtr,
     SometimesPtr,
     SincePtr,
-    BackToPtr
-    /*
-    // Spatio-temporal Primitives.
-    EmptySet,
-    UniverseSet,
-    BBox,
-    // Spatio-temporal operators
-    ComplementPtr,
-    IntersectPtr,
-    UnionPtr,
-    InteriorPtr,
-    ClosurePtr,
-    SpExistsPtr,
-    SpForallPtr,
-    CompareED,
-    CompareLat,
-    CompareLon,
-    CompareArea
-    */
-    >;
+    BackToPtr>;
 
 Expr operator~(const Expr& e);
 Expr operator&(const Expr& lhs, const Expr& rhs);
 Expr operator|(const Expr& lhs, const Expr& rhs);
 Expr operator>>(const Expr& lhs, const Expr& rhs);
 
-} // namespace ast
-} // namespace percemon
+} // namespace percemon::ast
 
 #endif /* end of include guard: __PERCEMON_AST_AST_HPP__ */
