@@ -68,7 +68,7 @@ include(ThirdPartyLibs)
 add_subdirectory(third_party)
 
 # Sources and actual library Add library and module
-set(PERCEMON_SOURCES src/ast.cc src/monitoring/default_monitor.cc
+set(PERCEMON_SOURCES src/ast.cc src/topo.cc src/monitoring/default_monitor.cc
                      src/monitoring/horizon.cc)
 
 add_library(PerceMon ${PERCEMON_SOURCES})

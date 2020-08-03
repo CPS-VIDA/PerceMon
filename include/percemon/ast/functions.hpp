@@ -5,9 +5,8 @@
 
 #include "percemon/ast/primitives.hpp"
 
-namespace percemon {
-namespace ast {
-namespace functions {
+namespace percemon::ast::functions {
+
 using namespace primitives;
 
 // Primitive operations on Time/Frames
@@ -26,10 +25,10 @@ struct TimeBound {
 
   TimeBound() = delete;
   TimeBound(
-      const Var_x& x_,
+      Var_x x_,
       const ComparisonOp op_ = ComparisonOp::GE,
       const double bound_    = 0.0) :
-      x{x_}, op{op_}, bound{bound_} {
+      x{std::move(x_)}, op{op_}, bound{bound_} {
     if (op == ComparisonOp::EQ || op == ComparisonOp::NE) {
       throw std::invalid_argument(
           "TimeBound (Var_x - C_TIME ~ c) cannot have == and != constraints.");
@@ -79,10 +78,10 @@ struct FrameBound {
 
   FrameBound() = delete;
   FrameBound(
-      const Var_f& f_,
+      Var_f f_,
       const ComparisonOp op_ = ComparisonOp::GE,
       const size_t bound_    = 0) :
-      f{f_}, op{op_}, bound{bound_} {
+      f{std::move(f_)}, op{op_}, bound{bound_} {
     if (op == ComparisonOp::EQ || op == ComparisonOp::NE) {
       throw std::invalid_argument(
           "FrameBound (Var_f - C_FRAME ~ c) cannot have == and != constraints.");
@@ -119,7 +118,7 @@ struct CompareId {
 
   CompareId() = delete;
   CompareId(Var_id lhs_, ComparisonOp op_, Var_id rhs_) :
-      lhs{lhs_}, op{op_}, rhs{rhs_} {
+      lhs{std::move(lhs_)}, op{op_}, rhs{std::move(rhs_)} {
     if (op != ComparisonOp::EQ && op != ComparisonOp::NE) {
       throw std::invalid_argument(
           "Cannot use relational operators <, >, <=, >= to compare Var_id");
@@ -136,7 +135,7 @@ struct Class {
   Var_id id;
 
   Class() = delete;
-  Class(Var_id id_) : id{id_} {}
+  Class(Var_id id_) : id{std::move(id_)} {}
 };
 
 /**
@@ -150,7 +149,7 @@ struct CompareClass {
 
   CompareClass() = delete;
   CompareClass(Class lhs_, ComparisonOp op_, std::variant<int, Class> rhs_) :
-      lhs{lhs_}, op{op_}, rhs{rhs_} {
+      lhs{std::move(lhs_)}, op{op_}, rhs{std::move(rhs_)} {
     if (op != ComparisonOp::EQ && op != ComparisonOp::NE) {
       throw std::invalid_argument(
           "Cannot use relational operators <, >, <=, >= to compare Class(id)");
@@ -173,13 +172,13 @@ struct Prob {
   double scale = 1.0;
 
   Prob() = delete;
-  Prob(Var_id id_, double scale_ = 1.0) : id{id_}, scale{scale_} {}
+  Prob(Var_id id_, double scale_ = 1.0) : id{std::move(id_)}, scale{scale_} {}
 
   Prob& operator*=(const double rhs) {
     this->scale *= rhs;
     return *this;
   };
-  friend Prob operator*(Prob lhs, const double rhs) {
+  friend Prob operator*(const Prob& lhs, const double rhs) {
     return Prob{lhs.id, lhs.scale * rhs};
   }
 
@@ -193,7 +192,7 @@ struct CompareProb {
 
   CompareProb() = delete;
   CompareProb(Prob lhs_, ComparisonOp op_, std::variant<double, Prob> rhs_) :
-      lhs{lhs_}, op{op_}, rhs{rhs_} {
+      lhs{std::move(lhs_)}, op{op_}, rhs{std::move(rhs_)} {
     if (op == ComparisonOp::EQ || op == ComparisonOp::NE) {
       throw std::invalid_argument(
           "Cannot use relational operators ==, != to compare Prob(id)");
@@ -223,13 +222,17 @@ struct ED {
 
   ED() = delete;
   ED(Var_id id1_, CRT crt1_, Var_id id2_, CRT crt2_, double scale_ = 1.0) :
-      id1{id1_}, crt1{crt1_}, id2{id2_}, crt2{crt2_}, scale{scale_} {}
+      id1{std::move(id1_)},
+      crt1{crt1_},
+      id2{std::move(id2_)},
+      crt2{crt2_},
+      scale{scale_} {}
 
   ED& operator*=(const double rhs) {
     this->scale *= rhs;
     return *this;
   };
-  friend ED operator*(ED lhs, const double rhs) {
+  friend ED operator*(const ED& lhs, const double rhs) {
     return ED{lhs.id1, lhs.crt1, lhs.id2, lhs.crt2, lhs.scale * rhs};
   }
 
@@ -239,11 +242,11 @@ struct ED {
 struct CompareED {
   ED lhs;
   ComparisonOp op;
-  std::variant<double, ED> rhs;
+  double rhs;
 
   CompareED() = delete;
-  CompareED(ED lhs_, ComparisonOp op_, std::variant<double, ED> rhs_) :
-      lhs{std::move(lhs_)}, op{op_}, rhs{std::move(rhs_)} {
+  CompareED(ED lhs_, ComparisonOp op_, double rhs_) :
+      lhs{std::move(lhs_)}, op{op_}, rhs{rhs_} {
     if (op == ComparisonOp::EQ || op == ComparisonOp::NE) {
       throw std::invalid_argument(
           "Cannot use relational operators ==, != to compare Euclidean Distance");
@@ -270,7 +273,8 @@ struct Lat {
   double scale = 1.0;
 
   Lat() = delete;
-  Lat(Var_id id_, CRT crt_, double scale_ = 1.0) : id{id_}, crt{crt_}, scale{scale_} {}
+  Lat(Var_id id_, CRT crt_, double scale_ = 1.0) :
+      id{std::move(id_)}, crt{crt_}, scale{scale_} {}
 
   Lat& operator*=(const double rhs) {
     this->scale *= rhs;
@@ -290,7 +294,8 @@ struct Lon {
   double scale = 1.0;
 
   Lon() = delete;
-  Lon(Var_id id_, CRT crt_, double scale_ = 1.0) : id{id_}, crt{crt_}, scale{scale_} {}
+  Lon(Var_id id_, CRT crt_, double scale_ = 1.0) :
+      id{std::move(id_)}, crt{crt_}, scale{scale_} {}
 
   Lon& operator*=(const double rhs) {
     this->scale *= rhs;
@@ -311,7 +316,7 @@ struct CompareLat {
 
   CompareLat() = delete;
   CompareLat(Lat lhs_, ComparisonOp op_, std::variant<double, Lat, Lon> rhs_) :
-      lhs{lhs_}, op{op_}, rhs{rhs_} {
+      lhs{std::move(lhs_)}, op{op_}, rhs{std::move(rhs_)} {
     if (op == ComparisonOp::EQ || op == ComparisonOp::NE) {
       throw std::invalid_argument(
           "Cannot use relational operators ==, != to compare Lat(id)");
@@ -326,7 +331,7 @@ struct CompareLon {
 
   CompareLon() = delete;
   CompareLon(Lon lhs_, ComparisonOp op_, std::variant<double, Lat, Lon> rhs_) :
-      lhs{lhs_}, op{op_}, rhs{rhs_} {
+      lhs{std::move(lhs_)}, op{op_}, rhs{std::move(rhs_)} {
     if (op == ComparisonOp::EQ || op == ComparisonOp::NE) {
       throw std::invalid_argument(
           "Cannot use relational operators ==, != to compare Lon(id)");
@@ -373,13 +378,13 @@ struct Area {
   double scale = 1.0;
 
   Area() = delete;
-  Area(Var_id id_, double scale_ = 1.0) : id{id_}, scale{scale_} {}
+  Area(Var_id id_, double scale_ = 1.0) : id{std::move(id_)}, scale{scale_} {}
 
   Area& operator*=(const double rhs) {
     this->scale *= rhs;
     return *this;
   };
-  friend Area operator*(Area lhs, const double rhs) {
+  friend Area operator*(const Area& lhs, const double rhs) {
     return Area{lhs.id, lhs.scale * rhs};
   }
 
@@ -393,7 +398,7 @@ struct CompareArea {
 
   CompareArea() = delete;
   CompareArea(Area lhs_, ComparisonOp op_, std::variant<double, Area> rhs_) :
-      lhs{lhs_}, op{op_}, rhs{rhs_} {
+      lhs{std::move(lhs_)}, op{op_}, rhs{std::move(rhs_)} {
     if (op == ComparisonOp::EQ || op == ComparisonOp::NE) {
       throw std::invalid_argument(
           "Cannot use relational operators ==, != to compare Area(id)");
@@ -413,8 +418,6 @@ CompareArea operator>=(const Area& lhs, const Area& rhs);
 CompareArea operator<(const Area& lhs, const Area& rhs);
 CompareArea operator<=(const Area& lhs, const Area& rhs);
 
-} // namespace functions
-} // namespace ast
-} // namespace percemon
+} // namespace percemon::ast::functions
 
 #endif /* end of include guard: __PERCEMON_AST_FUNCTIONS_HPP__ */

@@ -13,8 +13,7 @@
 
 #include "percemon/ast/ast.hpp"
 
-namespace percemon {
-namespace ast {
+namespace percemon::ast {
 
 // TODO(anand): Add MTL x S4U ops
 
@@ -27,7 +26,6 @@ struct Closure;
 struct SpExists;
 struct SpForall;
 
-} // namespace ast
-} // namespace percemon
+} // namespace percemon::ast
 
 #endif /* end of include guard: __PERCEMON_S4U_HPP__ */

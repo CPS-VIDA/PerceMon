@@ -3,8 +3,11 @@
 #ifndef __PERCEMON_FMT_PRIMITIVES_HPP__
 #define __PERCEMON_FMT_PRIMITIVES_HPP__
 
-#include "percemon/ast/primitives.hpp"
+#include <fmt/format.h>
+
 #include "percemon/fmt/fmt.hpp"
+
+#include "percemon/ast/primitives.hpp"
 
 template <>
 struct fmt::formatter<percemon::ast::ComparisonOp>
@@ -82,7 +85,7 @@ template <>
 struct fmt::formatter<percemon::ast::EmptySet>
     : percemon::ast::formatter<percemon::ast::EmptySet> {
   template <typename FormatContext>
-  auto format(const percemon::ast::EmptySet& e, FormatContext& ctx) {
+  auto format(const percemon::ast::EmptySet&, FormatContext& ctx) {
     return format_to(ctx.out(), "EMPTYSET");
   }
 };
@@ -91,7 +94,7 @@ template <>
 struct fmt::formatter<percemon::ast::UniverseSet>
     : percemon::ast::formatter<percemon::ast::UniverseSet> {
   template <typename FormatContext>
-  auto format(const percemon::ast::UniverseSet& e, FormatContext& ctx) {
+  auto format(const percemon::ast::UniverseSet&, FormatContext& ctx) {
     return format_to(ctx.out(), "UNIVERSE");
   }
 };

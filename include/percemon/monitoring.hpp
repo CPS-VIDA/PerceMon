@@ -14,8 +14,7 @@
 
 #include <optional>
 
-namespace percemon {
-namespace monitoring {
+namespace percemon::monitoring {
 
 /**
  * Returns if the formula is purely past-time. Only place where this can be true is in
@@ -42,17 +41,8 @@ std::optional<size_t> get_horizon(const percemon::ast::Expr& expr, double fps);
  */
 struct OnlineMonitor {
  public:
-  /**
-   * The formula being monitored
-   */
-  const ast::Expr phi;
-  /**
-   * Frames per second for the datastream
-   */
-  const double fps;
-
   OnlineMonitor() = delete;
-  OnlineMonitor(const ast::Expr& phi_, const double fps_);
+  OnlineMonitor(ast::Expr phi_, const double fps_);
 
   /**
    * Add a new frame to the monitor buffer
@@ -63,14 +53,19 @@ struct OnlineMonitor {
   /**
    * Compute the robustness of the currently buffered frames.
    */
-  double eval() const;
+  double eval();
 
-  size_t getHorizon() const {
-    return max_horizon;
-  }
+  size_t getHorizon() { return max_horizon; }
 
  private:
-  // Primary data
+  /**
+   * The formula being monitored
+   */
+  const ast::Expr phi;
+  /**
+   * Frames per second for the datastream
+   */
+  const double fps;
 
   /**
    * A buffer containing the history of Frames required to compute robustness of phi
@@ -84,8 +79,6 @@ struct OnlineMonitor {
   size_t max_horizon;
 };
 
-} // namespace monitoring
-// namespace monitoring
-} // namespace percemon
+} // namespace percemon::monitoring
 
 #endif /* end of include guard: __PERCEMON_MONITORING_HPP__ */

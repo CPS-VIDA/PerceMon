@@ -6,12 +6,14 @@
 #include <fmt/format.h>
 #include <fmt/ostream.h>
 
+#include "percemon/ast.hpp"
+
+#include "percemon/utils.hpp"
+
 #include "percemon/fmt/functions.hpp"
 #include "percemon/fmt/primitives.hpp"
 #include "percemon/fmt/s4u.hpp"
 #include "percemon/fmt/tqtl.hpp"
-
-#include "percemon/utils.hpp"
 
 template <>
 struct fmt::formatter<percemon::ast::TemporalBoundExpr>
@@ -28,38 +30,22 @@ struct fmt::formatter<percemon::ast::Expr>
     : percemon::ast::formatter<percemon::ast::Expr> {
   template <typename FormatContext>
   auto format(const percemon::ast::Expr& expr, FormatContext& ctx) {
-    return std::visit(
-        percemon::utils::overloaded{[&](const percemon::ast::Const& e) {
-                                      return format_to(ctx.out(), "{}", e);
-                                    },
-                                    [&](const percemon::ast::TimeBound& e) {
-                                      return format_to(ctx.out(), "{}", e);
-                                    },
-                                    [&](const percemon::ast::FrameBound& e) {
-                                      return format_to(ctx.out(), "{}", e);
-                                    },
-                                    [&](const percemon::ast::CompareId& e) {
-                                      return format_to(ctx.out(), "{}", e);
-                                    },
-                                    [&](const percemon::ast::CompareClass& e) {
-                                      return format_to(ctx.out(), "{}", e);
-                                    },
-                                    [&](const percemon::ast::CompareED& e) {
-                                      return format_to(ctx.out(), "{}", e);
-                                    },
-                                    [&](const percemon::ast::CompareLat& e) {
-                                      return format_to(ctx.out(), "{}", e);
-                                    },
-                                    [&](const percemon::ast::CompareLon& e) {
-                                      return format_to(ctx.out(), "{}", e);
-                                    },
-                                    [&](const percemon::ast::CompareArea& e) {
-                                      return format_to(ctx.out(), "{}", e);
-                                    },
-                                    [&](const auto& e) {
-                                      return format_to(ctx.out(), "{}", *e);
-                                    }},
+    using namespace percemon;
+    std::string expr_str = std::visit(
+        utils::overloaded{[](const ast::Const& e) { return fmt::to_string(e); },
+                          [](const ast::TimeBound& e) { return fmt::to_string(e); },
+                          [](const ast::FrameBound& e) { return fmt::to_string(e); },
+                          [](const ast::CompareId& e) { return fmt::to_string(e); },
+                          [](const ast::CompareClass& e) { return fmt::to_string(e); },
+                          [](const ast::CompareED& e) { return fmt::to_string(e); },
+                          [](const ast::CompareLat& e) { return fmt::to_string(e); },
+                          [](const ast::CompareLon& e) { return fmt::to_string(e); },
+                          [](const ast::CompareArea& e) { return fmt::to_string(e); },
+                          [](const auto&& e) {
+                            return fmt::to_string(*e);
+                          }},
         expr);
+    return format_to(ctx.out(), "{}", expr_str);
   }
 };
 

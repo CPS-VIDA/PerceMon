@@ -5,8 +5,7 @@
 
 #include "percemon/ast/ast.hpp"
 
-namespace percemon {
-namespace ast {
+namespace percemon::ast {
 
 /**
  * Datastructure to pin frames
@@ -17,38 +16,22 @@ struct Pin {
 
   Expr phi = {};
 
-  Pin(std::optional<Var_x> x_, std::optional<Var_f> f_) : x{x_}, f{f_} {
+  Pin(const std::optional<Var_x>& x_, const std::optional<Var_f>& f_) : x{x_}, f{f_} {
     if (!x_.has_value() and !f_.has_value()) {
       throw std::invalid_argument(
           "Either time variable or frame variable must be specified when a frame is pinned.");
     }
   };
 
-  Pin(std::optional<Var_x> x_) : Pin{x_, {}} {};
-  Pin(std::optional<Var_f> f_) : Pin{{}, f_} {};
+  Pin(const std::optional<Var_x>& x_) : Pin{x_, {}} {};
+  Pin(const std::optional<Var_f>& f_) : Pin{{}, f_} {};
 
-  Pin(const Pin& other) : x{other.x}, f{other.f}, phi{other.phi} {};
-  Pin& operator=(const Pin& other) noexcept {
-    if (this != &other) {
-      x   = other.x;
-      f   = other.f;
-      phi = other.phi;
-    }
-    return *this;
-  };
+  Pin(const Pin&) = default;
+  Pin& operator=(const Pin&) = default;
+  Pin(Pin&&)                 = default;
+  Pin& operator=(Pin&&) = default;
 
-  Pin(Pin&& other) noexcept :
-      x{std::move(other.x)}, f{std::move(other.f)}, phi{std::move(other.phi)} {};
-  Pin& operator=(Pin&& other) noexcept {
-    if (this != &other) {
-      x   = std::move(other.x);
-      f   = std::move(other.f);
-      phi = std::move(other.phi);
-    }
-    return *this;
-  };
-
-  PinPtr dot(const Expr& e) const {
+  PinPtr dot(const Expr& e) {
     auto ret = std::make_shared<Pin>(x, f);
     ret->phi = e;
     return ret;
@@ -63,9 +46,9 @@ struct Exists {
   std::optional<Pin> pinned_at = {};
   std::optional<Expr> phi      = {};
 
-  Exists(std::vector<Var_id> id_list) : ids{id_list}, pinned_at{}, phi{} {};
+  Exists(std::vector<Var_id> id_list) : ids{std::move(id_list)}, pinned_at{}, phi{} {};
 
-  ExistsPtr at(const Pin& pin) const {
+  ExistsPtr at(const Pin& pin) {
     auto ret       = std::make_shared<Exists>(ids);
     ret->pinned_at = pin;
     return ret;
@@ -97,9 +80,9 @@ struct Forall {
   std::optional<Pin> pinned_at = {};
   std::optional<Expr> phi      = {};
 
-  Forall(std::vector<Var_id> id_list) : ids{id_list}, pinned_at{}, phi{} {};
+  Forall(std::vector<Var_id> id_list) : ids{std::move(id_list)}, pinned_at{}, phi{} {};
 
-  ForallPtr at(const Pin& pin) const {
+  ForallPtr at(const Pin& pin) {
     auto ret       = std::make_shared<Forall>(ids);
     ret->pinned_at = pin;
     return ret;
@@ -127,7 +110,7 @@ struct Not {
   Expr arg;
 
   Not() = delete;
-  Not(const Expr& arg_) : arg{arg_} {};
+  Not(Expr arg_) : arg{std::move(arg_)} {};
 };
 
 struct And {
@@ -142,9 +125,9 @@ struct And {
     }
     for (auto&& e : args_) {
       if (auto tb_ptr = std::get_if<TimeBound>(&e)) {
-        temporal_bound_args.push_back(*tb_ptr);
+        temporal_bound_args.emplace_back(*tb_ptr);
       } else if (auto fb_ptr = std::get_if<FrameBound>(&e)) {
-        temporal_bound_args.push_back(*fb_ptr);
+        temporal_bound_args.emplace_back(*fb_ptr);
       } else {
         args.push_back(e);
       }
@@ -164,9 +147,9 @@ struct Or {
     }
     for (auto&& e : args_) {
       if (auto tb_ptr = std::get_if<TimeBound>(&e)) {
-        temporal_bound_args.push_back(*tb_ptr);
+        temporal_bound_args.emplace_back(*tb_ptr);
       } else if (auto fb_ptr = std::get_if<FrameBound>(&e)) {
-        temporal_bound_args.push_back(*fb_ptr);
+        temporal_bound_args.emplace_back(*fb_ptr);
       } else {
         args.push_back(e);
       }
@@ -178,21 +161,21 @@ struct Previous {
   Expr arg;
 
   Previous() = delete;
-  Previous(const Expr& arg_) : arg{arg_} {};
+  Previous(Expr arg_) : arg{std::move(arg_)} {};
 };
 
 struct Always {
   Expr arg;
 
   Always() = delete;
-  Always(const Expr& arg_) : arg{arg_} {};
+  Always(Expr arg_) : arg{std::move(arg_)} {};
 };
 
 struct Sometimes {
   Expr arg;
 
   Sometimes() = delete;
-  Sometimes(const Expr& arg_) : arg{arg_} {};
+  Sometimes(Expr arg_) : arg{std::move(arg_)} {};
 };
 
 struct Since {
@@ -209,7 +192,6 @@ struct BackTo {
   BackTo(const Expr& arg0, const Expr& arg1) : args{std::make_pair(arg0, arg1)} {};
 };
 
-} // namespace ast
-} // namespace percemon
+} // namespace percemon::ast
 
 #endif /* end of include guard: __PERCEMON_AST_TQTL_HPP__ */

@@ -8,8 +8,7 @@
 #include <type_traits>
 #include <vector>
 
-namespace percemon {
-namespace utils {
+namespace percemon::utils {
 
 /**
  * Helper for SNIFAE: checks if given variable is any one of the Args
@@ -31,7 +30,6 @@ struct overloaded : Ts... {
 template <class... Ts>
 overloaded(Ts...)->overloaded<Ts...>;
 
-} // namespace utils
-} // namespace percemon
+} // namespace percemon::utils
 
 #endif /* end of include guard: __PERCEMON_UTILS_HPP__ */

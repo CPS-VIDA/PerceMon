@@ -4,12 +4,12 @@
 #define __PERCEMON_FMT_FMT_HPP__
 
 #include <fmt/format.h>
+#include <fmt/ostream.h>
+
+#include "percemon/ast.hpp"
 
 namespace percemon {
 namespace ast {
-// std::ostream& operator<<(std::ostream& os, const percemon::ast::Expr& expr);
-// std::ostream&
-// operator<<(std::ostream& os, const percemon::ast::TemporalBoundExpr& expr);
 
 template <typename Node>
 struct formatter {

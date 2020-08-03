@@ -30,6 +30,9 @@ namespace percemon::datastream {
  * A bounding box data structure that follows the Pascal VOC Bounding box format
  * (x-top left, y-top left,x-bottom right, y-bottom right), where each
  * coordinate is in terms of number of pixels.
+ *
+ * NOTE: The origin in an image is the top left corner.
+ *
  */
 struct BoundingBox {
   size_t xmin;

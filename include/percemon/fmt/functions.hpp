@@ -3,9 +3,11 @@
 #ifndef __PERCEMON_FMT_FUNCTIONS_HPP__
 #define __PERCEMON_FMT_FUNCTIONS_HPP__
 
-#include "percemon/fmt/fmt.hpp"
+#include <fmt/format.h>
 
 #include "percemon/ast.hpp"
+
+#include "percemon/fmt/fmt.hpp"
 
 template <>
 struct fmt::formatter<percemon::ast::TimeBound>
