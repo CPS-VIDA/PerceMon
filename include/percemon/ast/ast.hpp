@@ -55,10 +55,25 @@ struct Interior;
 using InteriorPtr = std::shared_ptr<Interior>;
 struct Closure;
 using ClosurePtr = std::shared_ptr<Closure>;
+
 struct SpExists;
 using SpExistsPtr = std::shared_ptr<SpExists>;
 struct SpForall;
 using SpForallPtr = std::shared_ptr<SpForall>;
+
+struct SpPrevious;
+using SpPreviousPtr = std::shared_ptr<SpPrevious>;
+struct SpAlways;
+using SpAlwaysPtr = std::shared_ptr<SpAlways>;
+struct SpSometimes;
+using SpSometimesPtr = std::shared_ptr<SpSometimes>;
+struct SpSince;
+using SpSincePtr = std::shared_ptr<SpSince>;
+struct SpBackTo;
+using SpBackToPtr = std::shared_ptr<SpBackTo>;
+
+struct CompareSpArea;
+using CompareSpAreaPtr = std::shared_ptr<CompareSpArea>;
 
 using Expr = std::variant<
     // Primitives.
@@ -84,7 +99,14 @@ using Expr = std::variant<
     AlwaysPtr,
     SometimesPtr,
     SincePtr,
-    BackToPtr>;
+    BackToPtr,
+    // Spatio-temporal operators
+    CompareSpArea,
+    SpExistsPtr,
+    SpForallPtr>;
+
+using SpatialExpr =
+    std::variant<BBox, ComplementPtr, IntersectPtr, UnionPtr, InteriorPtr, ClosurePtr>;
 
 Expr operator~(const Expr& e);
 Expr operator&(const Expr& lhs, const Expr& rhs);

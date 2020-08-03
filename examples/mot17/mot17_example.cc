@@ -7,6 +7,16 @@
 #include <itertools.hpp>
 #include <spdlog/spdlog.h>
 
+#if defined(__cpp_lib_filesystem) || __has_include(<filesystem>)
+#include <filesystem>
+namespace fs = std::filesystem;
+#elif __cpp_lib_experimental_filesystem || __has_include(<experimental/filesystem>)
+#include <experimental/filesystem>
+namespace fs = std::experimental::filesystem;
+#else
+#error "no <filesystem> support"
+#endif
+
 namespace ds = percemon::datastream;
 
 enum class PhiNumber : int { Example1, Example2, Example3 };
@@ -58,19 +68,34 @@ percemon::Expr get_phi(PhiNumber opt) {
   return {};
 }
 
-void compute(
+std::vector<bool> compute(
     percemon::monitoring::OnlineMonitor& monitor,
     const std::vector<ds::Frame>& trace) {
   spdlog::info("Running online monitor for:\n\t {}", monitor.phi);
   spdlog::info("Horizon:  {}", monitor.getHorizon());
   spdlog::info("FPS:      {}", monitor.fps);
 
+  std::vector<bool> sat_unsat;
+
   for (auto&& [i, it] = std::make_tuple(0, std::begin(trace)); it != std::end(trace);
        it++, i++) {
     auto& frame = *it;
     monitor.add_frame(frame);
     double rob = monitor.eval();
+    sat_unsat.push_back(rob >= 0);
     spdlog::debug("rob[{}]\t= {}", i, rob);
+  }
+
+  return sat_unsat;
+}
+
+void save_to_file(const std::vector<bool>& out, const std::string& file) {
+  auto output_file_path = fs::path(file, std::ios_base::out);
+  fs::create_directories(output_file_path.parent_path());
+
+  std::ofstream out_file{output_file_path};
+  for (auto&& [i, b] : iters::enumerate(out)) {
+    out_file << fmt::format("{},{}", i, (b) ? 1 : 0);
   }
 }
 
@@ -80,6 +105,9 @@ int main(int argc, char* argv[]) {
 
   std::string filename;
   app.add_option("input", filename, "Input MOT17 results file")->required();
+
+  std::string out_file = "robustness.csv";
+  app.add_option("-o,--output", out_file, "Save frame by frame robustness results to?");
 
   double fps;
   app.add_option("-f,--fps", fps, "FPS for given stream.")->required();
@@ -109,7 +137,7 @@ int main(int argc, char* argv[]) {
   percemon::Expr phi = get_phi(phi_option);
   auto trace         = mot17::parse_results(filename, fps, width, height);
   auto monitor       = percemon::monitoring::OnlineMonitor{phi, fps};
-  compute(monitor, trace);
+  auto frame_rob     = compute(monitor, trace);
 
   return 0;
 }

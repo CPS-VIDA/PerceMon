@@ -123,6 +123,11 @@ struct RobustnessOp {
   std::vector<double> operator()(const ast::FrameBound& e);
   std::vector<double> operator()(const ast::CompareId& e);
   std::vector<double> operator()(const ast::CompareClass& e);
+  std::vector<double> operator()(const ast::CompareED& e);
+  std::vector<double> operator()(const ast::CompareLat& e);
+  std::vector<double> operator()(const ast::CompareLon& e);
+  std::vector<double> operator()(const ast::CompareArea& e);
+
   std::vector<double> operator()(const ast::ExistsPtr& e);
   std::vector<double> operator()(const ast::ForallPtr& e);
   std::vector<double> operator()(const ast::PinPtr& e);
@@ -135,10 +140,9 @@ struct RobustnessOp {
   std::vector<double> operator()(const ast::SincePtr& e);
   std::vector<double> operator()(const ast::BackToPtr& e);
 
-  std::vector<double> operator()(const ast::CompareED& e);
-  std::vector<double> operator()(const ast::CompareLat& e);
-  std::vector<double> operator()(const ast::CompareLon& e);
-  std::vector<double> operator()(const ast::CompareArea& e);
+  std::vector<double> operator()(const ast::CompareSpArea&);
+  std::vector<double> operator()(const ast::SpExistsPtr&);
+  std::vector<double> operator()(const ast::SpForallPtr&);
 };
 } // namespace
 

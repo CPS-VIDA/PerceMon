@@ -11,6 +11,46 @@ using namespace primitives;
 
 // Primitive operations on Time/Frames
 
+struct TimeInterval {
+  double low, high;
+
+  enum Bound { OPEN, LOPEN, ROPEN, CLOSED };
+  Bound bound;
+
+  static TimeInterval open(double low, double high) {
+    return TimeInterval{low, high, OPEN};
+  }
+  static TimeInterval lopen(double low, double high) {
+    return TimeInterval{low, high, LOPEN};
+  }
+  static TimeInterval ropen(double low, double high) {
+    return TimeInterval{low, high, ROPEN};
+  }
+  static TimeInterval closed(double low, double high) {
+    return TimeInterval{low, high, CLOSED};
+  }
+};
+
+struct FrameInterval {
+  size_t low, high;
+
+  enum Bound { OPEN, LOPEN, ROPEN, CLOSED };
+  Bound bound;
+
+  static FrameInterval open(size_t low, size_t high) {
+    return FrameInterval{low, high, OPEN};
+  }
+  static FrameInterval lopen(size_t low, size_t high) {
+    return FrameInterval{low, high, LOPEN};
+  }
+  static FrameInterval ropen(size_t low, size_t high) {
+    return FrameInterval{low, high, ROPEN};
+  }
+  static FrameInterval closed(size_t low, size_t high) {
+    return FrameInterval{low, high, CLOSED};
+  }
+};
+
 /**
  * A bound on a Var_x of the form
  *

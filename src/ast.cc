@@ -112,18 +112,6 @@ CompareED operator<(const ED& lhs, const double rhs) {
 CompareED operator<=(const ED& lhs, const double rhs) {
   return CompareED{lhs, ComparisonOp::LE, rhs};
 }
-CompareED operator>(const ED& lhs, const ED& rhs) {
-  return CompareED{lhs, ComparisonOp::GT, rhs};
-}
-CompareED operator>=(const ED& lhs, const ED& rhs) {
-  return CompareED{lhs, ComparisonOp::GE, rhs};
-}
-CompareED operator<(const ED& lhs, const ED& rhs) {
-  return CompareED{lhs, ComparisonOp::LT, rhs};
-}
-CompareED operator<=(const ED& lhs, const ED& rhs) {
-  return CompareED{lhs, ComparisonOp::LE, rhs};
-}
 
 CompareLat operator>(const Lat& lhs, const double rhs) {
   return {lhs, ComparisonOp::GT, rhs};
@@ -240,6 +228,36 @@ CompareArea operator<=(const Area& lhs, const Area& rhs) {
 }
 
 } // namespace functions
+
+CompareSpArea operator>(const SpArea& lhs, const double rhs) {
+  return {lhs, ComparisonOp::GT, rhs};
+}
+CompareSpArea operator>=(const SpArea& lhs, const double rhs) {
+  return {lhs, ComparisonOp::GE, rhs};
+}
+CompareSpArea operator<(const SpArea& lhs, const double rhs) {
+  return {lhs, ComparisonOp::LT, rhs};
+}
+CompareSpArea operator<=(const SpArea& lhs, const double rhs) {
+  return {lhs, ComparisonOp::LE, rhs};
+}
+CompareSpArea operator>(const double lhs, const SpArea& rhs) { return rhs < lhs; }
+CompareSpArea operator>=(const double lhs, const SpArea& rhs) { return rhs <= lhs; }
+CompareSpArea operator<(const double lhs, const SpArea& rhs) { return rhs > lhs; }
+CompareSpArea operator<=(const double lhs, const SpArea& rhs) { return rhs >= lhs; }
+
+CompareSpArea operator>(const SpArea& lhs, const SpArea& rhs) {
+  return {lhs, ComparisonOp::GT, rhs};
+}
+CompareSpArea operator>=(const SpArea& lhs, const SpArea& rhs) {
+  return {lhs, ComparisonOp::GE, rhs};
+}
+CompareSpArea operator<(const SpArea& lhs, const SpArea& rhs) {
+  return {lhs, ComparisonOp::LT, rhs};
+}
+CompareSpArea operator<=(const SpArea& lhs, const SpArea& rhs) {
+  return {lhs, ComparisonOp::LE, rhs};
+}
 
 namespace {
 using percemon::utils::overloaded;

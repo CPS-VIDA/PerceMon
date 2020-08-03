@@ -93,7 +93,7 @@ struct BoundingBox {
 
 struct TopoUnion {
   struct BBoxCmp {
-    bool operator()(const BoundingBox& a, const BoundingBox& b) {
+    constexpr bool operator()(const BoundingBox& a, const BoundingBox& b) const {
       // TODO: Handling of open and closed sets?
       if (a.xmin < b.xmin) { return true; }
       if (a.xmin == b.xmin) {
@@ -134,7 +134,8 @@ struct TopoUnion {
         regions.end(),
         other.begin(),
         other.end(),
-        std::inserter(regions, regions.begin()));
+        std::inserter(regions, regions.begin()),
+        BBoxCmp{});
   }
 
   iterator begin() { return regions.begin(); }
@@ -158,7 +159,6 @@ Region interior(const Region& region);
 Region closure(const Region& region);
 Region spatial_intersect(const Region& lhs, const Region& rhs);
 Region spatial_union(const Region& lhs, const Region& rhs);
-Region simplify_region(const Region& region);
 
 } // namespace percemon::topo
 

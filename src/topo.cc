@@ -16,6 +16,44 @@ using namespace percemon::topo;
 constexpr double TOP    = std::numeric_limits<double>::infinity();
 constexpr double BOTTOM = -TOP;
 
+/**
+ * Helper class to compute the area of a union of BoundingBoxes.
+ * Idea derived from
+ * https://codercareer.blogspot.com/2011/12/no-27-area-of-rectangles.html
+ */
+struct TopoAreaCompute {
+  /**
+   * A one dimensional interval
+   */
+  struct Interval {
+    double low, high;
+    Interval(double l, double h) {
+      low  = (l < h) ? l : h;
+      high = (l + h) - low;
+    }
+    constexpr bool is_overlapping(const Interval& other) {
+      return !(low > other.high || other.low > high);
+    }
+    void merge(const Interval& other) {
+      if (is_overlapping(other)) {
+        low  = std::min(low, other.low);
+        high = std::max(high, other.high);
+      }
+    }
+  };
+
+  /**
+   * Sort boxes by left margin
+   */
+  struct BoundOrder {
+    constexpr bool operator()(const BoundingBox& a, const BoundingBox& b) {
+      return a.xmin < b.xmin;
+    }
+  };
+
+  double operator()(const TopoUnion& region);
+};
+
 Region intersection_of(const BoundingBox& a, const BoundingBox& b) {
   // First check if they intersect horizontally
 
@@ -113,11 +151,71 @@ Region intersection_of(const TopoUnion& lhs, const TopoUnion& rhs) {
   return TopoUnion{std::begin(intersect_set), std::end(intersect_set)};
 }
 
-Region union_of(const BoundingBox& a, const BoundingBox& b) {}
-Region union_of(const TopoUnion& a, const BoundingBox& b);
-Region union_of(const TopoUnion& a, const TopoUnion& b);
+Region union_of(const BoundingBox& a, const BoundingBox& b) {
+  // Check if one box is  inside the other.
 
-Region simplify(const TopoUnion& a);
+  if ((a.xmin <= b.xmin && b.xmin <= a.xmax) &&
+      (a.xmin <= b.xmax && b.xmax <= a.xmax)) {
+    // b is inside a in the horizontal axis
+
+    // Left is open if the left align and both of them are open.
+    // Else just pick a (the outer one)
+    bool lopen = (a.xmin == b.xmin) ? (a.lopen && b.lopen) : a.lopen;
+    // Same logic
+    bool ropen = (a.xmax == b.xmax) ? (a.ropen && b.ropen) : a.ropen;
+
+    // Now check the vertical axis.
+    if ((a.ymin < b.ymin && b.ymin < a.ymax) && (a.ymin < b.ymax && b.ymax < a.ymax)) {
+      // b is inside a
+
+      bool topen = (a.ymin == b.ymin) ? (a.topen && b.topen) : a.topen;
+      bool bopen = (a.ymax == b.ymax) ? (a.bopen && b.bopen) : a.bopen;
+
+      // Return a
+      return BoundingBox{a.xmin, a.xmax, a.ymin, a.ymax, lopen, ropen, topen, bopen};
+    }
+  }
+  if ((b.xmin <= a.xmin && a.xmin <= b.xmax) &&
+      (b.xmin <= a.xmax && a.xmax <= b.xmax)) {
+    // a is inside b in the horizontal axis
+
+    // Left is open if the left align and both of them are open.
+    // Els e just pick a (the outer one)
+    bool lopen = (b.xmin == a.xmin) ? (b.lopen && a.lopen) : b.lopen;
+    // Same logic
+    bool ropen = (b.xmax == a.xmax) ? (b.ropen && a.ropen) : b.ropen;
+
+    // Now check the vertical axis.
+    if ((b.ymin < a.ymin && a.ymin < b.ymax) && (b.ymin < a.ymax && a.ymax < b.ymax)) {
+      // b is inside a
+
+      bool topen = (b.ymin == a.ymin) ? (b.topen && a.topen) : b.topen;
+      bool bopen = (b.ymax == a.ymax) ? (b.bopen && a.bopen) : b.bopen;
+
+      // Return a
+      return BoundingBox{b.xmin, b.xmax, b.ymin, b.ymax, lopen, ropen, topen, bopen};
+    }
+  }
+
+  // Just return a union of the boxes.
+  auto ret = TopoUnion{};
+  ret.insert(a);
+  ret.insert(b);
+  return ret;
+}
+
+Region union_of(const TopoUnion& a, const BoundingBox& b) {
+  auto ret = a;
+  ret.insert(b);
+  return ret;
+}
+
+Region union_of(const TopoUnion& a, const TopoUnion& b) {
+  // Just add it. Handle the area computation properly.
+  auto ret = a;
+  ret.merge(b);
+  return ret;
+}
 
 } // namespace
 
@@ -171,11 +269,8 @@ double area(const Region& region) {
                    return std::abs((bbox.xmin - bbox.xmax) * (bbox.ymin - bbox.ymax));
                  },
                  [](const TopoUnion& region) -> double {
-                   double ret = 0;
-                   for (auto&& bbox : region) {
-                     ret += std::abs((bbox.xmin - bbox.xmax) * (bbox.ymin - bbox.ymax));
-                   }
-                   return ret;
+                   auto area_op = TopoAreaCompute{};
+                   return area_op(region);
                  }},
       region);
 }
@@ -295,15 +390,6 @@ Region spatial_union(const Region& lhs, const Region& rhs) {
       return union_of(std::get<TopoUnion>(rhs), std::get<BoundingBox>(lhs));
     }
   }
-}
-
-Region simplify_region(const Region& region) {
-  return std::visit(
-      overloaded{[](const auto& r) -> Region { return r; },
-                 [](const TopoUnion& r) {
-                   return simplify(r);
-                 }},
-      region);
 }
 
 } // namespace percemon::topo
