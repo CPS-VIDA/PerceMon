@@ -111,6 +111,7 @@ struct fmt::formatter<percemon::ast::CRT>
       case percemon::ast::CRT::BM: return format_to(ctx.out(), "BM");
       case percemon::ast::CRT::CT: return format_to(ctx.out(), "CT");
     }
+    return format_to(ctx.out(), "");
   }
 };
 

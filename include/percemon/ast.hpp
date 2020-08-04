@@ -51,11 +51,13 @@ ast::SpAlwaysPtr SpAlways(const FrameInterval&, const ast::SpatialExpr&);
 ast::SpSometimesPtr SpSometimes(const ast::SpatialExpr&);
 ast::SpSometimesPtr SpSometimes(const FrameInterval&, const ast::SpatialExpr&);
 
-ast::SpSincePtr SpSince(const ast::SpatialExpr&);
-ast::SpSincePtr SpSince(const FrameInterval&, const ast::SpatialExpr&);
+ast::SpSincePtr SpSince(const ast::SpatialExpr&, const ast::SpatialExpr&);
+ast::SpSincePtr
+SpSince(const FrameInterval&, const ast::SpatialExpr&, const ast::SpatialExpr&);
 
-ast::SpBackToPtr SpBackTo(const ast::SpatialExpr&);
-ast::SpBackToPtr SpBackTo(const FrameInterval&, const ast::SpatialExpr&);
+ast::SpBackToPtr SpBackTo(const ast::SpatialExpr&, const ast::SpatialExpr&);
+ast::SpBackToPtr
+SpBackTo(const FrameInterval&, const ast::SpatialExpr&, const ast::SpatialExpr&);
 
 } // namespace percemon
 

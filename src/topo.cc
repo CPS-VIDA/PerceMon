@@ -114,10 +114,7 @@ Region intersection_of(const TopoUnion& lhs, const TopoUnion& rhs) {
   return TopoUnion{std::begin(intersect_set), std::end(intersect_set)};
 }
 
-Region union_of(
-    const BoundingBox& a,
-    const BoundingBox& b,
-    const std::optional<BoundingBox>& universe) {
+Region union_of(const BoundingBox& a, const BoundingBox& b) {
   // Check if one box is  inside the other.
 
   if ((a.xmin <= b.xmin && b.xmin <= a.xmax) &&
@@ -170,19 +167,13 @@ Region union_of(
   return ret;
 }
 
-Region union_of(
-    const TopoUnion& a,
-    const BoundingBox& b,
-    const std::optional<BoundingBox>& universe) {
+Region union_of(const TopoUnion& a, const BoundingBox& b) {
   auto ret = a;
   ret.insert(b);
   return ret;
 }
 
-Region union_of(
-    const TopoUnion& a,
-    const TopoUnion& b,
-    const std::optional<BoundingBox>& universe) {
+Region union_of(const TopoUnion& a, const TopoUnion& b) {
   // Just add it. Handle the area computation properly.
   auto ret = a;
   ret.merge(b);
@@ -537,10 +528,13 @@ Region spatial_intersect(const Region& lhs, const Region& rhs) {
   }
 }
 
-Region spatial_union(
-    const Region& lhs,
-    const Region& rhs,
-    const std::optional<BoundingBox>& universe) {
+Region spatial_intersect(const std::vector<Region>& regions) {
+  Region ret = Empty{};
+  for (auto&& reg : regions) { ret = spatial_intersect(ret, reg); }
+  return ret;
+}
+
+Region spatial_union(const Region& lhs, const Region& rhs) {
   if (std::holds_alternative<Universe>(lhs) || std::holds_alternative<Universe>(rhs)) {
     // Handle either being Universe
     return Universe{};
@@ -550,25 +544,31 @@ Region spatial_union(
   if (std::holds_alternative<Empty>(rhs)) { return lhs; }
   if (std::holds_alternative<BoundingBox>(lhs) &&
       std::holds_alternative<BoundingBox>(rhs)) {
-    return union_of(std::get<BoundingBox>(lhs), std::get<BoundingBox>(rhs), universe);
+    return union_of(std::get<BoundingBox>(lhs), std::get<BoundingBox>(rhs));
   }
   // LHS is TopoUnion
   if (const auto topo_lhs_p = std::get_if<TopoUnion>(&lhs)) {
     if (std::holds_alternative<BoundingBox>(rhs)) {
-      return union_of(*topo_lhs_p, std::get<BoundingBox>(rhs), universe);
+      return union_of(*topo_lhs_p, std::get<BoundingBox>(rhs));
     } else {
-      return union_of(*topo_lhs_p, std::get<TopoUnion>(rhs), universe);
+      return union_of(*topo_lhs_p, std::get<TopoUnion>(rhs));
     }
   } else {
     // Else LHS is a BoundingBox
     // Switch on RHS
     if (std::holds_alternative<BoundingBox>(rhs)) {
       // NOTE: This should be redundant...
-      return union_of(std::get<BoundingBox>(lhs), std::get<BoundingBox>(rhs), universe);
+      return union_of(std::get<BoundingBox>(lhs), std::get<BoundingBox>(rhs));
     } else {
-      return union_of(std::get<TopoUnion>(rhs), std::get<BoundingBox>(lhs), universe);
+      return union_of(std::get<TopoUnion>(rhs), std::get<BoundingBox>(lhs));
     }
   }
+}
+
+Region spatial_union(const std::vector<Region>& regions) {
+  Region ret = Empty{};
+  for (auto&& reg : regions) { ret = spatial_union(ret, reg); }
+  return ret;
 }
 
 Region simplify_region(const Region& region) {

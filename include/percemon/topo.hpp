@@ -13,6 +13,7 @@
 #include <memory>
 #include <set>
 #include <variant>
+#include <vector>
 
 #include "percemon/datastream.hpp"
 
@@ -159,10 +160,10 @@ Region interior(const Region& region);
 Region closure(const Region& region);
 Region spatial_complement(const Region& region, const BoundingBox& universe);
 Region spatial_intersect(const Region& lhs, const Region& rhs);
-Region spatial_union(
-    const Region& lhs,
-    const Region& rhs,
-    const std::optional<BoundingBox>& universe = {});
+Region spatial_intersect(const std::vector<Region>&);
+Region spatial_union(const Region& lhs, const Region& rhs);
+Region spatial_union(const std::vector<Region>&);
+
 Region simplify_region(const Region& region);
 
 } // namespace percemon::topo

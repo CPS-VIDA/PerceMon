@@ -365,7 +365,7 @@ std::vector<double> RobustnessOp::operator()(const ast::CompareArea& e) {
   const std::string& id1      = this->obj_map.at(fmt::to_string(e.lhs.id));
   const variant_id id2_holder = std::visit(
       utils::overloaded{[](double i) -> variant_id { return i; },
-                        [&](const ast::Area& a) -> variant_id {
+                        [&](const ast::AreaOf& a) -> variant_id {
                           return this->obj_map.at(fmt::to_string(a.id));
                         }},
       e.rhs);
@@ -393,7 +393,7 @@ std::vector<double> RobustnessOp::operator()(const ast::CompareArea& e) {
 
     // Check if ID2 is needed and exists and get the comparing area.
     double area2 = 0;
-    if (auto area2_ptr = std::get_if<Area>(&(e.rhs))) {
+    if (auto area2_ptr = std::get_if<AreaOf>(&(e.rhs))) {
       // We already have ID. Get it
       const std::string& id2 =
           std::get<std::string>(id2_holder); // The holder must hold strin.
@@ -981,22 +981,99 @@ constexpr size_t interval_size(const FrameInterval& expr) {
 } // namespace
 
 std::vector<topo::Region> RobustnessOp::operator()(const ast::SpAlwaysPtr& e) {
-  // auto sub   = this->eval(e->arg);
-  // auto width = this->trace.size();
-  // if (e->interval.has_value()) { width = interval_size(*(e->interval)); }
+  auto sub   = this->eval(e->arg);
+  auto width = this->trace.size();
+  if (e->interval.has_value()) {
+    width = std::min(interval_size(*(e->interval)), width);
+  }
 
-  // return sub;
-  throw not_implemented_error("SpAlways semantics");
+  auto ret = std::vector<topo::Region>{};
+  ret.reserve(this->trace.size());
+  {
+    // Fill up the first "width" -1  amount with running intersection
+    topo::Region running_intersection = topo::Universe{};
+    for (auto i : iter::range(width - 1)) {
+      running_intersection = topo::spatial_intersect(running_intersection, sub.at(i));
+      ret.push_back(running_intersection);
+    }
+  }
+
+  // Now we need to maintain a sliding window of stuff.
+  for (auto&& window : iter::sliding_window(sub, width)) {
+    // Compute intersection in each window and push it to the back of ret.
+    // TODO: Optimize
+    topo::Region running_intersection = topo::Universe{};
+    for (auto&& r : window) {
+      running_intersection = topo::spatial_intersect(running_intersection, r);
+    }
+    ret.push_back(running_intersection);
+  }
+
+  assert(ret.size() == this->trace.size());
+  return ret;
 }
 
 std::vector<topo::Region> RobustnessOp::operator()(const ast::SpSometimesPtr& e) {
-  throw not_implemented_error("SpSometimes semantics");
+  auto sub   = this->eval(e->arg);
+  auto width = this->trace.size();
+  if (e->interval.has_value()) {
+    width = std::min(interval_size(*(e->interval)), width);
+  }
+
+  auto ret = std::vector<topo::Region>{};
+  ret.reserve(this->trace.size());
+  {
+    // Fill up the first "width" -1  amount with running union
+    topo::Region running_union = topo::Empty{};
+    for (auto i : iter::range(width - 1)) {
+      running_union = topo::spatial_union(running_union, sub.at(i));
+      ret.push_back(running_union);
+    }
+  }
+
+  // Now we need to maintain a sliding window of stuff.
+  for (auto&& window : iter::sliding_window(sub, width)) {
+    // Compute union in each window and push it to the back of ret.
+    // TODO: Optimize
+    topo::Region running_union = topo::Universe{};
+    for (auto&& r : window) { running_union = topo::spatial_union(running_union, r); }
+    ret.push_back(running_union);
+  }
+
+  assert(ret.size() == this->trace.size());
+  return ret;
 }
 
 std::vector<topo::Region> RobustnessOp::operator()(const ast::SpSincePtr& e) {
-  throw not_implemented_error("SpSince semantics");
+  auto lhs = this->eval(e->args.first);
+  auto rhs = this->eval(e->args.second);
+
+  // TODO: Deal with bounded.
+  auto vec = std::vector<topo::Region>{};
+
+  topo::Region prev = topo::Universe{};
+  for (const auto&& [i, j] : iter::zip(lhs, rhs)) {
+    auto tmp = topo::spatial_intersect(i, prev);
+    prev     = topo::spatial_union(tmp, j);
+    vec.push_back(prev);
+  }
+  assert(vec.size() == this->trace.size());
+  return vec;
 }
 
 std::vector<topo::Region> RobustnessOp::operator()(const ast::SpBackToPtr& e) {
-  throw not_implemented_error("SpBackTo semantics");
+  auto lhs = this->eval(e->args.first);
+  auto rhs = this->eval(e->args.second);
+
+  // TODO: Deal with bounded.
+  auto vec = std::vector<topo::Region>{};
+
+  topo::Region prev = topo::Empty{};
+  for (const auto&& [i, j] : iter::zip(lhs, rhs)) {
+    auto tmp = topo::spatial_union(i, prev);
+    prev     = topo::spatial_intersect(tmp, j);
+    vec.push_back(prev);
+  }
+  assert(vec.size() == this->trace.size());
+  return vec;
 }

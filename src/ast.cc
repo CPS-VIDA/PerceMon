@@ -420,19 +420,21 @@ ast::SpSometimesPtr SpSometimes(const FrameInterval& i, const ast::SpatialExpr& 
   return std::make_shared<ast::SpSometimes>(i, e);
 }
 
-ast::SpSincePtr SpSince(const ast::SpatialExpr& e) {
-  return std::make_shared<ast::SpSince>(e);
+ast::SpSincePtr SpSince(const ast::SpatialExpr& a, const ast::SpatialExpr& b) {
+  return std::make_shared<ast::SpSince>(a, b);
 }
-ast::SpSincePtr SpSince(const FrameInterval& i, const ast::SpatialExpr& e) {
-  return std::make_shared<ast::SpSince>(i, e);
-}
-
-ast::SpBackToPtr SpBackTo(const ast::SpatialExpr& e) {
-  return std::make_shared<ast::SpBackTo>(e);
+ast::SpSincePtr
+SpSince(const FrameInterval& i, const ast::SpatialExpr& a, const ast::SpatialExpr& b) {
+  return std::make_shared<ast::SpSince>(i, a, b);
 }
 
-ast::SpBackToPtr SpBackTo(const FrameInterval& i, const ast::SpatialExpr& e) {
-  return std::make_shared<ast::SpBackTo>(i, e);
+ast::SpBackToPtr SpBackTo(const ast::SpatialExpr& a, const ast::SpatialExpr& b) {
+  return std::make_shared<ast::SpBackTo>(a, b);
+}
+
+ast::SpBackToPtr
+SpBackTo(const FrameInterval& i, const ast::SpatialExpr& a, const ast::SpatialExpr& b) {
+  return std::make_shared<ast::SpBackTo>(i, a, b);
 }
 
 } // namespace percemon
