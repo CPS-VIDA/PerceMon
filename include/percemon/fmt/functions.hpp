@@ -10,6 +10,40 @@
 #include "percemon/fmt/fmt.hpp"
 
 template <>
+struct fmt::formatter<percemon::ast::TimeInterval>
+    : percemon::ast::formatter<percemon::ast::TimeInterval> {
+  template <typename FormatContext>
+  auto format(const percemon::ast::TimeInterval& e, FormatContext& ctx) {
+    using namespace percemon::ast;
+    auto fmt_str = "";
+    switch (e.bound) {
+      case TimeInterval::OPEN: fmt_str = "({}, {})"; break;
+      case TimeInterval::LOPEN: fmt_str = "({}, {}]"; break;
+      case TimeInterval::ROPEN: fmt_str = "[{}, {})"; break;
+      case TimeInterval::CLOSED: fmt_str = "[{}, {}]"; break;
+    }
+    return format_to(ctx.out(), fmt_str, e.low, e.high);
+  }
+};
+
+template <>
+struct fmt::formatter<percemon::ast::FrameInterval>
+    : percemon::ast::formatter<percemon::ast::FrameInterval> {
+  template <typename FormatContext>
+  auto format(const percemon::ast::FrameInterval& e, FormatContext& ctx) {
+    using namespace percemon::ast;
+    auto fmt_str = "";
+    switch (e.bound) {
+      case FrameInterval::OPEN: fmt_str = "({}, {})"; break;
+      case FrameInterval::LOPEN: fmt_str = "({}, {}]"; break;
+      case FrameInterval::ROPEN: fmt_str = "[{}, {})"; break;
+      case FrameInterval::CLOSED: fmt_str = "[{}, {}]"; break;
+    }
+    return format_to(ctx.out(), fmt_str, e.low, e.high);
+  }
+};
+
+template <>
 struct fmt::formatter<percemon::ast::TimeBound>
     : percemon::ast::formatter<percemon::ast::TimeBound> {
   template <typename FormatContext>
@@ -112,10 +146,10 @@ struct fmt::formatter<percemon::ast::Lon>
 };
 
 template <>
-struct fmt::formatter<percemon::ast::Area>
-    : percemon::ast::formatter<percemon::ast::Area> {
+struct fmt::formatter<percemon::ast::AreaOf>
+    : percemon::ast::formatter<percemon::ast::AreaOf> {
   template <typename FormatContext>
-  auto format(const percemon::ast::Area& e, FormatContext& ctx) {
+  auto format(const percemon::ast::AreaOf& e, FormatContext& ctx) {
     return format_to(ctx.out(), "{} * Area({})", e.scale, e.id);
   }
 };
@@ -125,8 +159,7 @@ struct fmt::formatter<percemon::ast::CompareED>
     : percemon::ast::formatter<percemon::ast::CompareED> {
   template <typename FormatContext>
   auto format(const percemon::ast::CompareED& e, FormatContext& ctx) {
-    auto rhs = std::visit([](const auto& r) { return fmt::to_string(r); });
-    return format_to(ctx.out(), "({} {} {})", e.lhs, e.op, rhs);
+    return format_to(ctx.out(), "({} {} {})", e.lhs, e.op, e.rhs);
   }
 };
 
@@ -135,7 +168,7 @@ struct fmt::formatter<percemon::ast::CompareLon>
     : percemon::ast::formatter<percemon::ast::CompareLon> {
   template <typename FormatContext>
   auto format(const percemon::ast::CompareLon& e, FormatContext& ctx) {
-    auto rhs = std::visit([](const auto& r) { return fmt::to_string(r); });
+    auto rhs = std::visit([](const auto& r) { return fmt::to_string(r); }, e.rhs);
     return format_to(ctx.out(), "({} {} {})", e.lhs, e.op, rhs);
   }
 };
@@ -145,7 +178,7 @@ struct fmt::formatter<percemon::ast::CompareLat>
     : percemon::ast::formatter<percemon::ast::CompareLat> {
   template <typename FormatContext>
   auto format(const percemon::ast::CompareLat& e, FormatContext& ctx) {
-    auto rhs = std::visit([](const auto& r) { return fmt::to_string(r); });
+    auto rhs = std::visit([](const auto& r) { return fmt::to_string(r); }, e.rhs);
     return format_to(ctx.out(), "({} {} {})", e.lhs, e.op, rhs);
   }
 };
@@ -155,7 +188,7 @@ struct fmt::formatter<percemon::ast::CompareArea>
     : percemon::ast::formatter<percemon::ast::CompareArea> {
   template <typename FormatContext>
   auto format(const percemon::ast::CompareArea& e, FormatContext& ctx) {
-    auto rhs = std::visit([](const auto& r) { return fmt::to_string(r); });
+    auto rhs = std::visit([](const auto& r) { return fmt::to_string(r); }, e.rhs);
     return format_to(ctx.out(), "({} {} {})", e.lhs, e.op, rhs);
   }
 };

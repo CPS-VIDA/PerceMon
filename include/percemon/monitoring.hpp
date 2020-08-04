@@ -42,7 +42,11 @@ std::optional<size_t> get_horizon(const percemon::ast::Expr& expr, double fps);
 struct OnlineMonitor {
  public:
   OnlineMonitor() = delete;
-  OnlineMonitor(ast::Expr phi_, const double fps_);
+  OnlineMonitor(
+      ast::Expr phi_,
+      const double fps_,
+      double x_boundary,
+      double y_boundary);
 
   /**
    * Add a new frame to the monitor buffer
@@ -55,7 +59,9 @@ struct OnlineMonitor {
    */
   double eval();
 
-  size_t getHorizon() { return max_horizon; }
+  [[nodiscard]] size_t get_max_horizon() const { return max_horizon; }
+  [[nodiscard]] size_t get_fps() const { return fps; };
+  [[nodiscard]] const ast::Expr& get_phi() const { return phi; }
 
  private:
   /**
@@ -77,6 +83,11 @@ struct OnlineMonitor {
    * Maximum width of buffer.
    */
   size_t max_horizon;
+
+  /**
+   * Boundary for UNIVERSE
+   */
+  double universe_x, universe_y;
 };
 
 } // namespace percemon::monitoring

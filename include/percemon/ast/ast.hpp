@@ -101,12 +101,24 @@ using Expr = std::variant<
     SincePtr,
     BackToPtr,
     // Spatio-temporal operators
-    CompareSpArea,
+    CompareSpAreaPtr,
     SpExistsPtr,
     SpForallPtr>;
 
-using SpatialExpr =
-    std::variant<BBox, ComplementPtr, IntersectPtr, UnionPtr, InteriorPtr, ClosurePtr>;
+using SpatialExpr = std::variant<
+    EmptySet,
+    UniverseSet,
+    BBox,
+    ComplementPtr,
+    IntersectPtr,
+    UnionPtr,
+    InteriorPtr,
+    ClosurePtr,
+    SpPreviousPtr,
+    SpAlwaysPtr,
+    SpSometimesPtr,
+    SpSincePtr,
+    SpBackToPtr>;
 
 Expr operator~(const Expr& e);
 Expr operator&(const Expr& lhs, const Expr& rhs);

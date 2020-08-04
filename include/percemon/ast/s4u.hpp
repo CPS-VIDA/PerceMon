@@ -98,10 +98,10 @@ struct Closure {
   Closure(SpatialExpr arg_) : arg{std::move(arg_)} {};
 };
 
-struct SpExist {
+struct SpExists {
   SpatialExpr arg;
-  SpExist() = delete;
-  SpExist(SpatialExpr arg_) : arg{std::move(arg_)} {};
+  SpExists() = delete;
+  SpExists(SpatialExpr arg_) : arg{std::move(arg_)} {};
 };
 
 struct SpForall {

@@ -413,50 +413,50 @@ CompareLon operator>=(const Lon& lhs, const Lat& rhs);
 CompareLon operator<(const Lon& lhs, const Lat& rhs);
 CompareLon operator<=(const Lon& lhs, const Lat& rhs);
 
-struct Area {
+struct AreaOf {
   Var_id id;
   double scale = 1.0;
 
-  Area() = delete;
-  Area(Var_id id_, double scale_ = 1.0) : id{std::move(id_)}, scale{scale_} {}
+  AreaOf() = delete;
+  AreaOf(Var_id id_, double scale_ = 1.0) : id{std::move(id_)}, scale{scale_} {}
 
-  Area& operator*=(const double rhs) {
+  AreaOf& operator*=(const double rhs) {
     this->scale *= rhs;
     return *this;
   };
-  friend Area operator*(const Area& lhs, const double rhs) {
-    return Area{lhs.id, lhs.scale * rhs};
+  friend AreaOf operator*(const AreaOf& lhs, const double rhs) {
+    return AreaOf{lhs.id, lhs.scale * rhs};
   }
 
-  friend Area operator*(const double lhs, const Area& rhs) { return rhs * lhs; }
+  friend AreaOf operator*(const double lhs, const AreaOf& rhs) { return rhs * lhs; }
 };
 
 struct CompareArea {
-  Area lhs;
+  AreaOf lhs;
   ComparisonOp op;
-  std::variant<double, Area> rhs;
+  std::variant<double, AreaOf> rhs;
 
   CompareArea() = delete;
-  CompareArea(Area lhs_, ComparisonOp op_, std::variant<double, Area> rhs_) :
+  CompareArea(AreaOf lhs_, ComparisonOp op_, std::variant<double, AreaOf> rhs_) :
       lhs{std::move(lhs_)}, op{op_}, rhs{std::move(rhs_)} {
     if (op == ComparisonOp::EQ || op == ComparisonOp::NE) {
       throw std::invalid_argument(
-          "Cannot use relational operators ==, != to compare Area(id)");
+          "Cannot use relational operators ==, != to compare AreaOf(id)");
     }
   };
 };
-CompareArea operator>(const Area& lhs, const double rhs);
-CompareArea operator>=(const Area& lhs, const double rhs);
-CompareArea operator<(const Area& lhs, const double rhs);
-CompareArea operator<=(const Area& lhs, const double rhs);
-CompareArea operator>(const double lhs, const Area& rhs);
-CompareArea operator>=(const double lhs, const Area& rhs);
-CompareArea operator<(const double lhs, const Area& rhs);
-CompareArea operator<=(const double lhs, const Area& rhs);
-CompareArea operator>(const Area& lhs, const Area& rhs);
-CompareArea operator>=(const Area& lhs, const Area& rhs);
-CompareArea operator<(const Area& lhs, const Area& rhs);
-CompareArea operator<=(const Area& lhs, const Area& rhs);
+CompareArea operator>(const AreaOf& lhs, const double rhs);
+CompareArea operator>=(const AreaOf& lhs, const double rhs);
+CompareArea operator<(const AreaOf& lhs, const double rhs);
+CompareArea operator<=(const AreaOf& lhs, const double rhs);
+CompareArea operator>(const double lhs, const AreaOf& rhs);
+CompareArea operator>=(const double lhs, const AreaOf& rhs);
+CompareArea operator<(const double lhs, const AreaOf& rhs);
+CompareArea operator<=(const double lhs, const AreaOf& rhs);
+CompareArea operator>(const AreaOf& lhs, const AreaOf& rhs);
+CompareArea operator>=(const AreaOf& lhs, const AreaOf& rhs);
+CompareArea operator<(const AreaOf& lhs, const AreaOf& rhs);
+CompareArea operator<=(const AreaOf& lhs, const AreaOf& rhs);
 
 } // namespace percemon::ast::functions
 

@@ -197,33 +197,33 @@ CompareLon operator<=(const Lon& lhs, const Lat& rhs) {
   return {lhs, ComparisonOp::LE, rhs};
 }
 
-CompareArea operator>(const Area& lhs, const double rhs) {
+CompareArea operator>(const AreaOf& lhs, const double rhs) {
   return {lhs, ComparisonOp::GT, rhs};
 }
-CompareArea operator>=(const Area& lhs, const double rhs) {
+CompareArea operator>=(const AreaOf& lhs, const double rhs) {
   return {lhs, ComparisonOp::GE, rhs};
 }
-CompareArea operator<(const Area& lhs, const double rhs) {
+CompareArea operator<(const AreaOf& lhs, const double rhs) {
   return {lhs, ComparisonOp::LT, rhs};
 }
-CompareArea operator<=(const Area& lhs, const double rhs) {
+CompareArea operator<=(const AreaOf& lhs, const double rhs) {
   return {lhs, ComparisonOp::LE, rhs};
 }
-CompareArea operator>(const double lhs, const Area& rhs) { return rhs < lhs; }
-CompareArea operator>=(const double lhs, const Area& rhs) { return rhs <= lhs; }
-CompareArea operator<(const double lhs, const Area& rhs) { return rhs > lhs; }
-CompareArea operator<=(const double lhs, const Area& rhs) { return rhs >= lhs; }
+CompareArea operator>(const double lhs, const AreaOf& rhs) { return rhs < lhs; }
+CompareArea operator>=(const double lhs, const AreaOf& rhs) { return rhs <= lhs; }
+CompareArea operator<(const double lhs, const AreaOf& rhs) { return rhs > lhs; }
+CompareArea operator<=(const double lhs, const AreaOf& rhs) { return rhs >= lhs; }
 
-CompareArea operator>(const Area& lhs, const Area& rhs) {
+CompareArea operator>(const AreaOf& lhs, const AreaOf& rhs) {
   return {lhs, ComparisonOp::GT, rhs};
 }
-CompareArea operator>=(const Area& lhs, const Area& rhs) {
+CompareArea operator>=(const AreaOf& lhs, const AreaOf& rhs) {
   return {lhs, ComparisonOp::GE, rhs};
 }
-CompareArea operator<(const Area& lhs, const Area& rhs) {
+CompareArea operator<(const AreaOf& lhs, const AreaOf& rhs) {
   return {lhs, ComparisonOp::LT, rhs};
 }
-CompareArea operator<=(const Area& lhs, const Area& rhs) {
+CompareArea operator<=(const AreaOf& lhs, const AreaOf& rhs) {
   return {lhs, ComparisonOp::LE, rhs};
 }
 
@@ -371,6 +371,68 @@ ast::SincePtr Since(const Expr& a, const Expr& b) {
 
 ast::BackToPtr BackTo(const Expr& a, const Expr& b) {
   return std::make_shared<ast::BackTo>(a, b);
+}
+
+ast::AreaOf Area(Var_id id, double scale) { return ast::AreaOf{std::move(id), scale}; }
+ast::SpArea Area(const ast::SpatialExpr& expr, double scale) {
+  return ast::SpArea{expr, scale};
+}
+
+ast::SpExistsPtr SpExists(const ast::SpatialExpr& e) {
+  return std::make_shared<ast::SpExists>(e);
+}
+ast::SpForallPtr SpForall(const ast::SpatialExpr& e) {
+  return std::make_shared<ast::SpForall>(e);
+}
+
+ast::ComplementPtr Complement(const ast::SpatialExpr& e) {
+  return std::make_shared<ast::Complement>(e);
+}
+
+ast::IntersectPtr Intersect(const std::vector<ast::SpatialExpr>& e) {
+  return std::make_shared<ast::Intersect>(e);
+}
+ast::UnionPtr Union(const std::vector<ast::SpatialExpr>& e) {
+  return std::make_shared<ast::Union>(e);
+}
+ast::InteriorPtr Interior(const ast::SpatialExpr& e) {
+  return std::make_shared<ast::Interior>(e);
+}
+ast::ClosurePtr Closure(const ast::SpatialExpr& e) {
+  return std::make_shared<ast::Closure>(e);
+}
+
+ast::SpPreviousPtr SpPrevious(const ast::SpatialExpr& e) {
+  return std::make_shared<ast::SpPrevious>(e);
+}
+
+ast::SpAlwaysPtr SpAlways(const ast::SpatialExpr& e) {
+  return std::make_shared<ast::SpAlways>(e);
+}
+ast::SpAlwaysPtr SpAlways(const FrameInterval& i, const ast::SpatialExpr& e) {
+  return std::make_shared<ast::SpAlways>(i, e);
+}
+
+ast::SpSometimesPtr SpSometimes(const ast::SpatialExpr& e) {
+  return std::make_shared<ast::SpSometimes>(e);
+}
+ast::SpSometimesPtr SpSometimes(const FrameInterval& i, const ast::SpatialExpr& e) {
+  return std::make_shared<ast::SpSometimes>(i, e);
+}
+
+ast::SpSincePtr SpSince(const ast::SpatialExpr& e) {
+  return std::make_shared<ast::SpSince>(e);
+}
+ast::SpSincePtr SpSince(const FrameInterval& i, const ast::SpatialExpr& e) {
+  return std::make_shared<ast::SpSince>(i, e);
+}
+
+ast::SpBackToPtr SpBackTo(const ast::SpatialExpr& e) {
+  return std::make_shared<ast::SpBackTo>(e);
+}
+
+ast::SpBackToPtr SpBackTo(const FrameInterval& i, const ast::SpatialExpr& e) {
+  return std::make_shared<ast::SpBackTo>(i, e);
 }
 
 } // namespace percemon

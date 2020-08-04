@@ -6,6 +6,8 @@
 #include "percemon/topo.hpp"
 #include "percemon/utils.hpp"
 
+#include "mono_wedge/mono_wedge.h"
+
 #include <algorithm>
 #include <deque>
 #include <functional>
@@ -98,6 +100,7 @@ struct RobustnessOp {
   //
   const std::deque<ds::Frame>& trace;
   const double fps;
+  const topo::BoundingBox universe;
 
   /**
    * Maintain a map from Var_x and Var_f to size_t (double gets converted using fps)
@@ -109,13 +112,20 @@ struct RobustnessOp {
    */
   std::map<std::string, std::string> obj_map;
 
-  RobustnessOp(const std::deque<ds::Frame>& buffer, const double fps_) :
-      trace{buffer}, fps{fps_} {};
+  RobustnessOp(
+      const std::deque<ds::Frame>& buffer,
+      const double fps_,
+      topo::BoundingBox universe_) :
+      trace{buffer}, fps{fps_}, universe{universe_} {};
 
   std::vector<double> eval(const ast::Expr& e) { return std::visit(*this, e); }
 
   std::vector<double> eval(const ast::TemporalBoundExpr& e) {
     return std::visit(*this, e);
+  }
+
+  std::vector<topo::Region> eval(const ast::SpatialExpr& expr) {
+    return std::visit(*this, expr);
   }
 
   std::vector<double> operator()(const ast::Const e);
@@ -140,21 +150,40 @@ struct RobustnessOp {
   std::vector<double> operator()(const ast::SincePtr& e);
   std::vector<double> operator()(const ast::BackToPtr& e);
 
-  std::vector<double> operator()(const ast::CompareSpArea&);
+  std::vector<double> operator()(const ast::CompareSpAreaPtr&);
   std::vector<double> operator()(const ast::SpExistsPtr&);
   std::vector<double> operator()(const ast::SpForallPtr&);
+
+  std::vector<double> operator()(const ast::SpArea&);
+
+  std::vector<topo::Region> operator()(const ast::EmptySet&);
+  std::vector<topo::Region> operator()(const ast::UniverseSet&);
+  std::vector<topo::Region> operator()(const ast::BBox&);
+  std::vector<topo::Region> operator()(const ast::ComplementPtr&);
+  std::vector<topo::Region> operator()(const ast::IntersectPtr&);
+  std::vector<topo::Region> operator()(const ast::UnionPtr&);
+  std::vector<topo::Region> operator()(const ast::InteriorPtr&);
+  std::vector<topo::Region> operator()(const ast::ClosurePtr&);
+  std::vector<topo::Region> operator()(const ast::SpPreviousPtr& e);
+  std::vector<topo::Region> operator()(const ast::SpAlwaysPtr& e);
+  std::vector<topo::Region> operator()(const ast::SpSometimesPtr& e);
+  std::vector<topo::Region> operator()(const ast::SpSincePtr& e);
+  std::vector<topo::Region> operator()(const ast::SpBackToPtr& e);
 };
 } // namespace
 
-OnlineMonitor::OnlineMonitor(ast::Expr phi_, const double fps_) :
-    phi{std::move(phi_)}, fps{fps_} {
+OnlineMonitor::OnlineMonitor(
+    ast::Expr phi_,
+    const double fps_,
+    double x_boundary,
+    double y_boundary) :
+    phi{std::move(phi_)}, fps{fps_}, universe_x{x_boundary}, universe_y{y_boundary} {
   // Set up the horizon. This will throw if phi is unbounded.
   if (auto opt_hrz = get_horizon(phi, fps)) {
     this->max_horizon = (*opt_hrz == 0) ? 1 : *opt_hrz;
   } else {
     throw std::invalid_argument(fmt::format(
-        "Given STQL expression doesn't have a bounded horizon. Cannot perform online monitoring for this formula.\n\tphi := {}",
-        phi));
+        "Given STQL expression doesn't have a bounded horizon. Cannot perform online monitoring for this formula."));
   }
 }
 
@@ -172,8 +201,11 @@ double OnlineMonitor::eval() {
   // future semantics. Plus, the back of the returned vector should have the robustness
   // at the current time.
 
-  auto rho_op = RobustnessOp{this->buffer, this->fps};
-  auto rho    = rho_op.eval(this->phi);
+  auto rho_op =
+      RobustnessOp{this->buffer,
+                   this->fps,
+                   topo::BoundingBox{0, 0, this->universe_x, this->universe_y}};
+  auto rho = rho_op.eval(this->phi);
   return rho.back();
 }
 
@@ -767,4 +799,204 @@ std::vector<double> RobustnessOp::operator()(const ast::BackToPtr& e) {
   }
 
   return rob;
+}
+
+std::vector<double> RobustnessOp::operator()(const ast::CompareSpAreaPtr& expr) {
+  // Get subformula robustness
+  auto rob     = this->operator()(expr->lhs);
+  auto rhs_rob = std::visit(
+      utils::overloaded{[n = this->trace.size()](const double a) {
+                          return std::vector<double>(n, a);
+                        },
+                        [&](const ast::SpArea& a) {
+                          return this->operator()(a);
+                        }},
+      expr->rhs);
+
+  assert(rob.size() == rhs_rob.size());
+
+  const auto op = get_relational_fn(expr->op);
+
+  for (auto&& [left, right] : iter::zip(rob, rhs_rob)) {
+    bool r = op(left, right);
+    left   = bool_to_robustness(r);
+  }
+
+  assert(rob.size() == this->trace.size());
+  return rob;
+}
+
+std::vector<double> RobustnessOp::operator()(const ast::SpExistsPtr& expr) {
+  auto rob = std::vector<double>{};
+  rob.reserve(this->trace.size());
+
+  auto sub_regions = this->eval(expr->arg);
+
+  for (auto&& region : sub_regions) {
+    auto simplified = topo::simplify_region(region);
+    rob.push_back(bool_to_robustness(!std::holds_alternative<topo::Empty>(simplified)));
+  }
+
+  assert(rob.size() == this->trace.size());
+  return rob;
+}
+
+std::vector<double> RobustnessOp::operator()(const ast::SpForallPtr&) {
+  throw not_implemented_error("SpForall semantics");
+}
+
+std::vector<double> RobustnessOp::operator()(const ast::SpArea& expr) {
+  auto ret = std::vector<double>{};
+  ret.reserve(this->trace.size());
+
+  auto sub_region_vec = this->eval(expr.arg);
+  for (auto&& reg : sub_region_vec) { ret.push_back(topo::area(reg)); }
+  return ret;
+}
+
+std::vector<topo::Region> RobustnessOp::operator()(const ast::EmptySet&) {
+  auto vec = std::vector<topo::Region>(this->trace.size(), topo::Empty{});
+  assert(vec.size() == this->trace.size());
+  return vec;
+}
+
+std::vector<topo::Region> RobustnessOp::operator()(const ast::UniverseSet&) {
+  auto vec = std::vector<topo::Region>(this->trace.size(), topo::Universe{});
+  assert(vec.size() == this->trace.size());
+  return vec;
+}
+
+std::vector<topo::Region> RobustnessOp::operator()(const ast::BBox& expr) {
+  auto vec = std::vector<topo::Region>{};
+  vec.reserve(this->trace.size());
+
+  auto id = this->obj_map.at(fmt::to_string(expr.id));
+
+  for (auto&& frame : this->trace) {
+    // Check if ID is in frame.
+    auto iter = frame.objects.find(id);
+    if (iter != frame.objects.end()) {
+      vec.emplace_back(topo::BoundingBox{iter->second.bbox});
+    } else {
+      vec.emplace_back(topo::Empty{});
+    }
+  }
+
+  assert(vec.size() == this->trace.size());
+  return vec;
+}
+
+std::vector<topo::Region> RobustnessOp::operator()(const ast::ComplementPtr& expr) {
+  auto rob = this->eval(expr->arg);
+
+  for (auto&& region : rob) {
+    region = topo::spatial_complement(region, this->universe);
+  }
+
+  assert(rob.size() == this->trace.size());
+  return rob;
+}
+
+std::vector<topo::Region> RobustnessOp::operator()(const ast::IntersectPtr& expr) {
+  std::vector<std::vector<topo::Region>> sub_regions;
+
+  // Initialize region vec to each subformula.
+  for (auto&& sub_expr : expr->args) { sub_regions.push_back(this->eval(sub_expr)); }
+
+  // Compute intersection across the
+  auto rob       = std::vector<topo::Region>{};
+  const size_t n = this->trace.size();
+
+  for (const size_t i : iter::range(n)) {
+    topo::Region reg = topo::Universe{};
+    for (const auto& region_vec : sub_regions) {
+      reg = topo::spatial_intersect(reg, region_vec.at(i));
+    }
+    rob.push_back(reg);
+  }
+
+  assert(rob.size() == this->trace.size());
+  return rob;
+}
+
+std::vector<topo::Region> RobustnessOp::operator()(const ast::UnionPtr& expr) {
+  std::vector<std::vector<topo::Region>> sub_regions;
+
+  // Initialize region vec to each subformula.
+  for (auto&& sub_expr : expr->args) { sub_regions.push_back(this->eval(sub_expr)); }
+
+  // Compute unionion across the
+  auto rob       = std::vector<topo::Region>{};
+  const size_t n = this->trace.size();
+
+  for (const size_t i : iter::range(n)) {
+    topo::Region reg = topo::Empty{};
+    for (const auto& region_vec : sub_regions) {
+      reg = topo::spatial_union(reg, region_vec.at(i));
+    }
+    rob.push_back(reg);
+  }
+
+  assert(rob.size() == this->trace.size());
+  return rob;
+}
+
+std::vector<topo::Region> RobustnessOp::operator()(const ast::InteriorPtr& expr) {
+  auto rob = this->eval(expr->arg);
+  for (auto&& region : rob) { region = topo::interior(region); }
+  assert(rob.size() == this->trace.size());
+  return rob;
+}
+
+std::vector<topo::Region> RobustnessOp::operator()(const ast::ClosurePtr& expr) {
+  auto rob = this->eval(expr->arg);
+  for (auto&& region : rob) { region = topo::closure(region); }
+  assert(rob.size() == this->trace.size());
+  return rob;
+}
+
+std::vector<topo::Region> RobustnessOp::operator()(const ast::SpPreviousPtr& e) {
+  auto sub = this->eval(e->arg);
+  // Iterate from the back and keep updating
+  for (auto i = std::rbegin(sub); i != std::rend(sub); i++) {
+    if (std::next(i) != std::rend(sub)) {
+      *i = *std::next(i);
+    } else {
+      *i = topo::Empty{};
+    }
+  }
+  return sub;
+}
+
+namespace {
+constexpr size_t interval_size(const FrameInterval& expr) {
+  switch (expr.bound) {
+    case FrameInterval::OPEN: return expr.high - 1;
+    case FrameInterval::LOPEN:
+    case FrameInterval::ROPEN: return expr.high;
+    case FrameInterval::CLOSED: return expr.high + 1;
+  }
+}
+
+} // namespace
+
+std::vector<topo::Region> RobustnessOp::operator()(const ast::SpAlwaysPtr& e) {
+  // auto sub   = this->eval(e->arg);
+  // auto width = this->trace.size();
+  // if (e->interval.has_value()) { width = interval_size(*(e->interval)); }
+
+  // return sub;
+  throw not_implemented_error("SpAlways semantics");
+}
+
+std::vector<topo::Region> RobustnessOp::operator()(const ast::SpSometimesPtr& e) {
+  throw not_implemented_error("SpSometimes semantics");
+}
+
+std::vector<topo::Region> RobustnessOp::operator()(const ast::SpSincePtr& e) {
+  throw not_implemented_error("SpSince semantics");
+}
+
+std::vector<topo::Region> RobustnessOp::operator()(const ast::SpBackToPtr& e) {
+  throw not_implemented_error("SpBackTo semantics");
 }

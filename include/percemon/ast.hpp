@@ -14,7 +14,6 @@ using namespace ast::primitives;
 using namespace ast::functions;
 
 using ast::Expr;
-
 using ast::Pin;
 
 ast::PinPtr Pinned(Var_x x, Var_f f);
@@ -32,6 +31,31 @@ ast::AlwaysPtr Always(const Expr& arg);
 ast::SometimesPtr Sometimes(const Expr& arg);
 ast::SincePtr Since(const Expr& a, const Expr& b);
 ast::BackToPtr BackTo(const Expr& a, const Expr& b);
+
+ast::AreaOf Area(Var_id id, double scale = 1.0);
+ast::SpArea Area(const ast::SpatialExpr& expr, double scale = 1.0);
+
+ast::SpExistsPtr SpExists(const ast::SpatialExpr&);
+ast::SpForallPtr SpForall(const ast::SpatialExpr&);
+ast::ComplementPtr Complement(const ast::SpatialExpr&);
+ast::IntersectPtr Intersect(const std::vector<ast::SpatialExpr>&);
+ast::UnionPtr Union(const std::vector<ast::SpatialExpr>&);
+ast::InteriorPtr Interior(const ast::SpatialExpr&);
+ast::ClosurePtr Closure(const ast::SpatialExpr&);
+
+ast::SpPreviousPtr SpPrevious(const ast::SpatialExpr&);
+
+ast::SpAlwaysPtr SpAlways(const ast::SpatialExpr&);
+ast::SpAlwaysPtr SpAlways(const FrameInterval&, const ast::SpatialExpr&);
+
+ast::SpSometimesPtr SpSometimes(const ast::SpatialExpr&);
+ast::SpSometimesPtr SpSometimes(const FrameInterval&, const ast::SpatialExpr&);
+
+ast::SpSincePtr SpSince(const ast::SpatialExpr&);
+ast::SpSincePtr SpSince(const FrameInterval&, const ast::SpatialExpr&);
+
+ast::SpBackToPtr SpBackTo(const ast::SpatialExpr&);
+ast::SpBackToPtr SpBackTo(const FrameInterval&, const ast::SpatialExpr&);
 
 } // namespace percemon
 

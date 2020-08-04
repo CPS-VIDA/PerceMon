@@ -14,7 +14,7 @@ struct Pin {
   std::optional<Var_x> x;
   std::optional<Var_f> f;
 
-  Expr phi = {};
+  Expr phi = Expr{Const{false}};
 
   Pin(const std::optional<Var_x>& x_, const std::optional<Var_f>& f_) : x{x_}, f{f_} {
     if (!x_.has_value() and !f_.has_value()) {
@@ -56,7 +56,7 @@ struct Exists {
 
   ExistsPtr at(Pin&& pin) {
     auto ret       = std::make_shared<Exists>(ids);
-    ret->pinned_at = pin;
+    ret->pinned_at = std::move(pin);
     return ret;
   };
 
@@ -90,7 +90,7 @@ struct Forall {
 
   ForallPtr at(Pin&& pin) {
     auto ret       = std::make_shared<Forall>(ids);
-    ret->pinned_at = pin;
+    ret->pinned_at = std::move(pin);
     return ret;
   };
 

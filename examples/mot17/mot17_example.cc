@@ -19,7 +19,7 @@ namespace fs = std::experimental::filesystem;
 
 namespace ds = percemon::datastream;
 
-enum class PhiNumber : int { Example1, Example2, Example3 };
+enum class PhiNumber : int { Example1, Example2, Example3, Example4 };
 
 percemon::Expr get_phi1() {
   using namespace percemon;
@@ -59,21 +59,33 @@ percemon::Expr get_phi3() {
   return phi;
 }
 
+percemon::Expr get_example6() {
+  using namespace percemon;
+
+  constexpr int PED = static_cast<int>(mot17::Labels::Pedestrian);
+
+  auto id1 = Var_id{"1"};
+  auto id2 = Var_id{"2"};
+  auto id3 = Var_id{"3"};
+  auto x   = Var_x{"1"};
+
+  return Const{false};
+}
+
 percemon::Expr get_phi(PhiNumber opt) {
   switch (opt) {
     case PhiNumber::Example1: return get_phi1();
     case PhiNumber::Example2: return get_phi2();
     case PhiNumber::Example3: return get_phi3();
   }
-  return {};
 }
 
 std::vector<bool> compute(
     percemon::monitoring::OnlineMonitor& monitor,
     const std::vector<ds::Frame>& trace) {
-  spdlog::info("Running online monitor for:\n\t {}", monitor.phi);
-  spdlog::info("Horizon:  {}", monitor.getHorizon());
-  spdlog::info("FPS:      {}", monitor.fps);
+  spdlog::info("Running online monitor for:\n\t {}", monitor.get_phi());
+  spdlog::info("Horizon:  {}", monitor.get_max_horizon());
+  spdlog::info("FPS:      {}", monitor.get_fps());
 
   std::vector<bool> sat_unsat;
 
@@ -90,12 +102,15 @@ std::vector<bool> compute(
 }
 
 void save_to_file(const std::vector<bool>& out, const std::string& file) {
-  auto output_file_path = fs::path(file, std::ios_base::out);
-  fs::create_directories(output_file_path.parent_path());
+  spdlog::info("Saving frame-by-frame robustness to: {}", file);
+  auto output_file_path = fs::absolute(fs::path(file));
+  if (!fs::exists(output_file_path.parent_path())) {
+    fs::create_directories(output_file_path.parent_path());
+  }
 
   std::ofstream out_file{output_file_path};
-  for (auto&& [i, b] : iters::enumerate(out)) {
-    out_file << fmt::format("{},{}", i, (b) ? 1 : 0);
+  for (auto&& [i, b] : iter::enumerate(out)) {
+    out_file << fmt::format("{},{}\n", i, b);
   }
 }
 
@@ -136,8 +151,11 @@ int main(int argc, char* argv[]) {
 
   percemon::Expr phi = get_phi(phi_option);
   auto trace         = mot17::parse_results(filename, fps, width, height);
-  auto monitor       = percemon::monitoring::OnlineMonitor{phi, fps};
-  auto frame_rob     = compute(monitor, trace);
+  auto monitor       = percemon::monitoring::OnlineMonitor{
+      phi, fps, static_cast<double>(width), static_cast<double>(height)};
+  auto frame_rob = compute(monitor, trace);
+
+  save_to_file(frame_rob, out_file);
 
   return 0;
 }

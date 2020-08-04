@@ -88,6 +88,20 @@ struct HorizonCompute {
     return std::visit([&](const auto e) { return (*this)(e); }, expr);
   }
 
+  std::optional<size_t> eval(const SpatialExpr& expr) {
+    return std::visit([&](const auto e) { return this->operator()(e); }, expr);
+  }
+
+  std::optional<size_t> eval(const SpArea& expr) { return this->eval(expr.arg); }
+  std::optional<size_t> eval(const FrameInterval& expr) {
+    switch (expr.bound) {
+      case FrameInterval::OPEN: return expr.high - 1;
+      case FrameInterval::LOPEN:
+      case FrameInterval::ROPEN: return expr.high;
+      case FrameInterval::CLOSED: return expr.high + 1;
+    }
+  }
+
   std::optional<size_t> operator()(const TimeBound& expr) {
     if (!fps.has_value()) {
       throw std::invalid_argument(
@@ -167,7 +181,8 @@ struct HorizonCompute {
 
   std::optional<size_t> operator()(const PreviousPtr& e) {
     const auto sub_hrz = this->eval(e->arg);
-    return (sub_hrz.has_value()) ? std::make_optional(1 + *sub_hrz) : std::nullopt;
+    return (sub_hrz.has_value()) ? std::make_optional(1 + *sub_hrz)
+                                 : std::make_optional<size_t>();
   }
   std::optional<size_t> operator()(const AlwaysPtr& expr) {
     return this->eval(expr->arg);
@@ -189,6 +204,89 @@ struct HorizonCompute {
     const auto lhrz = this->eval(a);
     const auto rhrz = this->eval(b);
     return max(lhrz, rhrz);
+  }
+
+  std::optional<size_t> operator()(const CompareSpAreaPtr& expr) {
+    const auto lhs_hrz = this->eval(expr->lhs);
+    const auto rhs_hrz = std::visit(
+        utils::overloaded{[](const double) -> std::optional<size_t> { return 0; },
+                          [&](const SpArea& e) {
+                            return this->eval(e);
+                          }},
+        expr->rhs);
+    return max(lhs_hrz, rhs_hrz);
+  }
+
+  std::optional<size_t> operator()(const ComplementPtr& expr) {
+    return this->eval(expr->arg);
+  }
+
+  std::optional<size_t> operator()(const IntersectPtr& expr) {
+    auto hrz1 = std::optional<size_t>{};
+    for (const auto& e : expr->args) {
+      const auto rhrz = this->eval(e);
+      hrz1            = max(hrz1, rhrz);
+    }
+    return hrz1;
+  }
+
+  std::optional<size_t> operator()(const UnionPtr& expr) {
+    auto hrz1 = std::optional<size_t>{};
+    for (const auto& e : expr->args) {
+      const auto rhrz = this->eval(e);
+      hrz1            = max(hrz1, rhrz);
+    }
+    return hrz1;
+  }
+  std::optional<size_t> operator()(const InteriorPtr& expr) {
+    return this->eval(expr->arg);
+  }
+  std::optional<size_t> operator()(const ClosurePtr& expr) {
+    return this->eval(expr->arg);
+  }
+  std::optional<size_t> operator()(const SpExistsPtr& expr) {
+    return this->eval(expr->arg);
+  }
+  std::optional<size_t> operator()(const SpForallPtr& expr) {
+    return this->eval(expr->arg);
+  }
+  std::optional<size_t> operator()(const SpPreviousPtr& e) {
+    const auto sub_hrz = this->eval(e->arg);
+    return (sub_hrz.has_value()) ? std::make_optional(1 + *sub_hrz)
+                                 : std::make_optional<size_t>();
+  }
+
+  std::optional<size_t> operator()(const SpAlwaysPtr& e) {
+    const auto sub_hrz = this->eval(e->arg);
+    if (e->interval.has_value()) {
+      return add_horizons(sub_hrz, this->eval(*(e->interval)));
+    }
+    return sub_hrz;
+  }
+  std::optional<size_t> operator()(const SpSometimesPtr& e) {
+    const auto sub_hrz = this->eval(e->arg);
+    if (e->interval.has_value()) {
+      return add_horizons(sub_hrz, this->eval(*(e->interval)));
+    }
+    return sub_hrz;
+  }
+
+  std::optional<size_t> operator()(const SpSincePtr& e) {
+    const auto [a, b]  = e->args;
+    const auto sub_hrz = max(this->eval(a), this->eval(b));
+    if (e->interval.has_value()) {
+      return add_horizons(sub_hrz, this->eval(*(e->interval)));
+    }
+    return sub_hrz;
+  }
+
+  std::optional<size_t> operator()(const SpBackToPtr& e) {
+    const auto [a, b]  = e->args;
+    const auto sub_hrz = max(this->eval(a), this->eval(b));
+    if (e->interval.has_value()) {
+      return add_horizons(sub_hrz, this->eval(*(e->interval)));
+    }
+    return sub_hrz;
   }
 
   // Set default horizon to 0

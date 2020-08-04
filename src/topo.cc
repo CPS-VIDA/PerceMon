@@ -1,4 +1,5 @@
 #include "percemon/topo.hpp"
+#include "percemon/exception.hh"
 
 #include <cassert>
 #include <cmath>
@@ -15,44 +16,6 @@ using namespace percemon::topo;
 
 constexpr double TOP    = std::numeric_limits<double>::infinity();
 constexpr double BOTTOM = -TOP;
-
-/**
- * Helper class to compute the area of a union of BoundingBoxes.
- * Idea derived from
- * https://codercareer.blogspot.com/2011/12/no-27-area-of-rectangles.html
- */
-struct TopoAreaCompute {
-  /**
-   * A one dimensional interval
-   */
-  struct Interval {
-    double low, high;
-    Interval(double l, double h) {
-      low  = (l < h) ? l : h;
-      high = (l + h) - low;
-    }
-    constexpr bool is_overlapping(const Interval& other) {
-      return !(low > other.high || other.low > high);
-    }
-    void merge(const Interval& other) {
-      if (is_overlapping(other)) {
-        low  = std::min(low, other.low);
-        high = std::max(high, other.high);
-      }
-    }
-  };
-
-  /**
-   * Sort boxes by left margin
-   */
-  struct BoundOrder {
-    constexpr bool operator()(const BoundingBox& a, const BoundingBox& b) {
-      return a.xmin < b.xmin;
-    }
-  };
-
-  double operator()(const TopoUnion& region);
-};
 
 Region intersection_of(const BoundingBox& a, const BoundingBox& b) {
   // First check if they intersect horizontally
@@ -151,7 +114,10 @@ Region intersection_of(const TopoUnion& lhs, const TopoUnion& rhs) {
   return TopoUnion{std::begin(intersect_set), std::end(intersect_set)};
 }
 
-Region union_of(const BoundingBox& a, const BoundingBox& b) {
+Region union_of(
+    const BoundingBox& a,
+    const BoundingBox& b,
+    const std::optional<BoundingBox>& universe) {
   // Check if one box is  inside the other.
 
   if ((a.xmin <= b.xmin && b.xmin <= a.xmax) &&
@@ -204,18 +170,211 @@ Region union_of(const BoundingBox& a, const BoundingBox& b) {
   return ret;
 }
 
-Region union_of(const TopoUnion& a, const BoundingBox& b) {
+Region union_of(
+    const TopoUnion& a,
+    const BoundingBox& b,
+    const std::optional<BoundingBox>& universe) {
   auto ret = a;
   ret.insert(b);
   return ret;
 }
 
-Region union_of(const TopoUnion& a, const TopoUnion& b) {
+Region union_of(
+    const TopoUnion& a,
+    const TopoUnion& b,
+    const std::optional<BoundingBox>& universe) {
   // Just add it. Handle the area computation properly.
   auto ret = a;
   ret.merge(b);
   return ret;
 }
+
+Region complement_of(BoundingBox bbox, const BoundingBox& universe) {
+  // Check if box is equal to or "larger than" universe.
+  if (bbox.xmin <= universe.xmin && bbox.xmax >= universe.xmax &&
+      bbox.ymin <= universe.ymin && bbox.ymax >= universe.ymax) {
+    return Empty{};
+  }
+  // Check if box is out of bounds
+  {
+    auto reg = intersection_of(bbox, universe);
+    if (std::holds_alternative<Empty>(reg)) { return Universe{}; }
+    bbox = std::get<BoundingBox>(reg);
+  }
+  // Holds Top, Bottom, Left, and Right fragments of complement
+  std::vector<BoundingBox> fragments;
+
+  // Get left fragment
+  if (bbox.xmin > universe.xmin || (bbox.xmin == universe.xmin && bbox.lopen)) {
+    fragments.emplace_back(BoundingBox{universe.xmin,
+                                       bbox.xmin,
+                                       bbox.ymin,
+                                       bbox.ymax,
+                                       false,
+                                       !bbox.lopen,
+                                       bbox.topen,
+                                       bbox.bopen});
+  }
+  // Get right fragment
+  if (bbox.xmax < universe.xmax || (bbox.xmax == universe.xmax && bbox.ropen)) {
+    fragments.emplace_back(BoundingBox{bbox.xmax,
+                                       universe.xmax,
+                                       bbox.ymin,
+                                       bbox.ymax,
+                                       !bbox.ropen,
+                                       false,
+                                       bbox.topen,
+                                       bbox.bopen});
+  }
+  // Get top fragment
+  if (bbox.ymin > universe.ymin || (bbox.ymin == universe.ymin && bbox.topen)) {
+    fragments.emplace_back(BoundingBox{universe.xmin,
+                                       universe.xmax,
+                                       universe.ymin,
+                                       bbox.ymin,
+                                       false,
+                                       false,
+                                       false,
+                                       !bbox.topen});
+  }
+  // Get bottom fragment
+  if (bbox.ymax < universe.ymax || (bbox.ymax == universe.ymax && bbox.bopen)) {
+    fragments.emplace_back(BoundingBox{universe.xmin,
+                                       universe.xmax,
+                                       bbox.ymax,
+                                       universe.ymax,
+                                       false,
+                                       false,
+                                       !bbox.bopen,
+                                       false});
+  }
+
+  return TopoUnion{std::begin(fragments), std::end(fragments)};
+}
+
+Region complement_of(const TopoUnion& region, const BoundingBox& universe) {
+  auto ret = TopoUnion{};
+  for (auto&& box : region) {
+    auto comp_box = complement_of(box, universe);
+    if (std::holds_alternative<Universe>(comp_box)) {
+      return Universe{}; // Since TopoUnion is the union of regions.
+    } else if (std::holds_alternative<Empty>(comp_box)) {
+      // Since this implies that the TopoUnion was Universe to begin with as atleast 1
+      // bounding box in the union was Universe.
+      // Therefore complement must be completely empty.
+      // TODO: verify.
+      return Empty{};
+    }
+    ret.merge(std::get<TopoUnion>(comp_box));
+  }
+  return ret;
+}
+
+/**
+ * Helper class to convert TopoUnion to a set of disjoint rectangles.
+ *
+ * Adapted from:
+ * https://codercareer.blogspot.com/2011/12/no-27-area-of-rectangles.html
+ */
+struct TopoSimplify {
+  /**
+   * A one dimensional interval
+   */
+  struct Interval {
+    double low, high;
+    Interval(double l, double h) {
+      low  = (l < h) ? l : h;
+      high = (l + h) - low;
+    }
+    constexpr bool is_overlapping(const Interval& other) {
+      return !(low > other.high || other.low > high);
+    }
+    void merge(const Interval& other) {
+      if (is_overlapping(other)) {
+        low  = std::min(low, other.low);
+        high = std::max(high, other.high);
+      }
+    }
+  };
+
+  /**
+   * Sort boxes by left margin
+   */
+  struct BoundOrder {
+    constexpr bool operator()(const BoundingBox& a, const BoundingBox& b) const {
+      return a.xmin < b.xmin;
+    }
+  };
+
+  Region operator()(const Empty& e) { return e; }
+  Region operator()(const Universe& e) { return e; }
+  Region operator()(const BoundingBox& bbox) { return bbox; }
+
+  std::set<double> get_all_xs(const std::set<BoundingBox, BoundOrder>& rects) {
+    auto ret = std::set<double>{};
+    for (auto&& r : rects) {
+      ret.insert(r.xmin);
+      ret.insert(r.xmax);
+    }
+    return ret;
+  }
+
+  template <typename RectIter>
+  std::vector<Interval>
+  get_y_ranges(RectIter start, RectIter end, const Interval& x_range) {
+    static_assert(std::is_same_v<BoundingBox, std::decay_t<decltype(*start)>>);
+
+    auto ret = std::vector<Interval>{};
+
+    auto& it = start;
+    for (; it != end; ++it) {
+      if (x_range.low < it->xmax && x_range.high > it->xmin) {
+        // Current rectangle is within the range.
+        auto y_range = Interval{it->ymin, it->ymax};
+        if (ret.empty()) {
+          // Add it if there is nothing in the ranges yet.
+          ret.push_back(y_range);
+        } else { // Else, try to accumulate the ranges.
+          auto tmp = std::vector<Interval>{};
+          for (auto&& rg : ret) {
+            if (y_range.is_overlapping(rg)) {
+              y_range.merge(rg);
+            } else {
+              tmp.push_back(rg);
+            }
+          }
+          tmp.push_back(y_range);
+          ret = tmp;
+        }
+      }
+    }
+
+    return ret;
+  }
+
+  Region operator()(const TopoUnion& region) {
+    std::set<BoundingBox, BoundOrder> rects{std::begin(region), std::end(region)};
+    std::set<double> x_margins = get_all_xs(rects);
+
+    std::vector<BoundingBox> ret;
+
+    auto iter = rects.cbegin();
+    for (auto xpair : iter::sliding_window(x_margins, 2)) {
+      double x1 = xpair.at(0), x2 = xpair.at(1);
+      Interval x_int{x1, x2};
+      while (iter->xmax < x1) ++iter; // This step is like interval scheduling.
+      // Hold intervals of Y that correspond to the current X interval.
+      std::vector<Interval> y_intervals = get_y_ranges(iter, rects.cend(), x_int);
+      // Merge the corresponding ranges to BoundingBoxes
+      // TODO: Open Closed Bounds?
+      for (auto&& y_int : y_intervals) {
+        ret.emplace_back(BoundingBox{x_int.low, x_int.high, y_int.low, y_int.high});
+      }
+    }
+
+    return TopoUnion{ret.begin(), ret.end()};
+  }
+};
 
 } // namespace
 
@@ -260,6 +419,7 @@ inline bool is_open(const Region& region) {
 }
 
 double area(const Region& region) {
+  auto reg = simplify_region(region);
   return std::visit(
       overloaded{[](const Empty&) -> double { return 0.0; },
                  [](const Universe&) -> double {
@@ -268,11 +428,15 @@ double area(const Region& region) {
                  [](const BoundingBox& bbox) -> double {
                    return std::abs((bbox.xmin - bbox.xmax) * (bbox.ymin - bbox.ymax));
                  },
-                 [](const TopoUnion& region) -> double {
-                   auto area_op = TopoAreaCompute{};
-                   return area_op(region);
+                 [](const TopoUnion& topo_un) -> double {
+                   double region_area = 0;
+                   for (auto&& bbox : topo_un) {
+                     region_area +=
+                         std::abs((bbox.xmin - bbox.xmax) * (bbox.ymin - bbox.ymax));
+                   }
+                   return region_area;
                  }},
-      region);
+      reg);
 }
 
 Region interior(const Region& region) {
@@ -331,6 +495,18 @@ Region closure(const Region& region) {
       region);
 }
 
+Region spatial_complement(const Region& region, const BoundingBox& universe) {
+  return std::visit(
+      utils::overloaded{
+          [](const Empty&) -> Region { return Universe{}; },
+          [](const Universe&) -> Region { return Empty{}; },
+          [&](const BoundingBox& bb) -> Region { return complement_of(bb, universe); },
+          [&](const TopoUnion& t) -> Region {
+            return complement_of(t, universe);
+          }},
+      region);
+}
+
 Region spatial_intersect(const Region& lhs, const Region& rhs) {
   if (std::holds_alternative<Empty>(lhs) || std::holds_alternative<Empty>(rhs)) {
     // Handle either being Empty
@@ -361,7 +537,10 @@ Region spatial_intersect(const Region& lhs, const Region& rhs) {
   }
 }
 
-Region spatial_union(const Region& lhs, const Region& rhs) {
+Region spatial_union(
+    const Region& lhs,
+    const Region& rhs,
+    const std::optional<BoundingBox>& universe) {
   if (std::holds_alternative<Universe>(lhs) || std::holds_alternative<Universe>(rhs)) {
     // Handle either being Universe
     return Universe{};
@@ -371,25 +550,30 @@ Region spatial_union(const Region& lhs, const Region& rhs) {
   if (std::holds_alternative<Empty>(rhs)) { return lhs; }
   if (std::holds_alternative<BoundingBox>(lhs) &&
       std::holds_alternative<BoundingBox>(rhs)) {
-    return union_of(std::get<BoundingBox>(lhs), std::get<BoundingBox>(rhs));
+    return union_of(std::get<BoundingBox>(lhs), std::get<BoundingBox>(rhs), universe);
   }
   // LHS is TopoUnion
   if (const auto topo_lhs_p = std::get_if<TopoUnion>(&lhs)) {
     if (std::holds_alternative<BoundingBox>(rhs)) {
-      return union_of(*topo_lhs_p, std::get<BoundingBox>(rhs));
+      return union_of(*topo_lhs_p, std::get<BoundingBox>(rhs), universe);
     } else {
-      return union_of(*topo_lhs_p, std::get<TopoUnion>(rhs));
+      return union_of(*topo_lhs_p, std::get<TopoUnion>(rhs), universe);
     }
   } else {
     // Else LHS is a BoundingBox
     // Switch on RHS
     if (std::holds_alternative<BoundingBox>(rhs)) {
       // NOTE: This should be redundant...
-      return union_of(std::get<BoundingBox>(lhs), std::get<BoundingBox>(rhs));
+      return union_of(std::get<BoundingBox>(lhs), std::get<BoundingBox>(rhs), universe);
     } else {
-      return union_of(std::get<TopoUnion>(rhs), std::get<BoundingBox>(lhs));
+      return union_of(std::get<TopoUnion>(rhs), std::get<BoundingBox>(lhs), universe);
     }
   }
+}
+
+Region simplify_region(const Region& region) {
+  auto comp = TopoSimplify{};
+  return std::visit(comp, region);
 }
 
 } // namespace percemon::topo

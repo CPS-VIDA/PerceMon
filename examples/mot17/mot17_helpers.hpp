@@ -10,7 +10,7 @@
 
 namespace mot17 {
 
-enum class Labels {
+enum class Labels : int {
   Pedestrian          = 1,
   PersonOnVehicle     = 2,
   Car                 = 3,

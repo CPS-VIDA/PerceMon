@@ -1,27 +1,11 @@
-#include "percemon/iter.hpp"
-
 #include <fmt/format.h>
 #include <fmt/ranges.h>
 #include <itertools.hpp>
-#include <map>
-#include <string>
-#include <typeinfo>
 #include <vector>
 
-namespace utiter = percemon::iter_helpers;
-
 int main() {
-  std::map<std::string, int> m = {{"a", 2}, {"b", 4}, {"c", 10}};
-
-  fmt::print("Original Map: {}\n", m);
-
-  std::vector<std::string> ids = {"Var_1", "Var_2"};
-  std::map<std::string, std::string> var_map;
-
-  for (auto p : utiter::product(m, std::size(ids))) {
-    for (auto&& [i, kv] : iter::enumerate(p)) { var_map[ids.at(i)] = kv.first; }
-    fmt::print("-- var_map = {}\n", var_map);
-  }
+  auto vec = std::vector<int>{0, 1, 2, 3, 4, 5, 6};
+  for (auto e : iter::sliding_window(vec, 2)) { fmt::print("{}\n", e); }
 
   return 0;
 }

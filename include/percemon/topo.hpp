@@ -157,8 +157,13 @@ bool is_open(const Region& region);
 double area(const Region& region);
 Region interior(const Region& region);
 Region closure(const Region& region);
+Region spatial_complement(const Region& region, const BoundingBox& universe);
 Region spatial_intersect(const Region& lhs, const Region& rhs);
-Region spatial_union(const Region& lhs, const Region& rhs);
+Region spatial_union(
+    const Region& lhs,
+    const Region& rhs,
+    const std::optional<BoundingBox>& universe = {});
+Region simplify_region(const Region& region);
 
 } // namespace percemon::topo
 

@@ -21,7 +21,6 @@ enum class ComparisonOp { GT, GE, LT, LE, EQ, NE };
 struct Const {
   bool value = false;
 
-  Const() = default;
   Const(bool value_) : value{value_} {};
 
   inline bool operator==(const Const& other) const {
@@ -46,7 +45,6 @@ struct C_FRAME {};
 struct Var_f {
   std::string name;
 
-  Var_f() = delete;
   Var_f(std::string name_) : name{std::move(name_)} {}
 
   inline bool operator==(const Var_f& other) const { return name == other.name; };
@@ -60,7 +58,6 @@ struct Var_f {
 struct Var_x {
   std::string name;
 
-  Var_x() = delete;
   Var_x(std::string name_) : name{std::move(name_)} {}
 
   inline bool operator==(const Var_x& other) const { return name == other.name; };
@@ -74,7 +71,6 @@ struct Var_x {
 struct Var_id {
   std::string name;
 
-  Var_id() = delete;
   Var_id(std::string name_) : name{std::move(name_)} {}
 };
 
