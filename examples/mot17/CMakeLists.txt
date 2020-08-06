@@ -12,3 +12,7 @@ endif()
 
 add_executable(mot17_example mot17_example.cc)
 target_link_libraries(mot17_example PRIVATE mot17_helpers)
+
+if(PERCEMON_COVERAGE) # THis is just to satisfy the linker
+  add_coverage(mot17_example)
+endif()

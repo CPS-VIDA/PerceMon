@@ -61,7 +61,7 @@ struct OnlineMonitor {
 
   [[nodiscard]] size_t get_max_horizon() const { return max_horizon; }
   [[nodiscard]] size_t get_fps() const { return fps; };
-  [[nodiscard]] const ast::Expr& get_phi() const { return phi; }
+  const ast::Expr& get_phi() { return phi; }
 
  private:
   /**

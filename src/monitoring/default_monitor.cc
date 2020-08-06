@@ -6,8 +6,6 @@
 #include "percemon/topo.hpp"
 #include "percemon/utils.hpp"
 
-#include "mono_wedge/mono_wedge.h"
-
 #include <algorithm>
 #include <deque>
 #include <functional>
@@ -132,6 +130,7 @@ struct RobustnessOp {
   std::vector<double> operator()(const ast::TimeBound& e);
   std::vector<double> operator()(const ast::FrameBound& e);
   std::vector<double> operator()(const ast::CompareId& e);
+  std::vector<double> operator()(const ast::CompareProb& e);
   std::vector<double> operator()(const ast::CompareClass& e);
   std::vector<double> operator()(const ast::CompareED& e);
   std::vector<double> operator()(const ast::CompareLat& e);
@@ -355,6 +354,56 @@ std::vector<double> RobustnessOp::operator()(const ast::CompareClass& e) {
   return ret;
 }
 
+std::vector<double> RobustnessOp::operator()(const ast::CompareProb& e) {
+  using variant_id = std::variant<double, std::string>;
+
+  auto ret = std::vector<double>{};
+  ret.reserve(this->trace.size());
+
+  // Get tentative IDs to lookup for each frame.
+  const std::string& id1      = this->obj_map.at(fmt::to_string(e.lhs.id));
+  const variant_id id2_holder = std::visit(
+      utils::overloaded{[](double i) -> variant_id { return i; },
+                        [&](const ast::Prob& a) -> variant_id {
+                          return this->obj_map.at(fmt::to_string(a.id));
+                        }},
+      e.rhs);
+  std::function<bool(double, double)> op = get_relational_fn(e.op);
+
+  for (const auto& f : this->trace) { // For each frame in trace,
+
+    // Check if ID1 is there in the frame.
+    const auto id1_it = f.objects.find(id1);
+    if (id1_it == f.objects.end()) { // If ID isn't in the frame: -inf
+      ret.push_back(BOTTOM);
+      continue;
+    }
+    auto prob1 = id1_it->second.probability * e.lhs.scale;
+
+    // Check if ID2 is needed and exists and get the comparing prob.
+    double prob2 = 0;
+    if (auto prob2_ptr = std::get_if<Prob>(&(e.rhs))) {
+      // We already have ID. Get it
+      const std::string& id2 =
+          std::get<std::string>(id2_holder); // The holder must hold strin.
+      // Check if it exists in the frame.
+      auto id2_it = f.objects.find(id2);
+      if (id2_it == f.objects.end()) { // ID2 not in frame: -inf
+        ret.push_back(BOTTOM);
+        continue;
+      }
+      // Just need to refer to the scale.
+      prob2 = id2_it->second.probability * prob2_ptr->scale;
+    } else {
+      prob2 = std::get<double>(e.rhs);
+    }
+    ret.push_back(bool_to_robustness(op(prob1, prob2)));
+  }
+
+  assert(ret.size() == this->trace.size());
+  return ret;
+}
+
 std::vector<double> RobustnessOp::operator()(const ast::CompareArea& e) {
   using variant_id = std::variant<double, std::string>;
 
@@ -369,16 +418,7 @@ std::vector<double> RobustnessOp::operator()(const ast::CompareArea& e) {
                           return this->obj_map.at(fmt::to_string(a.id));
                         }},
       e.rhs);
-  std::function<bool(double, double)> op;
-  switch (e.op) {
-    case ast::ComparisonOp::GE: op = std::greater_equal<double>{}; break;
-    case ast::ComparisonOp::GT: op = std::greater<double>{}; break;
-    case ast::ComparisonOp::LE: op = std::less_equal<double>{}; break;
-    case ast::ComparisonOp::LT: op = std::less<double>{}; break;
-    default:
-      throw std::invalid_argument(
-          "Malformed expression. Cannot Compare Area with == and !=.");
-  }
+  std::function<bool(double, double)> op = get_relational_fn(e.op);
 
   for (const auto& f : this->trace) { // For each frame in trace,
 
@@ -390,7 +430,6 @@ std::vector<double> RobustnessOp::operator()(const ast::CompareArea& e) {
     }
     auto bbox1 = topo::BoundingBox{id1_it->second.bbox};
     auto area1 = topo::area(bbox1) * e.lhs.scale;
-
     // Check if ID2 is needed and exists and get the comparing area.
     double area2 = 0;
     if (auto area2_ptr = std::get_if<AreaOf>(&(e.rhs))) {
@@ -556,9 +595,9 @@ std::vector<double> RobustnessOp::operator()(const ast::CompareLon& expr) {
 std::vector<double> RobustnessOp::operator()(const ast::ExistsPtr& e) {
   // This is hard...
   // Need to iterate over all k-sized, repeated permutations of IDs in the Frame,
-  // where k = number of IDs in the Exists quantifier.  Moreover, I need to assign the
-  // Var_id to each permutation in the map.  This cannot be parallelized yet as the
-  // current class holds the context for sub-formulas. Look into Task Graph for
+  // where k = number of IDs in the Exists quantifier.  Moreover, I need to assign
+  // the Var_id to each permutation in the map.  This cannot be parallelized yet as
+  // the current class holds the context for sub-formulas. Look into Task Graph for
   // parallelization.
 
   // Overview:
@@ -720,10 +759,11 @@ std::vector<double> RobustnessOp::operator()(const ast::PreviousPtr& e) {
   auto rho = this->eval(e->arg);
   // Iterate from the back and keep updating
   for (auto i = std::rbegin(rho); i != std::rend(rho); i++) {
-    if (std::next(i) != std::rend(rho)) { *i = *std::next(i); }
-    // Else don't do anything. This will not mess up mins or maxs.
-    // TODO: Is this correct? Any parent temporal operator should not
-    // evaluate this as it should exceed bounds.
+    if (std::next(i) != std::rend(rho)) {
+      *i = *std::next(i);
+    } else {
+      *i = BOTTOM;
+    }
   }
   return rho;
 }
@@ -757,8 +797,8 @@ std::vector<double> RobustnessOp::operator()(const ast::SometimesPtr& e) {
 std::vector<double> RobustnessOp::operator()(const ast::SincePtr& e) {
   // Ported from signal-temporal-logic:
   //  Unbounded Until but parse the signal in reverse order.
-  //  Since the actual loop computes Until robustness DP-style in reverse, we have to
-  //  do it from front.
+  //  Since the actual loop computes Until robustness DP-style in reverse, we have
+  //  to do it from front.
   const auto x = this->eval(e->args.first);
   const auto y = this->eval(e->args.second);
 

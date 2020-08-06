@@ -24,6 +24,7 @@ include(CMakePrintHelpers)
 include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
 include(CTest)
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
 
 # Options
 option(PERCEMON_TEST "Build percemon test suite?" ${PERCEMON_MASTER_PROJECT})
@@ -57,11 +58,10 @@ if(PERCEMON_COVERAGE)
   set(ENABLE_COVERAGE
       ON
       CACHE BOOL "Enable coverage build." FORCE)
+  find_package(codecov)
 endif()
 
 # set(CMAKE_CXX_EXTENSIONS ON)
-
-list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
 
 # Third party libraries and dependencies
 include(ThirdPartyLibs)
@@ -78,10 +78,11 @@ target_include_directories(
                   $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>)
 target_include_directories(PerceMon PRIVATE ${PROJECT_SOURCE_DIR}/src)
 target_compile_features(PerceMon PUBLIC cxx_std_17)
-target_link_libraries(PerceMon PRIVATE mono_wedge::mono_wedge)
 target_link_libraries(PerceMon PUBLIC fmt::fmt cppitertools::cppitertools)
 
-# if(PERCEMON_COVERAGE) add_coverage(PerceMon) endif()
+if(PERCEMON_COVERAGE)
+  add_coverage(PerceMon)
+endif()
 
 if(_PERCEMON_BUILD_THE_TESTS)
   add_subdirectory(tests)
@@ -92,5 +93,8 @@ if(PERCEMON_EXAMPLES)
 endif()
 
 if(PERCEMON_COVERAGE)
+  list(APPEND LCOV_REMOVE_PATTERNS "'${PROJECT_SOURCE_DIR}/third_party/*'"
+       "'${PROJECT_SOURCE_DIR}/tests/*'" "'${PROJECT_SOURCE_DIR}/examples/*'"
+       "'/usr/'")
   coverage_evaluate()
 endif()

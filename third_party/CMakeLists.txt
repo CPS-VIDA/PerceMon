@@ -1,5 +1,3 @@
-add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/mono_wedge)
-
 # fmtlib
 find_package(fmt QUIET)
 if(fmt_FOUND)
@@ -66,12 +64,6 @@ if(PERCEMON_EXAMPLES)
     add_subdirectory(spdlog)
   endif()
 
-endif()
-
-if(PERCEMON_COVERAGE)
-  git_submodule(PATH CMake-codecov WORKING_DIRECTORY ${CMAKE_CURRENT_LIST_DIR})
-  list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/CMake-codecov/cmake")
-  find_package(codecov REQUIRED)
 endif()
 
 set(CMAKE_MODULE_PATH

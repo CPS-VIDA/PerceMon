@@ -82,6 +82,7 @@ using Expr = std::variant<
     TimeBound,
     FrameBound,
     CompareId,
+    CompareProb,
     CompareClass,
     CompareED,
     CompareLat,

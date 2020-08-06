@@ -39,7 +39,7 @@ percemon::Expr get_phi2() {
   auto id2 = Var_id{"2"};
   Expr phi = Forall({id1})->dot(
       Expr{Previous(Const{true})} >>
-      Exists({id2})->dot((id1 == id2) & Expr{Class(id1) == Class(id2)}));
+      Previous(Exists({id2})->dot((id1 == id2) & Expr{Class(id1) == Class(id2)})));
 
   return phi;
 }
@@ -59,17 +59,45 @@ percemon::Expr get_phi3() {
   return phi;
 }
 
-percemon::Expr get_example6() {
+/**
+ * If there exists a pedestrian with high confidence in the current frame, that is far
+ * away from the margins, then in the last 1 second, the pedestrian should have existed
+ * with high probability.
+ */
+percemon::Expr get_phi4() {
   using namespace percemon;
 
   constexpr int PED = static_cast<int>(mot17::Labels::Pedestrian);
 
   auto id1 = Var_id{"1"};
   auto id2 = Var_id{"2"};
-  auto id3 = Var_id{"3"};
   auto x   = Var_x{"1"};
+  auto f   = Var_f{"1"};
 
-  return Const{false};
+  constexpr double precondition_prob  = 0.8;
+  constexpr double postcondition_prob = 0.7;
+
+  constexpr double ldist = 200;
+  constexpr double tdist = 200;
+  constexpr double rdist = 1920 - 200;
+  constexpr double bdist = 1080 - 200;
+
+  constexpr double num_sec = 1.0;
+
+  Expr phi_margin_dist = And({Lon(id1, CRT::TM) > tdist,
+                              Lon(id1, CRT::BM) < bdist,
+                              Lat(id1, CRT::LM) > ldist,
+                              Lat(id1, CRT::RM) < rdist});
+  Expr phi_high_prob =
+      And({Class(id1) == PED, Prob(id1) > precondition_prob, phi_margin_dist});
+  Expr phi_reappear =
+      Expr{id1 == id2} & (Prob(id2) > postcondition_prob) & (Class(id2) == PED);
+
+  Expr phi = Forall({id1})->at(Pin{f})->dot(
+      (phi_high_prob) >>
+      Always((f - C_FRAME{} < 6) >> Exists({id2})->dot(phi_reappear)));
+
+  return phi;
 }
 
 percemon::Expr get_phi(PhiNumber opt) {
@@ -77,16 +105,13 @@ percemon::Expr get_phi(PhiNumber opt) {
     case PhiNumber::Example1: return get_phi1();
     case PhiNumber::Example2: return get_phi2();
     case PhiNumber::Example3: return get_phi3();
+    case PhiNumber::Example4: return get_phi4();
   }
 }
 
 std::vector<bool> compute(
     percemon::monitoring::OnlineMonitor& monitor,
     const std::vector<ds::Frame>& trace) {
-  spdlog::info("Running online monitor for:\n\t {}", monitor.get_phi());
-  spdlog::info("Horizon:  {}", monitor.get_max_horizon());
-  spdlog::info("FPS:      {}", monitor.get_fps());
-
   std::vector<bool> sat_unsat;
 
   for (auto&& [i, it] = std::make_tuple(0, std::begin(trace)); it != std::end(trace);
@@ -134,7 +159,8 @@ int main(int argc, char* argv[]) {
       ->transform(CLI::CheckedTransformer(
           std::map<std::string, PhiNumber>{{"phi1", PhiNumber::Example1},
                                            {"phi2", PhiNumber::Example2},
-                                           {"phi3", PhiNumber::Example3}},
+                                           {"phi3", PhiNumber::Example3},
+                                           {"phi4", PhiNumber::Example4}},
           CLI::ignore_case));
 
   bool verbose = false;
@@ -151,7 +177,17 @@ int main(int argc, char* argv[]) {
 
   percemon::Expr phi = get_phi(phi_option);
   auto trace         = mot17::parse_results(filename, fps, width, height);
-  auto monitor       = percemon::monitoring::OnlineMonitor{
+
+  spdlog::info("Running online monitor for:\n\t {}", phi);
+  if (auto hrz = percemon::monitoring::get_horizon(phi, fps); hrz.has_value()) {
+    spdlog::info("Horizon:  {}", *hrz);
+  } else {
+    spdlog::error("Specification has unbounded horizon! Cannot monitor it.");
+    return 1;
+  }
+  spdlog::info("FPS:      {}", fps);
+
+  auto monitor = percemon::monitoring::OnlineMonitor{
       phi, fps, static_cast<double>(width), static_cast<double>(height)};
   auto frame_rob = compute(monitor, trace);
 

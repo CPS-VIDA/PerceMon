@@ -149,7 +149,7 @@ struct HorizonCompute {
     auto hrz1 = std::optional<size_t>{};
     for (const auto& e : expr->args) {
       const auto rhrz = this->eval(e);
-      hrz1            = max(hrz1, rhrz);
+      hrz1            = interval_intersection(hrz1, rhrz);
     }
 
     // Does an intersection of the intervals from each temporal bound

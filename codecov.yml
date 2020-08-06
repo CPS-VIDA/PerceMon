@@ -3,8 +3,8 @@ coverage:
     - "test_*.cc"
     - "tests/test_*.cc"
     - "tests/**/*"
-    - "third_party/**/*"
     - "examples/**/*"
+    - "third_party/**/*"
 
 codecov:
   branch: master
