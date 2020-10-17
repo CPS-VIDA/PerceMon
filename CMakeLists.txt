@@ -27,12 +27,9 @@ include(CTest)
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
 
 # Options
-option(PERCEMON_TEST "Build percemon test suite?" ${PERCEMON_MASTER_PROJECT})
-option(PERCEMON_COVERAGE "Generate coverage.xml for test suite?"
-       ${PERCEMON_MASTER_PROJECT})
-option(PERCEMON_EXAMPLES "Build the examples?" ${PERCEMON_MASTER_PROJECT})
-option(PERCEMON_INSTALL "Install the library and header files?"
-       ${PERCEMON_MASTER_PROJECT})
+option(PERCEMON_TEST "Build percemon test suite?" OFF)
+option(PERCEMON_COVERAGE "Generate coverage.xml for test suite?" OFF)
+option(PERCEMON_EXAMPLES "Build the examples?" OFF)
 
 set(_PERCEMON_BUILD_THE_TESTS
     OFF
@@ -69,6 +66,7 @@ endif()
 include(ThirdPartyLibs)
 add_subdirectory(third_party)
 find_package(fmt QUIET)
+find_package(cppitertools QUIET)
 
 # Sources and actual library Add library and module
 set(PERCEMON_SOURCES src/ast.cc src/topo.cc src/monitoring/default_monitor.cc

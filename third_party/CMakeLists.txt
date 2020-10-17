@@ -23,7 +23,7 @@ else()
   set(cppitertools_INSTALL_CMAKE_DIR
       "lib"
       CACHE STRING "CMake install directory for cppitertools")
-
+  set(ENV{cppitertools_INSTALL_CMAKE_DIR} "lib")
   add_subdirectory(cppitertools)
 endif()
 
