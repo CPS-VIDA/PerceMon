@@ -37,7 +37,9 @@ option(PERCEMON_INSTALL "Install the library and header files?"
 set(_PERCEMON_BUILD_THE_TESTS
     OFF
     CACHE INTERNAL "Easy option to build the tests")
-if((PERCEMON_MASTER_PROJECT OR PERCEMON_TEST) AND BUILD_TESTING)
+if(PERCEMON_MASTER_PROJECT
+   AND PERCEMON_TEST
+   AND BUILD_TESTING)
   set(_PERCEMON_BUILD_THE_TESTS
       ON
       CACHE INTERNAL "Easy option to build the tests")
@@ -98,3 +100,34 @@ if(PERCEMON_COVERAGE)
        "'/usr/'")
   coverage_evaluate()
 endif()
+
+include(GNUInstallDirs)
+
+# Install catkin package.xml
+install(FILES package.xml DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/PerceMon)
+
+install(
+  TARGETS PerceMon
+  EXPORT PerceMonTargets
+  ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+  LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+  RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+
+install(DIRECTORY include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+
+include(CMakePackageConfigHelpers)
+write_basic_package_version_file(
+  PerceMonConfigVersion.cmake
+  VERSION ${PACKAGE_VERSION}
+  COMPATIBILITY AnyNewerVersion)
+
+install(
+  EXPORT PerceMonTargets
+  FILE PerceMonTargets.cmake
+  NAMESPACE PerceMon::
+  DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/PerceMon)
+
+configure_file(cmake/PerceMonConfig.cmake.in PerceMonConfig.cmake @ONLY)
+install(FILES "${CMAKE_CURRENT_BINARY_DIR}/PerceMonConfig.cmake"
+              "${CMAKE_CURRENT_BINARY_DIR}/PerceMonConfigVersion.cmake"
+        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/PerceMon)

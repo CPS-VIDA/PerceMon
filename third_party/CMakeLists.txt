@@ -7,7 +7,7 @@ else()
   git_submodule(PATH fmt WORKING_DIRECTORY ${CMAKE_CURRENT_LIST_DIR})
   # NOTE: Workaround when building SIGNALTL
   set(FMT_INSTALL
-      ${PERCEMON_INSTALL}
+      ON
       CACHE BOOL "")
   add_subdirectory(fmt)
   set_target_properties(fmt PROPERTIES POSITION_INDEPENDENT_CODE ON)
@@ -21,7 +21,7 @@ else()
   message(STATUS "Using bundled third_party/cppitertools.")
   git_submodule(PATH cppitertools WORKING_DIRECTORY ${CMAKE_CURRENT_LIST_DIR})
   set(cppitertools_INSTALL_CMAKE_DIR
-      "share/cmake/cppitertools"
+      "lib/cmake/cppitertools"
       CACHE STRING "CMake install directory for cppitertools")
 
   add_subdirectory(cppitertools)
