@@ -21,7 +21,7 @@ else()
   message(STATUS "Using bundled third_party/cppitertools.")
   git_submodule(PATH cppitertools WORKING_DIRECTORY ${CMAKE_CURRENT_LIST_DIR})
   set(cppitertools_INSTALL_CMAKE_DIR
-      "lib/cmake/cppitertools"
+      "lib"
       CACHE STRING "CMake install directory for cppitertools")
 
   add_subdirectory(cppitertools)

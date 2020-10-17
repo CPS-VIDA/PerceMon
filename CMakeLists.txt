@@ -68,7 +68,7 @@ endif()
 # Third party libraries and dependencies
 include(ThirdPartyLibs)
 add_subdirectory(third_party)
-find_package(fmt REQUIRED)
+find_package(fmt QUIET)
 
 # Sources and actual library Add library and module
 set(PERCEMON_SOURCES src/ast.cc src/topo.cc src/monitoring/default_monitor.cc
