@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 
 <package format="3">
-  <name>PerceMon</name>
+  <name>percemon</name>
   <version>0.1.0</version>
   <description>
     Online monitoring for perception systems using Spatio-Temporal Quality Logic.
