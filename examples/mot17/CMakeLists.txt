@@ -1,6 +1,6 @@
 add_library(mot17_helpers mot17_helpers.cc)
 target_link_libraries(mot17_helpers PUBLIC PerceMon::PerceMon CLI11::CLI11
-                                           spdlog::spdlog)
+                                           fmt::fmt)
 target_include_directories(mot17_helpers PUBLIC ${CMAKE_CURRENT_LISTS_DIR})
 target_compile_features(mot17_helpers PUBLIC cxx_std_17)
 # Add <filesystem> support

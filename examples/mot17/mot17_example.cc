@@ -4,8 +4,8 @@
 #include "percemon/percemon.hpp"
 
 #include <CLI/CLI.hpp>
+#include <fmt/format.h>
 #include <itertools.hpp>
-#include <spdlog/spdlog.h>
 
 #if defined(__cpp_lib_filesystem) || __has_include(<filesystem>)
 #include <filesystem>
@@ -84,10 +84,11 @@ percemon::Expr get_phi4() {
 
   constexpr double num_sec = 1.0;
 
-  Expr phi_margin_dist = And({Lon(id1, CRT::TM) > tdist,
-                              Lon(id1, CRT::BM) < bdist,
-                              Lat(id1, CRT::LM) > ldist,
-                              Lat(id1, CRT::RM) < rdist});
+  Expr phi_margin_dist = And(
+      {Lon(id1, CRT::TM) > tdist,
+       Lon(id1, CRT::BM) < bdist,
+       Lat(id1, CRT::LM) > ldist,
+       Lat(id1, CRT::RM) < rdist});
   Expr phi_high_prob =
       And({Class(id1) == PED, Prob(id1) > precondition_prob, phi_margin_dist});
   Expr phi_reappear =
@@ -120,14 +121,14 @@ std::vector<bool> compute(
     monitor.add_frame(frame);
     double rob = monitor.eval();
     sat_unsat.push_back(rob >= 0);
-    spdlog::debug("rob[{}]\t= {}", i, rob);
+    fmt::print("rob[{}]\t= {}\n", i, rob);
   }
 
   return sat_unsat;
 }
 
 void save_to_file(const std::vector<bool>& out, const std::string& file) {
-  spdlog::info("Saving frame-by-frame robustness to: {}", file);
+  fmt::print("Saving frame-by-frame robustness to: {}\n", file);
   auto output_file_path = fs::absolute(fs::path(file));
   if (!fs::exists(output_file_path.parent_path())) {
     fs::create_directories(output_file_path.parent_path());
@@ -149,7 +150,7 @@ int main(int argc, char* argv[]) {
   std::string out_file = "robustness.csv";
   app.add_option("-o,--output", out_file, "Save frame by frame robustness results to?");
 
-  double fps;
+  double fps = 30.0;
   app.add_option("-f,--fps", fps, "FPS for given stream.")->required();
   std::pair<size_t, size_t> size;
   app.add_option("--size", size, "Width X Height of images in stream.")->required();
@@ -157,10 +158,11 @@ int main(int argc, char* argv[]) {
   PhiNumber phi_option = PhiNumber::Example1;
   app.add_option("--phi", phi_option, "Which example to run?")
       ->transform(CLI::CheckedTransformer(
-          std::map<std::string, PhiNumber>{{"phi1", PhiNumber::Example1},
-                                           {"phi2", PhiNumber::Example2},
-                                           {"phi3", PhiNumber::Example3},
-                                           {"phi4", PhiNumber::Example4}},
+          std::map<std::string, PhiNumber>{
+              {"phi1", PhiNumber::Example1},
+              {"phi2", PhiNumber::Example2},
+              {"phi3", PhiNumber::Example3},
+              {"phi4", PhiNumber::Example4}},
           CLI::ignore_case));
 
   bool verbose = false;
@@ -168,24 +170,20 @@ int main(int argc, char* argv[]) {
 
   CLI11_PARSE(app, argc, argv);
 
-  if (verbose) {
-    spdlog::set_level(spdlog::level::debug); // Set global log level to debug
-  }
-
   size_t width  = size.first;
   size_t height = size.second;
 
   percemon::Expr phi = get_phi(phi_option);
   auto trace         = mot17::parse_results(filename, fps, width, height);
 
-  spdlog::info("Running online monitor for:\n\t {}", phi);
+  fmt::print("Running online monitor for:\n\t {}\n", phi);
   if (auto hrz = percemon::monitoring::get_horizon(phi, fps); hrz.has_value()) {
-    spdlog::info("Horizon:  {}", *hrz);
+    fmt::print("Horizon:  {}\n", *hrz);
   } else {
-    spdlog::error("Specification has unbounded horizon! Cannot monitor it.");
+    fmt::print("Specification has unbounded horizon! Cannot monitor it.\n");
     return 1;
   }
-  spdlog::info("FPS:      {}", fps);
+  fmt::format("FPS:      {}\n", fps);
 
   auto monitor = percemon::monitoring::OnlineMonitor{
       phi, fps, static_cast<double>(width), static_cast<double>(height)};
