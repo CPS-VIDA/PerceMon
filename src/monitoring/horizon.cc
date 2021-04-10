@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <numeric>
 #include <optional>
+#include <stdexcept>
 #include <variant>
 
 #include "percemon/utils.hpp"
@@ -209,10 +210,11 @@ struct HorizonCompute {
   std::optional<size_t> operator()(const CompareSpAreaPtr& expr) {
     const auto lhs_hrz = this->eval(expr->lhs);
     const auto rhs_hrz = std::visit(
-        utils::overloaded{[](const double) -> std::optional<size_t> { return 0; },
-                          [&](const SpArea& e) {
-                            return this->eval(e);
-                          }},
+        utils::overloaded{
+            [](const double) -> std::optional<size_t> { return 0; },
+            [&](const SpArea& e) {
+              return this->eval(e);
+            }},
         expr->rhs);
     return max(lhs_hrz, rhs_hrz);
   }
