@@ -8,6 +8,8 @@
 #include "percemon/ast/s4u.hpp"
 #include "percemon/ast/tqtl.hpp"
 
+#include <stdexcept>
+
 namespace percemon {
 // TODO(anand): Create functions that return the Node pointers.
 using namespace ast::primitives;

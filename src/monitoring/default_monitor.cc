@@ -56,6 +56,7 @@ constexpr double get_lateral_distance(const topo::BoundingBox& bbox, const CRT c
     case ast::CRT::LM: return bbox.xmin; break; // Top Left
     case ast::CRT::TM: return bbox.xmax; break; // Top Right
     case ast::CRT::BM: return bbox.xmin; break; // Bottom left
+    default: return 0;
   }
 }
 
@@ -68,6 +69,7 @@ get_longidutnal_distance(const topo::BoundingBox& bbox, const CRT crt) {
     case ast::CRT::BM: return bbox.ymax; break; // Bottom left
     case ast::CRT::LM: return bbox.ymin; break; // Top Left
     case ast::CRT::RM: return bbox.ymax; break; // Bottom Right
+    default: return 0;
   }
 }
 
@@ -200,10 +202,10 @@ double OnlineMonitor::eval() {
   // future semantics. Plus, the back of the returned vector should have the robustness
   // at the current time.
 
-  auto rho_op =
-      RobustnessOp{this->buffer,
-                   this->fps,
-                   topo::BoundingBox{0, 0, this->universe_x, this->universe_y}};
+  auto rho_op = RobustnessOp{
+      this->buffer,
+      this->fps,
+      topo::BoundingBox{0, 0, this->universe_x, this->universe_y}};
   auto rho = rho_op.eval(this->phi);
   return rho.back();
 }
@@ -304,10 +306,11 @@ std::vector<double> RobustnessOp::operator()(const ast::CompareClass& e) {
   // Get tentative IDs to lookup for each frame.
   const std::string& id1 = this->obj_map.at(fmt::to_string(e.lhs.id));
   const variant_id id2   = std::visit(
-      utils::overloaded{[](const int i) -> variant_id { return i; },
-                        [&](const ast::Class& c) -> variant_id {
-                          return this->obj_map.at(fmt::to_string(c.id));
-                        }},
+      utils::overloaded{
+          [](const int i) -> variant_id { return i; },
+          [&](const ast::Class& c) -> variant_id {
+            return this->obj_map.at(fmt::to_string(c.id));
+          }},
       e.rhs);
 
   for (const auto& f : this->trace) { // For each frame in trace,
@@ -363,10 +366,11 @@ std::vector<double> RobustnessOp::operator()(const ast::CompareProb& e) {
   // Get tentative IDs to lookup for each frame.
   const std::string& id1      = this->obj_map.at(fmt::to_string(e.lhs.id));
   const variant_id id2_holder = std::visit(
-      utils::overloaded{[](double i) -> variant_id { return i; },
-                        [&](const ast::Prob& a) -> variant_id {
-                          return this->obj_map.at(fmt::to_string(a.id));
-                        }},
+      utils::overloaded{
+          [](double i) -> variant_id { return i; },
+          [&](const ast::Prob& a) -> variant_id {
+            return this->obj_map.at(fmt::to_string(a.id));
+          }},
       e.rhs);
   std::function<bool(double, double)> op = get_relational_fn(e.op);
 
@@ -413,10 +417,11 @@ std::vector<double> RobustnessOp::operator()(const ast::CompareArea& e) {
   // Get tentative IDs to lookup for each frame.
   const std::string& id1      = this->obj_map.at(fmt::to_string(e.lhs.id));
   const variant_id id2_holder = std::visit(
-      utils::overloaded{[](double i) -> variant_id { return i; },
-                        [&](const ast::AreaOf& a) -> variant_id {
-                          return this->obj_map.at(fmt::to_string(a.id));
-                        }},
+      utils::overloaded{
+          [](double i) -> variant_id { return i; },
+          [&](const ast::AreaOf& a) -> variant_id {
+            return this->obj_map.at(fmt::to_string(a.id));
+          }},
       e.rhs);
   std::function<bool(double, double)> op = get_relational_fn(e.op);
 
@@ -470,10 +475,11 @@ std::vector<double> RobustnessOp::operator()(const ast::CompareLat& expr) {
   // Get tentative IDs to lookup for each frame.
   const std::string& id1      = this->obj_map.at(fmt::to_string(expr.lhs.id));
   const variant_id id2_holder = std::visit(
-      utils::overloaded{[](double i) -> variant_id { return i; },
-                        [&](const auto& a) -> variant_id {
-                          return this->obj_map.at(fmt::to_string(a.id));
-                        }},
+      utils::overloaded{
+          [](double i) -> variant_id { return i; },
+          [&](const auto& a) -> variant_id {
+            return this->obj_map.at(fmt::to_string(a.id));
+          }},
       expr.rhs);
   std::function<bool(double, double)> op = get_relational_fn(expr.op);
 
@@ -535,10 +541,11 @@ std::vector<double> RobustnessOp::operator()(const ast::CompareLon& expr) {
   // Get tentative IDs to lookup for each frame.
   const std::string& id1      = this->obj_map.at(fmt::to_string(expr.lhs.id));
   const variant_id id2_holder = std::visit(
-      utils::overloaded{[](double i) -> variant_id { return i; },
-                        [&](const auto& a) -> variant_id {
-                          return this->obj_map.at(fmt::to_string(a.id));
-                        }},
+      utils::overloaded{
+          [](double i) -> variant_id { return i; },
+          [&](const auto& a) -> variant_id {
+            return this->obj_map.at(fmt::to_string(a.id));
+          }},
       expr.rhs);
   std::function<bool(double, double)> op = get_relational_fn(expr.op);
 
@@ -845,12 +852,13 @@ std::vector<double> RobustnessOp::operator()(const ast::CompareSpAreaPtr& expr) 
   // Get subformula robustness
   auto rob     = this->operator()(expr->lhs);
   auto rhs_rob = std::visit(
-      utils::overloaded{[n = this->trace.size()](const double a) {
-                          return std::vector<double>(n, a);
-                        },
-                        [&](const ast::SpArea& a) {
-                          return this->operator()(a);
-                        }},
+      utils::overloaded{
+          [n = this->trace.size()](const double a) {
+            return std::vector<double>(n, a);
+          },
+          [&](const ast::SpArea& a) {
+            return this->operator()(a);
+          }},
       expr->rhs);
 
   assert(rob.size() == rhs_rob.size());

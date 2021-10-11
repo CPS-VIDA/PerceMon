@@ -5,6 +5,7 @@
 #include <iostream>
 #include <set>
 #include <sstream>
+#include <stdexcept>
 #include <string>
 #include <vector>
 
@@ -182,10 +183,11 @@ std::vector<percemon::datastream::Frame> mot17::parse_results(
     auto id           = result.id;
     auto object_class = result.label;
     auto confidence   = result.confidence;
-    auto bbox         = ds::BoundingBox{static_cast<size_t>(result.bb_left),
-                                static_cast<size_t>(result.bb_left + result.bb_width),
-                                static_cast<size_t>(result.bb_top),
-                                static_cast<size_t>(result.bb_top + result.bb_height)};
+    auto bbox         = ds::BoundingBox{
+        static_cast<size_t>(result.bb_left),
+        static_cast<size_t>(result.bb_left + result.bb_width),
+        static_cast<size_t>(result.bb_top),
+        static_cast<size_t>(result.bb_top + result.bb_height)};
     std::map<std::string, ds::Object>& obj_map = stream.at(result.frame - 1).objects;
     obj_map[id] = ds::Object{object_class, confidence, bbox};
   }
