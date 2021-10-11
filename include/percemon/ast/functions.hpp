@@ -5,6 +5,8 @@
 
 #include "percemon/ast/primitives.hpp"
 
+#include <stdexcept>
+
 namespace percemon::ast::functions {
 
 using namespace primitives;

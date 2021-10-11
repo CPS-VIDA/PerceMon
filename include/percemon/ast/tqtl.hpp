@@ -5,6 +5,8 @@
 
 #include "percemon/ast/ast.hpp"
 
+#include <stdexcept>
+
 namespace percemon::ast {
 
 /**

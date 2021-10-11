@@ -30,6 +30,7 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
 option(PERCEMON_TEST "Build percemon test suite?" OFF)
 option(PERCEMON_COVERAGE "Generate coverage.xml for test suite?" OFF)
 option(PERCEMON_EXAMPLES "Build the examples?" OFF)
+option(PERCEMON_DOCS "Build the docs?" OFF)
 
 set(_PERCEMON_BUILD_THE_TESTS
     OFF
@@ -87,6 +88,10 @@ endif()
 
 if(_PERCEMON_BUILD_THE_TESTS)
   add_subdirectory(tests)
+endif()
+
+if(PERCEMON_DOCS)
+  add_subdirectory(doc)
 endif()
 
 if(PERCEMON_EXAMPLES)
