@@ -1,47 +1,63 @@
-﻿---
-AccessModifierOffset: '-1'
+﻿AccessModifierOffset: -1
 AlignAfterOpenBracket: AlwaysBreak
-AlignConsecutiveMacros: 'true'
-AlignConsecutiveAssignments: 'true'
-AlignConsecutiveDeclarations: 'false'
+AlignConsecutiveMacros:
+  Enabled: true
+  AcrossEmptyLines: false
+  AcrossComments: false
+  AlignCompound: false
+  AlignFunctionPointers: false
+  PadOperators: true
+AlignConsecutiveAssignments:
+  Enabled: true
+  AcrossEmptyLines: false
+  AcrossComments: false
+  AlignCompound: false
+  AlignFunctionPointers: false
+  PadOperators: true
+AlignConsecutiveDeclarations:
+  Enabled: false
+  AcrossEmptyLines: false
+  AcrossComments: false
+  AlignCompound: false
+  AlignFunctionPointers: false
+  PadOperators: true
 AlignEscapedNewlines: Left
-AlignOperands: 'true'
-AlignTrailingComments: 'true'
-AllowAllParametersOfDeclarationOnNextLine: 'false'
-AllowShortBlocksOnASingleLine: 'true'
-AllowShortCaseLabelsOnASingleLine: 'true'
+AlignOperands: Align
+AlignTrailingComments: true
+AllowAllParametersOfDeclarationOnNextLine: false
+AllowShortBlocksOnASingleLine: "Always"
+AllowShortCaseLabelsOnASingleLine: true
 AllowShortFunctionsOnASingleLine: All
 AllowShortIfStatementsOnASingleLine: WithoutElse
 AllowShortLambdasOnASingleLine: Inline
-AllowShortLoopsOnASingleLine: 'true'
+AllowShortLoopsOnASingleLine: true
 AlwaysBreakAfterReturnType: None
-AlwaysBreakBeforeMultilineStrings: 'true'
-AlwaysBreakTemplateDeclarations: 'Yes'
-BinPackArguments: 'false'
-BinPackParameters: 'false'
+AlwaysBreakBeforeMultilineStrings: true
+AlwaysBreakTemplateDeclarations: Yes
+BinPackArguments: false
+BinPackParameters: false
 BreakBeforeBinaryOperators: None
 BreakBeforeBraces: Attach
-BreakBeforeTernaryOperators: 'true'
+BreakBeforeTernaryOperators: true
 BreakConstructorInitializers: AfterColon
-BreakStringLiterals: 'false'
-ColumnLimit: '88'
-CompactNamespaces: 'false'
-ConstructorInitializerAllOnOneLineOrOnePerLine: 'true'
-ConstructorInitializerIndentWidth: '4'
-ContinuationIndentWidth: '4'
-Cpp11BracedListStyle: 'true'
-DerivePointerAlignment: 'false'
-DisableFormat: 'false'
-IndentCaseLabels: 'true'
-IndentWidth: '2'
-IndentWrappedFunctionNames: 'false'
-KeepEmptyLinesAtTheStartOfBlocks: 'false'
+BreakStringLiterals: false
+ColumnLimit: 88
+CompactNamespaces: false
+ConstructorInitializerAllOnOneLineOrOnePerLine: true
+ConstructorInitializerIndentWidth: 4
+ContinuationIndentWidth: 4
+Cpp11BracedListStyle: true
+DerivePointerAlignment: false
+DisableFormat: false
+IndentCaseLabels: true
+IndentWidth: 2
+IndentWrappedFunctionNames: false
+KeepEmptyLinesAtTheStartOfBlocks: false
 Language: Cpp
-MaxEmptyLinesToKeep: '1'
+MaxEmptyLinesToKeep: 1
 NamespaceIndentation: None
 PointerAlignment: Left
-Standard: Cpp11
-TabWidth: '2'
+Standard: "c++17"
+TabWidth: 2
 UseTab: Never
 
-...

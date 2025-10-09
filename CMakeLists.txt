@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.5.0)
+cmake_minimum_required(VERSION 3.10.0)
 
 file(
   STRINGS ${CMAKE_CURRENT_LIST_DIR}/VERSION PERCEMON_VERSION
