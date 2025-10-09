@@ -1,4 +1,5 @@
-#include <catch2/catch.hpp>
+#include <catch2/catch_approx.hpp>
+#include <catch2/catch_test_macros.hpp>
 
 #include "percemon/ast.hpp"
 #include "percemon/fmt.hpp"
@@ -70,19 +71,19 @@ TEST_CASE("AST nodes throw exceptions when constructed badly", "[ast][except]") 
     SECTION("Multiplying Prob(id) repeatedly stacks up") {
       {
         auto prob = Prob(id);
-        REQUIRE(prob.scale == Approx(1.0));
+        REQUIRE(prob.scale == Catch::Approx(1.0));
         prob *= 2.0;
-        REQUIRE(prob.scale == Approx(2.0));
+        REQUIRE(prob.scale == Catch::Approx(2.0));
         prob *= 3.0;
-        REQUIRE(prob.scale == Approx(6.0));
+        REQUIRE(prob.scale == Catch::Approx(6.0));
       }
       {
         auto prob = Prob(id) * 20.0;
-        REQUIRE(prob.scale == Approx(20.0));
+        REQUIRE(prob.scale == Catch::Approx(20.0));
         prob *= 2.0;
-        REQUIRE(prob.scale == Approx(40.0));
+        REQUIRE(prob.scale == Catch::Approx(40.0));
         prob *= 3.0;
-        REQUIRE(prob.scale == Approx(120.0));
+        REQUIRE(prob.scale == Catch::Approx(120.0));
       }
     }
   }
@@ -132,16 +133,22 @@ TEST_CASE("AST nodes are printed correctly", "[ast][fmt]") {
 
   SECTION("Functions on Var_id") {
     REQUIRE("Prob(id_1)" == fmt::to_string(Prob(id1)));
-    REQUIRE("4.0 * Prob(id_1)" == fmt::to_string(4.0 * Prob(id1)));
+    REQUIRE(fmt::format("{} * Prob(id_1)", 4.0) == fmt::to_string(4.0 * Prob(id1)));
 
     REQUIRE("Class(id_2)" == fmt::to_string(Class(id2)));
   }
 
   SECTION("TimeBounds, FrameBounds, and other Comparisons") {
-    REQUIRE("(x_1 - C_TIME >= 1.0)" == fmt::to_string(x1 - C_TIME{} >= 1.0));
-    REQUIRE("(x_2 - C_TIME > 1.0)" == fmt::to_string(x2 - C_TIME{} > 1.0));
-    REQUIRE("(x_1 - C_TIME <= 1.0)" == fmt::to_string(x1 - C_TIME{} <= 1.0));
-    REQUIRE("(x_2 - C_TIME < 1.0)" == fmt::to_string(x2 - C_TIME{} < 1.0));
+    REQUIRE(
+        fmt::format("(x_1 - C_TIME >= {})", 1.0) ==
+        fmt::to_string(x1 - C_TIME{} >= 1.0));
+    REQUIRE(
+        fmt::format("(x_2 - C_TIME > {})", 1.0) == fmt::to_string(x2 - C_TIME{} > 1.0));
+    REQUIRE(
+        fmt::format("(x_1 - C_TIME <= {})", 1.0) ==
+        fmt::to_string(x1 - C_TIME{} <= 1.0));
+    REQUIRE(
+        fmt::format("(x_2 - C_TIME < {})", 1.0) == fmt::to_string(x2 - C_TIME{} < 1.0));
 
     REQUIRE("(f_1 - C_FRAME >= 5)" == fmt::to_string(f1 - C_FRAME{} >= 5));
     REQUIRE("(f_2 - C_FRAME > 5)" == fmt::to_string(f2 - C_FRAME{} > 5));
@@ -170,7 +177,7 @@ TEST_CASE("AST nodes are printed correctly", "[ast][fmt]") {
     REQUIRE("{_, f_1} . false" == fmt::to_string(Pin{Var_f{"1"}}));
     REQUIRE("{x_1, _} . false" == fmt::to_string(Pin{Var_x{"1"}}));
     REQUIRE(
-        "{x_1, _} . (x_1 - C_TIME > 10.0)" ==
+        fmt::format("{{x_1, _}} . (x_1 - C_TIME > {})", 10.0) ==
         fmt::to_string(*(Pin{Var_x{"1"}}.dot(x1 - C_TIME{} > 10.0))));
   }
 
@@ -181,18 +188,24 @@ TEST_CASE("AST nodes are printed correctly", "[ast][fmt]") {
   }
 
   SECTION("Time bounds over frames and time") {
-    REQUIRE("(x_1 - C_TIME >= 2.0)" == fmt::to_string(Var_x{"1"} - C_TIME{} >= 2.0));
+    REQUIRE(
+        fmt::format("(x_1 - C_TIME >= {})", 2.0) ==
+        fmt::to_string(Var_x{"1"} - C_TIME{} >= 2.0));
 
     {
       auto [x, f] = std::make_tuple(Var_x{"1"}, Var_f{"1"});
       auto phi    = Pin{x, f}.dot(x - C_TIME{} >= 2.0);
-      REQUIRE("{x_1, f_1} . (x_1 - C_TIME >= 2.0)" == fmt::to_string(*phi));
+      REQUIRE(
+          fmt::format("{{x_1, f_1}} . (x_1 - C_TIME >= {})", 2.0) ==
+          fmt::to_string(*phi));
     }
 
     {
       auto [x, f] = std::make_tuple(Var_x{"1"}, Var_f{"1"});
       Expr phi    = Pin{x, f}.dot(Expr{x - C_TIME{} >= 2.0} >> Const{true});
-      REQUIRE("{x_1, f_1} . (~(x_1 - C_TIME >= 2.0) | true)" == fmt::to_string(phi));
+      REQUIRE(
+          fmt::format("{{x_1, f_1}} . (~(x_1 - C_TIME >= {}) | true)", 2.0) ==
+          fmt::to_string(phi));
     }
   }
 }

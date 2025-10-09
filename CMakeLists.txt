@@ -68,7 +68,7 @@ find_package(cppitertools REQUIRED)
 
 # Sources and actual library Add library and module
 set(PERCEMON_SOURCES src/ast.cc src/topo.cc src/monitoring/default_monitor.cc
-                     src/monitoring/horizon.cc)
+                     src/monitoring/horizon.cc src/fmt.cc)
 
 add_library(PerceMon ${PERCEMON_SOURCES})
 add_library(PerceMon::PerceMon ALIAS PerceMon)

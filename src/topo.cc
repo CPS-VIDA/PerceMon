@@ -5,7 +5,7 @@
 #include <cmath>
 #include <vector>
 
-#include <itertools.hpp>
+#include <cppitertools/itertools.hpp>
 
 #include "percemon/utils.hpp"
 

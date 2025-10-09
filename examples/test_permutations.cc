@@ -1,6 +1,6 @@
+#include <cppitertools/itertools.hpp>
 #include <fmt/format.h>
 #include <fmt/ranges.h>
-#include <itertools.hpp>
 #include <vector>
 
 int main() {

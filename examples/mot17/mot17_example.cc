@@ -186,7 +186,7 @@ int main(int argc, char* argv[]) {
     fmt::print("Specification has unbounded horizon! Cannot monitor it.\n");
     return 1;
   }
-  fmt::format("FPS:      {}\n", fps);
+  fmt::print("FPS:      {}\n", fps);
 
   auto monitor = percemon::monitoring::OnlineMonitor{
       phi, fps, static_cast<double>(width), static_cast<double>(height)};

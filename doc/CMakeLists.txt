@@ -15,12 +15,6 @@ set(DOXYGEN_QUIET YES)
 # set(DOXYGEN_EXTRACT_ALL YES)
 set(DOXYGEN_EXCLUDE_PATTERNS
     ${PROJECT_SOURCE_DIR}/include/percemon/fmt.hpp
-    ${PROJECT_SOURCE_DIR}/include/percemon/fmt/
-    ${PROJECT_SOURCE_DIR}/include/percemon/fmt/fmt.hpp
-    ${PROJECT_SOURCE_DIR}/include/percemon/fmt/functions.hpp
-    ${PROJECT_SOURCE_DIR}/include/percemon/fmt/primitives.hpp
-    ${PROJECT_SOURCE_DIR}/include/percemon/fmt/s4u.hpp
-    ${PROJECT_SOURCE_DIR}/include/percemon/fmt/tqtl.hpp
     ${PROJECT_SOURCE_DIR}/include/percemon/iter.hpp)
 
 set(DOXYGEN_GENERATE_XML NO)

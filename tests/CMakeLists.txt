@@ -3,11 +3,11 @@ find_package(Catch2)
 
 include(Catch)
 
-set(TEST_SRCS test_ast.cc test_percemon.cc)
+set(TEST_SRCS test_ast.cc)
 
 add_executable(percemon_tests ${TEST_SRCS})
 target_include_directories(percemon_tests PRIVATE ${CMAKE_CURRENT_LIST_DIR})
-target_link_libraries(percemon_tests PUBLIC PerceMon::PerceMon Catch2::Catch2)
+target_link_libraries(percemon_tests PUBLIC PerceMon::PerceMon Catch2::Catch2WithMain)
 if(MSVC)
   target_compile_options(percemon_tests PRIVATE /W4 /WX /utf-8)
 else()

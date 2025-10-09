@@ -9,10 +9,10 @@
 #include <string>
 #include <vector>
 
+#include <cppitertools/itertools.hpp>
 #include <fmt/core.h>
 #include <fmt/ostream.h>
 #include <fmt/ranges.h>
-#include <itertools.hpp>
 
 #include <cassert>
 
