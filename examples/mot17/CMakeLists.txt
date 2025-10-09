@@ -1,3 +1,5 @@
+find_package(CLI11)
+
 add_library(mot17_helpers mot17_helpers.cc)
 target_link_libraries(mot17_helpers PUBLIC PerceMon::PerceMon CLI11::CLI11
                                            fmt::fmt)

@@ -1,4 +1,6 @@
 message(STATUS "Building Tests in ${CMAKE_CURRENT_LIST_DIR}")
+find_package(Catch2)
+
 include(Catch)
 
 set(TEST_SRCS test_ast.cc test_percemon.cc)

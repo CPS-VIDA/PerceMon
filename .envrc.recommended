@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+
+watch_file pixi.lock
+eval "$(pixi shell-hook)"

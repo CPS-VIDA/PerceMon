@@ -63,11 +63,8 @@ endif()
 
 # set(CMAKE_CXX_EXTENSIONS ON)
 
-# Third party libraries and dependencies
-include(ThirdPartyLibs)
-add_subdirectory(third_party)
-find_package(fmt QUIET)
-find_package(cppitertools QUIET)
+find_package(fmt REQUIRED)
+find_package(cppitertools REQUIRED)
 
 # Sources and actual library Add library and module
 set(PERCEMON_SOURCES src/ast.cc src/topo.cc src/monitoring/default_monitor.cc
@@ -99,7 +96,7 @@ if(PERCEMON_EXAMPLES)
 endif()
 
 if(PERCEMON_COVERAGE)
-  list(APPEND LCOV_REMOVE_PATTERNS "'${PROJECT_SOURCE_DIR}/third_party/*'"
+  list(APPEND LCOV_REMOVE_PATTERNS
        "'${PROJECT_SOURCE_DIR}/tests/*'" "'${PROJECT_SOURCE_DIR}/examples/*'"
        "'/usr/'")
   coverage_evaluate()

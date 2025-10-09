@@ -195,3 +195,6 @@ dmypy.json
 .pytype/
 
 # End of https://www.toptal.com/developers/gitignore/api/c++,python,cmake,gcov
+# pixi environments
+.pixi/*
+!.pixi/config.toml
