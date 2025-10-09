@@ -1,13 +1,9 @@
 # This file is part of CMake-codecov.
 #
-# Copyright (c)
-#   2015-2017 RWTH Aachen University, Federal Republic of Germany
+# SPDX-FileCopyrightText: RWTH Aachen University, Federal Republic of Germany
+# SPDX-FileContributor: Alexander Haase, alexander.haase@rwth-aachen.de
 #
-# See the LICENSE file in the package base directory for details
-#
-# Written by Alexander Haase, alexander.haase@rwth-aachen.de
-#
-
+# SPDX-License-Identifier: BSD-3-Clause
 
 # include required Modules
 include(FindPackageHandleStandardArgs)
@@ -35,18 +31,20 @@ foreach (LANG ${ENABLED_LANGUAGES})
       find_program(GCOV_BIN NAMES gcov-${GCC_VERSION} gcov
     HINTS ${COMPILER_PATH})
 
-    elseif ("${CMAKE_${LANG}_COMPILER_ID}" STREQUAL "Clang")
+    elseif ("${CMAKE_${LANG}_COMPILER_ID}" MATCHES "^(Apple)?Clang$")
       # Some distributions like Debian ship llvm-cov with the compiler
-      # version appended as llvm-cov-x.y. To find this binary we'll build
+      # version appended as llvm-cov-x.y or just llvm-cov-x. To find this binary we'll build
       # the suggested binary name with the compiler version.
-      string(REGEX MATCH "^[0-9]+.[0-9]+" LLVM_VERSION
+      string(REGEX MATCH "^[0-9]+\.[0-9]+" LLVM_FULL_VERSION
+    "${CMAKE_${LANG}_COMPILER_VERSION}")
+      string(REGEX MATCH "^[0-9]+" LLVM_MAJOR_VERSION
     "${CMAKE_${LANG}_COMPILER_VERSION}")
 
       # llvm-cov prior version 3.5 seems to be not working with coverage
       # evaluation tools, but these versions are compatible with the gcc
       # gcov tool.
-      if(LLVM_VERSION VERSION_GREATER 3.4)
-        find_program(LLVM_COV_BIN NAMES "llvm-cov-${LLVM_VERSION}"
+      if(LLVM_FULL_VERSION VERSION_GREATER 3.4)
+        find_program(LLVM_COV_BIN NAMES "llvm-cov-${LLVM_FULL_VERSION}" "llvm-cov-${LLVM_MAJOR_VERSION}"
      "llvm-cov" HINTS ${COMPILER_PATH})
         mark_as_advanced(LLVM_COV_BIN)
 
@@ -105,7 +103,8 @@ endif (NOT TARGET gcov)
 # Gcov on any source file of <TNAME> once and store the gcov file in the same
 # directory.
 function (add_gcov_target TNAME)
-  set(TDIR ${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/${TNAME}.dir)
+  get_target_property(TBIN_DIR ${TNAME} BINARY_DIR)
+  set(TDIR ${TBIN_DIR}/CMakeFiles/${TNAME}.dir)
 
   # We don't have to check, if the target has support for coverage, thus this
   # will be checked by add_coverage_target in Findcoverage.cmake. Instead we
@@ -135,14 +134,18 @@ function (add_gcov_target TNAME)
 
 
   set(BUFFER "")
+  set(NULL_DEVICE "/dev/null")
+  if(WIN32)
+    set(NULL_DEVICE "NUL")
+  endif()
   foreach(FILE ${SOURCES})
     get_filename_component(FILE_PATH "${TDIR}/${FILE}" PATH)
 
     # call gcov
     add_custom_command(OUTPUT ${TDIR}/${FILE}.gcov
-   COMMAND ${GCOV_ENV} ${GCOV_BIN} ${TDIR}/${FILE}.gcno > /dev/null
+   COMMAND ${GCOV_ENV} ${GCOV_BIN} -p ${TDIR}/${FILE}.gcno > ${NULL_DEVICE}
    DEPENDS ${TNAME} ${TDIR}/${FILE}.gcno
-   WORKING_DIRECTORY ${FILE_PATH}
+   WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
   )
 
     list(APPEND BUFFER ${TDIR}/${FILE}.gcov)
