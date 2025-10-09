@@ -197,47 +197,55 @@ Region complement_of(BoundingBox bbox, const BoundingBox& universe) {
 
   // Get left fragment
   if (bbox.xmin > universe.xmin || (bbox.xmin == universe.xmin && bbox.lopen)) {
-    fragments.emplace_back(BoundingBox{universe.xmin,
-                                       bbox.xmin,
-                                       bbox.ymin,
-                                       bbox.ymax,
-                                       false,
-                                       !bbox.lopen,
-                                       bbox.topen,
-                                       bbox.bopen});
+    fragments.emplace_back(
+        BoundingBox{
+            universe.xmin,
+            bbox.xmin,
+            bbox.ymin,
+            bbox.ymax,
+            false,
+            !bbox.lopen,
+            bbox.topen,
+            bbox.bopen});
   }
   // Get right fragment
   if (bbox.xmax < universe.xmax || (bbox.xmax == universe.xmax && bbox.ropen)) {
-    fragments.emplace_back(BoundingBox{bbox.xmax,
-                                       universe.xmax,
-                                       bbox.ymin,
-                                       bbox.ymax,
-                                       !bbox.ropen,
-                                       false,
-                                       bbox.topen,
-                                       bbox.bopen});
+    fragments.emplace_back(
+        BoundingBox{
+            bbox.xmax,
+            universe.xmax,
+            bbox.ymin,
+            bbox.ymax,
+            !bbox.ropen,
+            false,
+            bbox.topen,
+            bbox.bopen});
   }
   // Get top fragment
   if (bbox.ymin > universe.ymin || (bbox.ymin == universe.ymin && bbox.topen)) {
-    fragments.emplace_back(BoundingBox{universe.xmin,
-                                       universe.xmax,
-                                       universe.ymin,
-                                       bbox.ymin,
-                                       false,
-                                       false,
-                                       false,
-                                       !bbox.topen});
+    fragments.emplace_back(
+        BoundingBox{
+            universe.xmin,
+            universe.xmax,
+            universe.ymin,
+            bbox.ymin,
+            false,
+            false,
+            false,
+            !bbox.topen});
   }
   // Get bottom fragment
   if (bbox.ymax < universe.ymax || (bbox.ymax == universe.ymax && bbox.bopen)) {
-    fragments.emplace_back(BoundingBox{universe.xmin,
-                                       universe.xmax,
-                                       bbox.ymax,
-                                       universe.ymax,
-                                       false,
-                                       false,
-                                       !bbox.bopen,
-                                       false});
+    fragments.emplace_back(
+        BoundingBox{
+            universe.xmin,
+            universe.xmax,
+            bbox.ymax,
+            universe.ymax,
+            false,
+            false,
+            !bbox.bopen,
+            false});
   }
 
   return TopoUnion{std::begin(fragments), std::end(fragments)};
@@ -373,60 +381,61 @@ namespace percemon::topo {
 
 inline bool is_closed(const Region& region) {
   return std::visit(
-      overloaded{[](const Empty&) { return true; },
-                 [](const Universe&) { return true; },
-                 [](const BoundingBox& bbox) {
-                   return !(bbox.lopen || bbox.ropen || bbox.topen || bbox.bopen);
-                 },
-                 [](const TopoUnion& region) {
-                   // If any sub region is open, the set is not closed.
-                   for (auto&& bbox : region) {
-                     if (bbox.lopen || bbox.ropen || bbox.topen || bbox.bopen) {
-                       return false;
-                     }
-                   }
-                   return true;
-                 }},
+      overloaded{
+          [](const Empty&) { return true; },
+          [](const Universe&) { return true; },
+          [](const BoundingBox& bbox) {
+            return !(bbox.lopen || bbox.ropen || bbox.topen || bbox.bopen);
+          },
+          [](const TopoUnion& region) {
+            // If any sub region is open, the set is not closed.
+            for (auto&& bbox : region) {
+              if (bbox.lopen || bbox.ropen || bbox.topen || bbox.bopen) {
+                return false;
+              }
+            }
+            return true;
+          }},
       region);
 }
 
 inline bool is_open(const Region& region) {
   return std::visit(
-      overloaded{[](const Empty&) { return true; },
-                 [](const Universe&) { return true; },
-                 [](const BoundingBox& bbox) {
-                   return bbox.lopen || bbox.ropen || bbox.topen || bbox.bopen;
-                 },
-                 [](const TopoUnion& region) {
-                   // If even one sub region is open, the entire thing should be open.
-                   for (auto&& bbox : region) {
-                     if (bbox.lopen || bbox.ropen || bbox.topen || bbox.bopen) {
-                       return true;
-                     }
-                   }
-                   return false;
-                 }},
+      overloaded{
+          [](const Empty&) { return true; },
+          [](const Universe&) { return true; },
+          [](const BoundingBox& bbox) {
+            return bbox.lopen || bbox.ropen || bbox.topen || bbox.bopen;
+          },
+          [](const TopoUnion& region) {
+            // If even one sub region is open, the entire thing should be open.
+            for (auto&& bbox : region) {
+              if (bbox.lopen || bbox.ropen || bbox.topen || bbox.bopen) { return true; }
+            }
+            return false;
+          }},
       region);
 }
 
 double area(const Region& region) {
   auto reg = simplify_region(region);
   return std::visit(
-      overloaded{[](const Empty&) -> double { return 0.0; },
-                 [](const Universe&) -> double {
-                   return std::numeric_limits<double>::infinity();
-                 },
-                 [](const BoundingBox& bbox) -> double {
-                   return std::abs((bbox.xmin - bbox.xmax) * (bbox.ymin - bbox.ymax));
-                 },
-                 [](const TopoUnion& topo_un) -> double {
-                   double region_area = 0;
-                   for (auto&& bbox : topo_un) {
-                     region_area +=
-                         std::abs((bbox.xmin - bbox.xmax) * (bbox.ymin - bbox.ymax));
-                   }
-                   return region_area;
-                 }},
+      overloaded{
+          [](const Empty&) -> double { return 0.0; },
+          [](const Universe&) -> double {
+            return std::numeric_limits<double>::infinity();
+          },
+          [](const BoundingBox& bbox) -> double {
+            return std::abs((bbox.xmin - bbox.xmax) * (bbox.ymin - bbox.ymax));
+          },
+          [](const TopoUnion& topo_un) -> double {
+            double region_area = 0;
+            for (auto&& bbox : topo_un) {
+              region_area +=
+                  std::abs((bbox.xmin - bbox.xmax) * (bbox.ymin - bbox.ymax));
+            }
+            return region_area;
+          }},
       reg);
 }
 
@@ -447,8 +456,16 @@ Region interior(const Region& region) {
           [](const TopoUnion& region) -> Region {
             TopoUnion ret{};
             for (auto&& bbox : region) {
-              ret.insert(BoundingBox{
-                  bbox.xmin, bbox.xmax, bbox.ymin, bbox.ymax, true, true, true, true});
+              ret.insert(
+                  BoundingBox{
+                      bbox.xmin,
+                      bbox.xmax,
+                      bbox.ymin,
+                      bbox.ymax,
+                      true,
+                      true,
+                      true,
+                      true});
             }
             return ret;
           }},
@@ -457,32 +474,35 @@ Region interior(const Region& region) {
 
 Region closure(const Region& region) {
   return std::visit(
-      overloaded{[](const Empty& e) -> Region { return e; },
-                 [](const Universe& u) -> Region { return u; },
-                 [](const BoundingBox& bbox) -> Region {
-                   BoundingBox ret{bbox};
-                   ret.lopen = false;
-                   ret.ropen = false;
-                   ret.topen = false;
-                   ret.bopen = false;
-                   assert(is_closed(ret));
-                   return ret;
-                 },
-                 [](const TopoUnion& region) -> Region {
-                   TopoUnion ret{};
-                   for (const auto& bbox : region) {
-                     ret.insert(BoundingBox{bbox.xmin,
-                                            bbox.xmax,
-                                            bbox.ymin,
-                                            bbox.ymax,
-                                            false,
-                                            false,
-                                            false,
-                                            false});
-                   }
+      overloaded{
+          [](const Empty& e) -> Region { return e; },
+          [](const Universe& u) -> Region { return u; },
+          [](const BoundingBox& bbox) -> Region {
+            BoundingBox ret{bbox};
+            ret.lopen = false;
+            ret.ropen = false;
+            ret.topen = false;
+            ret.bopen = false;
+            assert(is_closed(ret));
+            return ret;
+          },
+          [](const TopoUnion& region) -> Region {
+            TopoUnion ret{};
+            for (const auto& bbox : region) {
+              ret.insert(
+                  BoundingBox{
+                      bbox.xmin,
+                      bbox.xmax,
+                      bbox.ymin,
+                      bbox.ymax,
+                      false,
+                      false,
+                      false,
+                      false});
+            }
 
-                   return ret;
-                 }},
+            return ret;
+          }},
       region);
 }
 

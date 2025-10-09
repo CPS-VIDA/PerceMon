@@ -2,6 +2,7 @@
 #include "percemon/monitoring.hpp"
 
 #include <algorithm>
+#include <cstdlib>
 #include <numeric>
 #include <optional>
 #include <stdexcept>
@@ -100,6 +101,7 @@ struct HorizonCompute {
       case FrameInterval::LOPEN:
       case FrameInterval::ROPEN: return expr.high;
       case FrameInterval::CLOSED: return expr.high + 1;
+      default: std::abort();
     }
   }
 

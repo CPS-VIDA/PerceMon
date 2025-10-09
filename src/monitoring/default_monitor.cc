@@ -183,8 +183,9 @@ OnlineMonitor::OnlineMonitor(
   if (auto opt_hrz = get_horizon(phi, fps)) {
     this->max_horizon = (*opt_hrz == 0) ? 1 : *opt_hrz;
   } else {
-    throw std::invalid_argument(fmt::format(
-        "Given STQL expression doesn't have a bounded horizon. Cannot perform online monitoring for this formula."));
+    throw std::invalid_argument(
+        fmt::format(
+            "Given STQL expression doesn't have a bounded horizon. Cannot perform online monitoring for this formula."));
   }
 }
 
@@ -620,9 +621,10 @@ std::vector<double> RobustnessOp::operator()(const ast::ExistsPtr& e) {
   // same variable name again. This is an error.
   for (auto&& id : ids) {
     if (this->obj_map.find(fmt::to_string(id)) != std::end(this->obj_map)) {
-      throw std::invalid_argument(fmt::format(
-          "{} seems to be created multiple times in the formula. This is not valid.",
-          id));
+      throw std::invalid_argument(
+          fmt::format(
+              "{} seems to be created multiple times in the formula. This is not valid.",
+              id.name));
     }
   }
 
@@ -662,9 +664,10 @@ std::vector<double> RobustnessOp::operator()(const ast::ForallPtr& e) {
   // same variable name again. This is an error.
   for (auto&& id : ids) {
     if (this->obj_map.find(fmt::to_string(id)) != std::end(this->obj_map)) {
-      throw std::invalid_argument(fmt::format(
-          "{} seems to be created multiple times in the formula. This is not valid.",
-          id));
+      throw std::invalid_argument(
+          fmt::format(
+              "{} seems to be created multiple times in the formula. This is not valid.",
+              id));
     }
   }
 
@@ -1023,6 +1026,7 @@ constexpr size_t interval_size(const FrameInterval& expr) {
     case FrameInterval::LOPEN:
     case FrameInterval::ROPEN: return expr.high;
     case FrameInterval::CLOSED: return expr.high + 1;
+    default: std::abort();
   }
 }
 

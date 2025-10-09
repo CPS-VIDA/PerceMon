@@ -18,9 +18,7 @@ struct not_implemented_error : public std::exception {
 
   not_implemented_error(const not_implemented_error& other) noexcept = default;
 
-  virtual const char* what() const noexcept {
-    return this->what_arg.c_str();
-  }
+  virtual const char* what() const noexcept { return this->what_arg.c_str(); }
 };
 
 } // namespace percemon

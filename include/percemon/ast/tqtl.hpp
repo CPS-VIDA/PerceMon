@@ -28,10 +28,10 @@ struct Pin {
   Pin(const std::optional<Var_x>& x_) : Pin{x_, {}} {};
   Pin(const std::optional<Var_f>& f_) : Pin{{}, f_} {};
 
-  Pin(const Pin&) = default;
+  Pin(const Pin&)            = default;
   Pin& operator=(const Pin&) = default;
   Pin(Pin&&)                 = default;
-  Pin& operator=(Pin&&) = default;
+  Pin& operator=(Pin&&)      = default;
 
   PinPtr dot(const Expr& e) {
     auto ret = std::make_shared<Pin>(x, f);

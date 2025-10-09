@@ -29,9 +29,7 @@ struct product_iterator {
 
   bool operator!=(const product_iterator<Iter>& other) const {
     for (size_t i = 0; i < _curr.size(); i++) {
-      if (_curr.at(i) != other._curr.at(i)) {
-        return true;
-      }
+      if (_curr.at(i) != other._curr.at(i)) { return true; }
     }
     return false;
   }

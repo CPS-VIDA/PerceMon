@@ -4,8 +4,9 @@
 #include "percemon/percemon.hpp"
 
 #include <CLI/CLI.hpp>
+#include <cppitertools/itertools.hpp>
+#include <cstdlib>
 #include <fmt/format.h>
-#include <itertools.hpp>
 
 #if defined(__cpp_lib_filesystem) || __has_include(<filesystem>)
 #include <filesystem>
@@ -19,7 +20,7 @@ namespace fs = std::experimental::filesystem;
 
 namespace ds = percemon::datastream;
 
-enum class PhiNumber : int { Example1, Example2, Example3, Example4 };
+enum class PhiNumber : std::uint8_t { Example1, Example2, Example3, Example4 };
 
 percemon::Expr get_phi1() {
   using namespace percemon;
@@ -107,6 +108,7 @@ percemon::Expr get_phi(PhiNumber opt) {
     case PhiNumber::Example2: return get_phi2();
     case PhiNumber::Example3: return get_phi3();
     case PhiNumber::Example4: return get_phi4();
+    default: std::abort();
   }
 }
 
@@ -157,13 +159,14 @@ int main(int argc, char* argv[]) {
 
   PhiNumber phi_option = PhiNumber::Example1;
   app.add_option("--phi", phi_option, "Which example to run?")
-      ->transform(CLI::CheckedTransformer(
-          std::map<std::string, PhiNumber>{
-              {"phi1", PhiNumber::Example1},
-              {"phi2", PhiNumber::Example2},
-              {"phi3", PhiNumber::Example3},
-              {"phi4", PhiNumber::Example4}},
-          CLI::ignore_case));
+      ->transform(
+          CLI::CheckedTransformer(
+              std::map<std::string, PhiNumber>{
+                  {"phi1", PhiNumber::Example1},
+                  {"phi2", PhiNumber::Example2},
+                  {"phi3", PhiNumber::Example3},
+                  {"phi4", PhiNumber::Example4}},
+              CLI::ignore_case));
 
   bool verbose = false;
   app.add_flag("-v,--verbose", verbose, "If set, will set logging level to DEBUG");

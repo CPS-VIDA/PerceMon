@@ -53,11 +53,11 @@ struct BoundingBox {
   bool topen = false;
   bool bopen = false;
 
-  BoundingBox()                   = delete;
-  BoundingBox(const BoundingBox&) = default;
-  BoundingBox(BoundingBox&&)      = default;
+  BoundingBox()                              = delete;
+  BoundingBox(const BoundingBox&)            = default;
+  BoundingBox(BoundingBox&&)                 = default;
   BoundingBox& operator=(const BoundingBox&) = default;
-  BoundingBox& operator=(BoundingBox&&) = default;
+  BoundingBox& operator=(BoundingBox&&)      = default;
 
   BoundingBox(
       double xmin_,
@@ -78,10 +78,11 @@ struct BoundingBox {
       bopen{bopen_} {};
 
   BoundingBox(percemon::datastream::BoundingBox bbox) :
-      BoundingBox{static_cast<double>(bbox.xmin),
-                  static_cast<double>(bbox.xmax),
-                  static_cast<double>(bbox.ymin),
-                  static_cast<double>(bbox.ymax)} {};
+      BoundingBox{
+          static_cast<double>(bbox.xmin),
+          static_cast<double>(bbox.xmax),
+          static_cast<double>(bbox.ymin),
+          static_cast<double>(bbox.ymax)} {};
 
   BoundingBox& operator=(percemon::datastream::BoundingBox bbox) {
     xmin = bbox.xmin;
@@ -119,11 +120,11 @@ struct TopoUnion {
   using difference_type = Set::difference_type;
   using size_type       = Set::size_type;
 
-  TopoUnion()                 = default;
-  TopoUnion(const TopoUnion&) = default;
-  TopoUnion(TopoUnion&&)      = default;
+  TopoUnion()                            = default;
+  TopoUnion(const TopoUnion&)            = default;
+  TopoUnion(TopoUnion&&)                 = default;
   TopoUnion& operator=(const TopoUnion&) = default;
-  TopoUnion& operator=(TopoUnion&&) = default;
+  TopoUnion& operator=(TopoUnion&&)      = default;
 
   template <typename Iter>
   TopoUnion(Iter first, Iter last) : regions{first, last} {};

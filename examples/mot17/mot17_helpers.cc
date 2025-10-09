@@ -164,8 +164,9 @@ std::vector<percemon::datastream::Frame> mot17::parse_results(
     double confidence = std::stod(std::string{row[6]});
     int label = static_cast<int>(Labels::Pedestrian); // MOT17 is always pedestrian
 
-    results.push_back(ResultsRow{
-        frame_num, id, bb_left, bb_top, bb_width, bb_height, confidence, label});
+    results.push_back(
+        ResultsRow{
+            frame_num, id, bb_left, bb_top, bb_width, bb_height, confidence, label});
     n_rows += 1;
   }
 

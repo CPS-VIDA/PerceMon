@@ -53,7 +53,7 @@ TEST_CASE("AST nodes throw exceptions when constructed badly", "[ast][except]") 
     const auto id1 = Var_id{"1"};
     const auto id2 = Var_id{"2"};
 
-    enum class Classification : int { PED, CAR };
+    enum class Classification : std::uint8_t { PED, CAR };
 
     REQUIRE_NOTHROW(Class(id1) == Class(id2));
     REQUIRE_NOTHROW(Class(id1) != Class(id2));
