@@ -9,876 +9,706 @@
 #include <optional>
 #include <stdexcept>
 #include <string>
+#include <tuple>
+#include <type_traits>
+#include <utility>
 #include <variant>
 #include <vector>
 
-namespace percemon {
-namespace ast {
+#define NODE_DECL_AND_DEF_OVERRIDES                                                \
+  [[nodiscard]] std::string to_string() const final;                               \
+  [[nodiscard]] std::optional<std::int64_t> history(std::int64_t fps) const final; \
+  [[nodiscard]] std::optional<std::int64_t> horizon(std::int64_t fps) const final;
 
-namespace primitives {
+namespace percemon::ast {
+
+// Some forward declarations
+struct BaseExpr;
+using Expr = std::shared_ptr<BaseExpr>;
+struct BaseSpatialExpr;
+using SpatialExpr = std::shared_ptr<BaseSpatialExpr>;
+
+template <typename Base>
+struct AstVisitor {
+  virtual ~AstVisitor() = default;
+
+  virtual void visit(const std::shared_ptr<Base>&) = 0;
+};
+
+/**
+ * Abstract Expression type
+ */
+struct BaseExpr : std::enable_shared_from_this<BaseExpr> {
+  virtual ~BaseExpr() = default;
+
+  Expr ptr() { return shared_from_this(); }
+  std::shared_ptr<const BaseExpr> ptr() const { return shared_from_this(); }
+
+  /* Utility method to easily downcast.
+   * Useful when a child doesn't inherit directly from enable_shared_from_this
+   * but wants to use the feature.
+   */
+  template <class Down>
+  std::shared_ptr<Down> downcast_ptr() {
+    return std::dynamic_pointer_cast<Down>(BaseExpr::shared_from_this());
+  }
+
+  /**
+   * Convert the given expression to a string
+   */
+  [[nodiscard]] virtual std::string to_string() const = 0;
+
+  /**
+   * Compute the horizon requirment for the expression
+   */
+  [[nodiscard]] virtual std::optional<std::int64_t> horizon(std::int64_t fps) const = 0;
+  /**
+   * Compute the history requirment for the expression
+   */
+  [[nodiscard]] virtual std::optional<std::int64_t> history(std::int64_t fps) const = 0;
+
+  Expr operator~();
+};
+Expr operator&(const Expr& lhs, const Expr& rhs);
+Expr operator|(const Expr& lhs, const Expr& rhs);
+
+struct BaseSpatialExpr : std::enable_shared_from_this<BaseSpatialExpr> {
+  virtual ~BaseSpatialExpr() = default;
+
+  SpatialExpr ptr() { return shared_from_this(); }
+
+  /* Utility method to easily downcast.
+   * Useful when a child doesn't inherit directly from enable_shared_from_this
+   * but wants to use the feature.
+   */
+  template <class Down>
+  std::shared_ptr<Down> downcast_ptr() {
+    return std::dynamic_pointer_cast<Down>(BaseSpatialExpr::shared_from_this());
+  }
+
+  /**
+   * Convert the given expression to a string
+   */
+  [[nodiscard]] virtual std::string to_string() const = 0;
+
+  /**
+   * Compute the horizon requirment for the expression
+   */
+  [[nodiscard]] virtual std::optional<std::int64_t> horizon(std::int64_t fps) const = 0;
+  /**
+   * Compute the history requirment for the expression
+   */
+  [[nodiscard]] virtual std::optional<std::int64_t> history(std::int64_t fps) const = 0;
+
+  SpatialExpr operator~();
+};
+SpatialExpr operator&(const SpatialExpr& lhs, const SpatialExpr& rhs);
+SpatialExpr operator|(const SpatialExpr& lhs, const SpatialExpr& rhs);
+
 // Some basic primitives
+// These are needed for mixins/CRTP templates defined later.
 
 enum class ComparisonOp : std::uint8_t { GT, GE, LT, LE, EQ, NE };
 
 /**
- * Node that holds a constant value, true or false.
+ * Allows one to flip the comparison operation such that the lhs and rhs can be
+ * swapped.
+ *
+ * NOTE: This is not a negation, it just changes the direction of the comparison.
  */
-struct Const {
-  bool value = false;
+inline ComparisonOp flip_comparison(ComparisonOp op) {
+  switch (op) {
+    case ComparisonOp::GT: return ComparisonOp::LT;
+    case ComparisonOp::GE: return ComparisonOp::LE;
+    case ComparisonOp::LT: return ComparisonOp::GT;
+    case ComparisonOp::LE: return ComparisonOp::GE;
+    default: return op;
+  }
+}
 
-  Const(bool value_) : value{value_} {};
+/**
+ * Return the comparison if the expression is negated.
+ */
+inline ComparisonOp negate_comparison(ComparisonOp op) {
+  switch (op) {
+    case ComparisonOp::GT: return ComparisonOp::LE;
+    case ComparisonOp::GE: return ComparisonOp::LT;
+    case ComparisonOp::LT: return ComparisonOp::GE;
+    case ComparisonOp::LE: return ComparisonOp::GT;
+    case ComparisonOp::NE: return ComparisonOp::EQ;
+    case ComparisonOp::EQ: return ComparisonOp::NE;
+    default: return op;
+  }
+}
 
-  inline bool operator==(const Const& other) const {
-    return this->value == other.value;
-  };
+inline auto format_as(ComparisonOp op) {
+  switch (op) {
+    case ComparisonOp::GE: return ">=";
+    case ComparisonOp::GT: return ">";
+    case ComparisonOp::LE: return "<=";
+    case ComparisonOp::LT: return "<";
+    case ComparisonOp::EQ: return "==";
+    case ComparisonOp::NE: return "!=";
+    default: std::abort();
+  }
+}
 
-  inline bool operator!=(const Const& other) const { return !(*this == other); };
+/**
+ * Abstract variable node
+ */
+struct VarNode {
+  std::string name;
+
+  VarNode()                          = delete;
+  VarNode(const VarNode&)            = default;
+  VarNode(VarNode&&)                 = delete;
+  VarNode& operator=(const VarNode&) = default;
+  VarNode& operator=(VarNode&&)      = delete;
+  VarNode(std::string name_) : name{std::move(name_)} {}
+
+  virtual ~VarNode() = default;
+  [[nodiscard]] virtual std::string to_string() const { return this->name; }
 };
 
-/**
- * Placeholder value for Current Time
- */
-struct C_TIME {};
-/**
- * Placeholder value for Current Frame
- */
-struct C_FRAME {};
+inline bool operator==(const VarNode& a, const VarNode& b) { return a.name == b.name; }
+inline bool operator!=(const VarNode& a, const VarNode& b) { return a.name != b.name; }
 
 /**
  * Variable place holder for frames.
  */
-struct Var_f {
-  std::string name;
-
-  Var_f(std::string name_) : name{std::move(name_)} {}
-
-  inline bool operator==(const Var_f& other) const { return name == other.name; };
-
-  inline bool operator!=(const Var_f& other) const { return !(*this == other); };
+struct Var_f final : public virtual VarNode {
+  using VarNode::VarNode;
+  static Var_f current() { return Var_f{"C_FRAME"}; }
 };
+const auto C_FRAME = Var_f::current();
 
 /**
  * Variable place holder for timestamps.
  */
-struct Var_x {
-  std::string name;
-
-  Var_x(std::string name_) : name{std::move(name_)} {}
-
-  inline bool operator==(const Var_x& other) const { return name == other.name; };
-
-  inline bool operator!=(const Var_x& other) const { return !(*this == other); };
+struct Var_x final : public virtual VarNode {
+  using VarNode::VarNode;
+  static Var_x current() { return Var_x{"C_TIME"}; }
 };
+const auto C_TIME = Var_x::current();
 
 /**
  * Variable place holder for object IDs
  */
-struct Var_id {
-  std::string name;
-
-  Var_id(std::string name_) : name{std::move(name_)} {}
+struct Var_id final : public virtual VarNode {
+  using VarNode::VarNode;
 };
 
-// Spatial primitives.
-
-struct EmptySet {};
-struct UniverseSet {};
-
-// Topological identifiers.
+/**
+ * Topological identifiers.
+ */
 enum struct CRT : std::uint8_t { LM, RM, TM, BM, CT };
 
-/**
- * A bound on a Var_x of the form
- *
- *    x - C_TIME ~ c
- *
- * where, `~` is a relational operator: `<`,`>`,`<=`,`>=`.
- */
-struct TimeBound {
-  Var_x x;
-  ComparisonOp op = ComparisonOp::GE;
-  double bound    = 0.0;
+inline auto format_as(CRT ref_point) {
+  switch (ref_point) {
+    case CRT::LM: return "Left";
+    case CRT::RM: return "Right";
+    case CRT::TM: return "Top";
+    case CRT::BM: return "Bottom";
+    case CRT::CT: return "Center";
+    default: std::abort();
+  }
+}
 
-  TimeBound() = delete;
-  TimeBound(
-      Var_x x_,
-      const ComparisonOp op_ = ComparisonOp::GE,
-      const double bound_    = 0.0) :
-      x{std::move(x_)}, op{op_}, bound{bound_} {
-    if (op == ComparisonOp::EQ || op == ComparisonOp::NE) {
-      throw std::invalid_argument(
-          "TimeBound (Var_x - C_TIME ~ c) cannot have == and != constraints.");
-    }
-    if (bound_ <= 0.0) {
-      bound = -bound_;
-      switch (op_) {
-        case ComparisonOp::GE: op = ComparisonOp::LE; break;
-        case ComparisonOp::GT: op = ComparisonOp::LT; break;
-        case ComparisonOp::LE: op = ComparisonOp::GE; break;
-        case ComparisonOp::LT: op = ComparisonOp::GT; break;
-        default: {
-          throw std::invalid_argument(
-              "TimeBound (Var_x - C_TIME ~ c) cannot have == and != constraints.");
-        }
-      }
-    }
-  };
+enum struct Bound : std::uint8_t { OPEN, LOPEN, ROPEN, CLOSED };
 
-  inline bool operator==(const TimeBound& other) const {
-    return (x == other.x) && (op == other.op) && (bound == other.bound);
-  };
-
-  inline bool operator!=(const TimeBound& other) const { return !(*this == other); };
-};
-TimeBound operator-(const Var_x& lhs, C_TIME);
-TimeBound operator>(const TimeBound& lhs, const double bound);
-TimeBound operator>=(const TimeBound& lhs, const double bound);
-TimeBound operator<(const TimeBound& lhs, const double bound);
-TimeBound operator<=(const TimeBound& lhs, const double bound);
-TimeBound operator>(const double bound, const TimeBound& rhs);
-TimeBound operator>=(const double bound, const TimeBound& rhs);
-TimeBound operator<(const double bound, const TimeBound& rhs);
-TimeBound operator<=(const double bound, const TimeBound& rhs);
-
-/**
- * A bound on a Var_f of the form
- *
- *    f - C_FRAME ~ c
- *
- * where, `~` is a relational operator: `<`,`>`,`<=`,`>=`.
- */
-struct FrameBound {
-  Var_f f;
-  ComparisonOp op = ComparisonOp::GE;
-  size_t bound    = 0;
-
-  FrameBound() = delete;
-  FrameBound(
-      Var_f f_,
-      const ComparisonOp op_ = ComparisonOp::GE,
-      const size_t bound_    = 0) :
-      f{std::move(f_)}, op{op_}, bound{bound_} {
-    if (op == ComparisonOp::EQ || op == ComparisonOp::NE) {
-      throw std::invalid_argument(
-          "FrameBound (Var_f - C_FRAME ~ c) cannot have == and != constraints.");
-    }
-  };
-
-  inline bool operator==(const FrameBound& other) const {
-    return (f == other.f) && (op == other.op) && (bound == other.bound);
-  };
-
-  inline bool operator!=(const FrameBound& other) const { return !(*this == other); };
-};
-FrameBound operator-(const Var_f& lhs, C_FRAME);
-FrameBound operator>(const FrameBound& lhs, const size_t bound);
-FrameBound operator>=(const FrameBound& lhs, const size_t bound);
-FrameBound operator<(const FrameBound& lhs, const size_t bound);
-FrameBound operator<=(const FrameBound& lhs, const size_t bound);
-FrameBound operator>(const size_t bound, const FrameBound& rhs);
-FrameBound operator>=(const size_t bound, const FrameBound& rhs);
-FrameBound operator<(const size_t bound, const FrameBound& rhs);
-FrameBound operator<=(const size_t bound, const FrameBound& rhs);
-
-using TemporalBoundExpr = std::variant<TimeBound, FrameBound>;
-
-struct TimeInterval {
-  double low, high;
-
-  enum Bound : std::uint8_t { OPEN, LOPEN, ROPEN, CLOSED };
+template <typename T>
+struct Interval {
+  T low, high;
   Bound bound;
+  static Interval open(T low, T high) { return Interval{low, high, Bound::OPEN}; }
+  static Interval lopen(T low, T high) { return Interval{low, high, Bound::LOPEN}; }
+  static Interval ropen(T low, T high) { return Interval{low, high, Bound::ROPEN}; }
+  static Interval closed(T low, T high) { return Interval{low, high, Bound::CLOSED}; }
 
-  static TimeInterval open(double low, double high) {
-    return TimeInterval{low, high, OPEN};
-  }
-  static TimeInterval lopen(double low, double high) {
-    return TimeInterval{low, high, LOPEN};
-  }
-  static TimeInterval ropen(double low, double high) {
-    return TimeInterval{low, high, ROPEN};
-  }
-  static TimeInterval closed(double low, double high) {
-    return TimeInterval{low, high, CLOSED};
-  }
+  [[nodiscard]] std::string to_string() const;
 };
 
-struct FrameInterval {
-  size_t low, high;
+using TimeInterval  = Interval<double>;
+using FrameInterval = Interval<std::int64_t>;
 
-  enum Bound : std::uint8_t { OPEN, LOPEN, ROPEN, CLOSED };
-  Bound bound;
+template <typename... Args>
+struct FuncNode {
+  static_assert(sizeof...(Args) > 0, "can't have a 0-ary function");
 
-  static FrameInterval open(size_t low, size_t high) {
-    return FrameInterval{low, high, OPEN};
-  }
-  static FrameInterval lopen(size_t low, size_t high) {
-    return FrameInterval{low, high, LOPEN};
-  }
-  static FrameInterval ropen(size_t low, size_t high) {
-    return FrameInterval{low, high, ROPEN};
-  }
-  static FrameInterval closed(size_t low, size_t high) {
-    return FrameInterval{low, high, CLOSED};
-  }
+  static constexpr std::size_t arity = sizeof...(Args);
+
+  std::tuple<Args...> args;
+
+  FuncNode(const Args&... args_) : args{std::make_tuple(args_...)} {};
+  FuncNode(const FuncNode&)            = default;
+  FuncNode& operator=(const FuncNode&) = default;
+  // FuncNode(FuncNode&&)                 = default;
+  // FuncNode& operator=(FuncNode&&)      = default;
+  virtual ~FuncNode() = default;
+
+  [[nodiscard]] virtual std::string get_name() const { return "UnknownFunc"; };
+  [[nodiscard]] virtual std::string to_string() const;
+  [[nodiscard]] std::optional<std::int64_t> history(std::int64_t fps) const;
+  [[nodiscard]] std::optional<std::int64_t> horizon(std::int64_t fps) const;
 };
 
-// Some primitive operations on IDs
+// template <typename... Args>
+// struct ScaledFuncNode : public virtual FuncNode<Args...> {
+//   ScaledFuncNode(const Args&... args, double scale_ = 1.0) :
+//       FuncNode<Args...>(args...), scale{scale_} {}
 
-/**
- * Node comparing objects.
- */
-struct CompareId {
-  Var_id lhs;
-  ComparisonOp op;
-  Var_id rhs;
+//   ScaledFuncNode(const ScaledFuncNode&)            = default;
+//   ScaledFuncNode& operator=(const ScaledFuncNode&) = default;
+//   // ScaledFuncNode(ScaledFuncNode&&)                 = default;
+//   // ScaledFuncNode& operator=(ScaledFuncNode&&)      = default;
 
-  CompareId() = delete;
-  CompareId(Var_id lhs_, ComparisonOp op_, Var_id rhs_) :
-      lhs{std::move(lhs_)}, op{op_}, rhs{std::move(rhs_)} {
-    if (op != ComparisonOp::EQ && op != ComparisonOp::NE) {
-      throw std::invalid_argument(
-          "Cannot use relational operators <, >, <=, >= to compare Var_id");
-    }
-  };
-};
-CompareId operator==(const Var_id& lhs, const Var_id& rhs);
-CompareId operator!=(const Var_id& lhs, const Var_id& rhs);
+//   double scale = 1.0;
+// };
 
 /**
  * Node to represent the Class(id) function.
  */
-struct Class {
-  Var_id id;
+struct Class final : public virtual FuncNode<Var_id> {
+  using FuncNode<Var_id>::FuncNode;
+  using FuncNode<Var_id>::operator=;
 
-  Class() = delete;
-  Class(Var_id id_) : id{std::move(id_)} {}
+  [[nodiscard]] std::string get_name() const final { return "Class"; }
+  [[nodiscard]] std::string to_string() const final;
 };
-
-/**
- * Node to compare equality of object class between either two IDs or an ID and a
- * class literal.
- */
-struct CompareClass {
-  Class lhs;
-  ComparisonOp op;
-  std::variant<int, Class> rhs;
-
-  CompareClass() = delete;
-  CompareClass(Class lhs_, ComparisonOp op_, std::variant<int, Class> rhs_) :
-      lhs{std::move(lhs_)}, op{op_}, rhs{std::move(rhs_)} {
-    if (op != ComparisonOp::EQ && op != ComparisonOp::NE) {
-      throw std::invalid_argument(
-          "Cannot use relational operators <, >, <=, >= to compare Class(id)");
-    }
-  };
-};
-CompareClass operator==(const Class& lhs, const int rhs);
-CompareClass operator==(const int lhs, const Class& rhs);
-CompareClass operator==(const Class& lhs, const Class& rhs);
-CompareClass operator!=(const Class& lhs, const int rhs);
-CompareClass operator!=(const int lhs, const Class& rhs);
-CompareClass operator!=(const Class& lhs, const Class& rhs);
 
 /**
  * Node representing the Prob(id) function. Providing a multiplier is equivalent to
  * Prob(id) * scale.
  */
-struct Prob {
-  Var_id id;
-  double scale = 1.0;
-
-  Prob() = delete;
-  Prob(Var_id id_, double scale_ = 1.0) : id{std::move(id_)}, scale{scale_} {}
-
-  Prob& operator*=(const double rhs) {
-    this->scale *= rhs;
-    return *this;
-  };
-  friend Prob operator*(const Prob& lhs, const double rhs) {
-    return Prob{lhs.id, lhs.scale * rhs};
-  }
-
-  friend Prob operator*(const double lhs, const Prob& rhs) { return rhs * lhs; }
+struct Prob final : public virtual FuncNode<Var_id> {
+  using FuncNode<Var_id>::FuncNode;
+  using FuncNode<Var_id>::operator=;
+  [[nodiscard]] std::string get_name() const final { return "Prob"; }
+  [[nodiscard]] std::string to_string() const final;
 };
 
-struct CompareProb {
-  Prob lhs;
-  ComparisonOp op;
-  std::variant<double, Prob> rhs;
-
-  CompareProb() = delete;
-  CompareProb(Prob lhs_, ComparisonOp op_, std::variant<double, Prob> rhs_) :
-      lhs{std::move(lhs_)}, op{op_}, rhs{std::move(rhs_)} {
-    if (op == ComparisonOp::EQ || op == ComparisonOp::NE) {
-      throw std::invalid_argument(
-          "Cannot use relational operators ==, != to compare Prob(id)");
-    }
-  };
-};
-CompareProb operator>(const Prob& lhs, const double rhs);
-CompareProb operator>=(const Prob& lhs, const double rhs);
-CompareProb operator<(const Prob& lhs, const double rhs);
-CompareProb operator<=(const Prob& lhs, const double rhs);
-CompareProb operator>(const Prob& lhs, const Prob& rhs);
-CompareProb operator>=(const Prob& lhs, const Prob& rhs);
-CompareProb operator<(const Prob& lhs, const Prob& rhs);
-CompareProb operator<=(const Prob& lhs, const Prob& rhs);
-
-// Spatial primitive operations
-struct BBox {
-  Var_id id;
-};
-
-struct ED {
-  Var_id id1;
-  CRT crt1;
-  Var_id id2;
-  CRT crt2;
-  double scale = 1.0;
-
-  ED() = delete;
-  ED(Var_id id1_, CRT crt1_, Var_id id2_, CRT crt2_, double scale_ = 1.0) :
-      id1{std::move(id1_)},
-      crt1{crt1_},
-      id2{std::move(id2_)},
-      crt2{crt2_},
-      scale{scale_} {}
-
-  ED& operator*=(const double rhs) {
-    this->scale *= rhs;
-    return *this;
-  };
-  friend ED operator*(const ED& lhs, const double rhs) {
-    return ED{lhs.id1, lhs.crt1, lhs.id2, lhs.crt2, lhs.scale * rhs};
-  }
-
-  friend ED operator*(const double lhs, const ED& rhs) { return rhs * lhs; }
-};
-
-struct CompareED {
-  ED lhs;
-  ComparisonOp op;
-  double rhs;
-
-  CompareED() = delete;
-  CompareED(ED lhs_, ComparisonOp op_, double rhs_) :
-      lhs{std::move(lhs_)}, op{op_}, rhs{rhs_} {
-    if (op == ComparisonOp::EQ || op == ComparisonOp::NE) {
-      throw std::invalid_argument(
-          "Cannot use relational operators ==, != to compare Euclidean Distance");
-    }
-  };
-};
-
-CompareED operator>(const ED& lhs, const double rhs);
-CompareED operator>=(const ED& lhs, const double rhs);
-CompareED operator<(const ED& lhs, const double rhs);
-CompareED operator<=(const ED& lhs, const double rhs);
-CompareED operator>(const double lhs, const ED& rhs);
-CompareED operator>=(const double lhs, const ED& rhs);
-CompareED operator<(const double lhs, const ED& rhs);
-CompareED operator<=(const double lhs, const ED& rhs);
-CompareED operator>(const ED& lhs, const ED& rhs);
-CompareED operator>=(const ED& lhs, const ED& rhs);
-CompareED operator<(const ED& lhs, const ED& rhs);
-CompareED operator<=(const ED& lhs, const ED& rhs);
-
-struct Lat {
+/**
+ * Set the reference point/anchor of the object
+ */
+struct RefPoint {
   Var_id id;
   CRT crt;
-  double scale = 1.0;
 
-  Lat() = delete;
-  Lat(Var_id id_, CRT crt_, double scale_ = 1.0) :
-      id{std::move(id_)}, crt{crt_}, scale{scale_} {}
+  RefPoint() = delete;
+  RefPoint(Var_id id, CRT crt) : id(std::move(id)), crt(crt) {}
+};
 
-  Lat& operator*=(const double rhs) {
-    this->scale *= rhs;
-    return *this;
-  };
-  friend Lat operator*(Lat lhs, const double rhs) {
-    lhs *= rhs;
-    return lhs;
+/**
+ * Compute the Euclidean distance between two objects given their reference points
+ */
+struct ED final : public virtual FuncNode<RefPoint, RefPoint> {
+  using FuncNode<RefPoint, RefPoint>::FuncNode;
+  using FuncNode<RefPoint, RefPoint>::operator=;
+  [[nodiscard]] std::string get_name() const final { return "ED"; }
+  [[nodiscard]] std::string to_string() const final;
+};
+
+/**
+ * Access the (scaled) lateral position of the reference point.
+ */
+struct Lat final : public virtual FuncNode<RefPoint> {
+  using FuncNode<RefPoint>::FuncNode;
+  using FuncNode<RefPoint>::operator=;
+  [[nodiscard]] std::string get_name() const final { return "Lat"; }
+  [[nodiscard]] std::string to_string() const final;
+};
+
+/**
+ * Access the (scaled) longitudinal position of the reference point.
+ */
+struct Lon final : public virtual FuncNode<RefPoint> {
+  using FuncNode<RefPoint>::FuncNode;
+  using FuncNode<RefPoint>::operator=;
+  [[nodiscard]] std::string get_name() const final { return "Lon"; }
+  [[nodiscard]] std::string to_string() const final;
+};
+
+struct AreaOf final : public virtual FuncNode<SpatialExpr> {
+  using FuncNode<SpatialExpr>::FuncNode;
+  using FuncNode<SpatialExpr>::operator=;
+  [[nodiscard]] std::string get_name() const final { return "AreaOf"; }
+  [[nodiscard]] std::string to_string() const final;
+};
+
+/**
+ * Node that holds a constant value, true or false.
+ */
+struct Const final : public virtual BaseExpr {
+  bool value = false;
+
+  Const(bool value_) : value{value_} {};
+
+  NODE_DECL_AND_DEF_OVERRIDES
+};
+const auto CONST_TRUE  = std::make_shared<Const>(true);
+const auto CONST_FALSE = std::make_shared<Const>(false);
+
+struct EmptySet final : public virtual BaseSpatialExpr {
+  NODE_DECL_AND_DEF_OVERRIDES
+};
+struct UniverseSet final : public virtual BaseSpatialExpr {
+  NODE_DECL_AND_DEF_OVERRIDES
+};
+
+template <typename T>
+struct Difference {
+  T lhs;
+  T rhs;
+
+  Difference() = delete;
+  Difference(T lhs_, T rhs_) : lhs{std::move(lhs_)}, rhs{std::move(rhs_)} {}
+
+  [[nodiscard]] std::string to_string() const;
+  [[nodiscard]] std::optional<std::int64_t> history(std::int64_t fps) const;
+  [[nodiscard]] std::optional<std::int64_t> horizon(std::int64_t fps) const;
+};
+template <typename T>
+inline Difference<T> operator-(const T& lhs, const T& rhs) {
+  return Difference<T>{lhs, rhs};
+}
+
+using TimeDiff  = Difference<Var_x>;
+using FrameDiff = Difference<Var_f>;
+
+template <typename Lhs, typename Rhs, ComparisonOp... Ops>
+struct CompareNode : public virtual BaseExpr {
+  Lhs lhs;
+  ComparisonOp op;
+  Rhs rhs;
+
+  CompareNode()                              = delete;
+  CompareNode(const CompareNode&)            = default;
+  CompareNode(CompareNode&&)                 = default;
+  CompareNode& operator=(const CompareNode&) = default;
+  CompareNode(const Lhs& lhs, ComparisonOp op, const Rhs& rhs) :
+      lhs{lhs}, op{op}, rhs{rhs} {
+    if (!((op == Ops) || ...)) { throw std::invalid_argument("unsupported operation"); }
   }
 
-  friend Lat operator*(const double lhs, const Lat& rhs) { return rhs * lhs; }
+  [[nodiscard]] std::string to_string() const override;
+  [[nodiscard]] std::optional<std::int64_t> history(std::int64_t fps) const override;
+  [[nodiscard]] std::optional<std::int64_t> horizon(std::int64_t fps) const override;
 };
 
-struct Lon {
-  Var_id id;
-  CRT crt;
-  double scale = 1.0;
+template <typename Lhs, typename Rhs>
+struct OrderingOpNode final : public virtual CompareNode<
+                                  Lhs,
+                                  Rhs,
+                                  ComparisonOp::LT,
+                                  ComparisonOp::LE,
+                                  ComparisonOp::GT,
+                                  ComparisonOp::GE> {
+  using CompareNode<
+      Lhs,
+      Rhs,
+      ComparisonOp::LT,
+      ComparisonOp::LE,
+      ComparisonOp::GT,
+      ComparisonOp::GE>::CompareNode;
 
-  Lon() = delete;
-  Lon(Var_id id_, CRT crt_, double scale_ = 1.0) :
-      id{std::move(id_)}, crt{crt_}, scale{scale_} {}
+  using CompareNode<
+      Lhs,
+      Rhs,
+      ComparisonOp::LT,
+      ComparisonOp::LE,
+      ComparisonOp::GT,
+      ComparisonOp::GE>::operator=;
+};
+template <typename Lhs, typename Rhs>
+inline OrderingOpNode<Lhs, Rhs> less_than(const Lhs& lhs, const Rhs& rhs) {
+  return OrderingOpNode<Lhs, Rhs>{lhs, ComparisonOp::LT, rhs};
+}
+template <typename Lhs, typename Rhs>
+inline OrderingOpNode<Lhs, Rhs> less_than_eq(const Lhs& lhs, const Rhs& rhs) {
+  return OrderingOpNode<Lhs, Rhs>{lhs, ComparisonOp::LE, rhs};
+}
+template <typename Lhs, typename Rhs>
+inline OrderingOpNode<Lhs, Rhs> greater_than(const Lhs& lhs, const Rhs& rhs) {
+  return OrderingOpNode<Lhs, Rhs>(lhs, ComparisonOp::GT, rhs);
+}
+template <typename Lhs, typename Rhs>
+inline OrderingOpNode<Lhs, Rhs> greater_than_eq(const Lhs& lhs, const Rhs& rhs) {
+  return OrderingOpNode<Lhs, Rhs>{lhs, ComparisonOp::GE, rhs};
+}
 
-  Lon& operator*=(const double rhs) {
-    this->scale *= rhs;
-    return *this;
-  };
-  friend Lon operator*(Lon lhs, const double rhs) {
-    lhs *= rhs;
-    return lhs;
-  }
+// template <typename Lhs, typename Rhs> OrderingOpNode<Lhs, Rhs> operator<(const Lhs&
+// lhs, const Rhs& rhs) {return OrderingOpNode{lhs, ComparisonOp::LT, rhs};} template
+// <typename Lhs, typename Rhs> OrderingOpNode<Lhs, Rhs> operator<=(const Lhs& lhs,
+// const Rhs& rhs) {return OrderingOpNode{lhs, ComparisonOp::LE, rhs};} template
+// <typename Lhs, typename Rhs> OrderingOpNode<Lhs, Rhs> operator>(const Lhs& lhs, const
+// Rhs& rhs) {return OrderingOpNode{lhs, ComparisonOp::GT, rhs};} template <typename
+// Lhs, typename Rhs> OrderingOpNode<Lhs, Rhs> operator>=(const Lhs& lhs, const Rhs&
+// rhs) {return OrderingOpNode{lhs, ComparisonOp::GE, rhs};}
 
-  friend Lon operator*(const double lhs, const Lon& rhs) { return rhs * lhs; }
+template <typename Lhs, typename Rhs>
+struct EqualityOpNode final
+    : public virtual CompareNode<Lhs, Rhs, ComparisonOp::NE, ComparisonOp::EQ> {
+  using CompareNode<Lhs, Rhs, ComparisonOp::NE, ComparisonOp::EQ>::CompareNode;
+  using CompareNode<Lhs, Rhs, ComparisonOp::NE, ComparisonOp::EQ>::operator=;
+};
+template <typename Lhs, typename Rhs>
+inline EqualityOpNode<Lhs, Rhs> not_equal(const Lhs& lhs, const Rhs& rhs) {
+  return EqualityOpNode<Lhs, Rhs>{lhs, ComparisonOp::NE, rhs};
+}
+template <typename Lhs, typename Rhs>
+inline EqualityOpNode<Lhs, Rhs> equal(const Lhs& lhs, const Rhs& rhs) {
+  return EqualityOpNode<Lhs, Rhs>{lhs, ComparisonOp::EQ, rhs};
+}
+
+// template <typename Lhs, typename Rhs> EqualityOpNode<Lhs, Rhs> operator!=(const Lhs&
+// lhs, const Rhs& rhs) {return EqualityOpNode{lhs, ComparisonOp::NE, rhs};} template
+// <typename Lhs, typename Rhs> EqualityOpNode<Lhs, Rhs> operator==(const Lhs& lhs,
+// const Rhs& rhs) {return EqualityOpNode{lhs, ComparisonOp::EQ, rhs};}
+
+/**
+ * A bound on time frozen variables
+ *
+ *    x - y ~ c
+ *
+ * where, `~` is a relational operator: `<`,`>`,`<=`,`>=`.
+ */
+using TimeBound = OrderingOpNode<TimeDiff, double>;
+
+/**
+ * A bound on frame frozen variables of the form
+ *
+ *    f1 - f2 ~ c
+ *
+ * where, `~` is a relational operator: `<`,`>`,`<=`,`>=`.
+ */
+using FrameBound = OrderingOpNode<FrameDiff, std::int64_t>;
+
+/**
+ * Node comparing objects.
+ */
+using CompareId = EqualityOpNode<Var_id, Var_id>;
+
+using MaybeClass = std::variant<int, Class>;
+/**
+ * Node to compare equality of object class between either two IDs or an ID and a
+ * class literal.
+ */
+using CompareClass = EqualityOpNode<Class, MaybeClass>;
+
+using MaybeProb = std::variant<Prob, double>;
+/**
+ * Node to compare the confidence associated with a given object to either another
+ * confidence variable, or a constant double.
+ */
+using CompareProb = OrderingOpNode<Prob, MaybeProb>;
+
+using CompareED = OrderingOpNode<ED, double>;
+
+using MaybeLatLon = std::variant<double, Lat, Lon>;
+using CompareLat  = OrderingOpNode<Lat, MaybeLatLon>;
+using CompareLon  = OrderingOpNode<Lon, MaybeLatLon>;
+
+/**
+ * Existential quantifier over object IDs
+ */
+struct Exists final : public virtual BaseExpr {
+  std::vector<Var_id> ids;
+  Expr arg;
+
+  Exists(std::vector<Var_id> id_list, Expr subexpr) :
+      ids{std::move(id_list)}, arg{std::move(subexpr)} {};
+
+  NODE_DECL_AND_DEF_OVERRIDES
 };
 
-struct CompareLat {
-  Lat lhs;
-  ComparisonOp op;
-  std::variant<double, Lat, Lon> rhs;
+/**
+ * Universal quantifier over IDs in either the current frame or a pinned frame.
+ */
+struct Forall final : public virtual BaseExpr {
+  std::vector<Var_id> ids;
+  Expr arg;
 
-  CompareLat() = delete;
-  CompareLat(Lat lhs_, ComparisonOp op_, std::variant<double, Lat, Lon> rhs_) :
-      lhs{std::move(lhs_)}, op{op_}, rhs{std::move(rhs_)} {
-    if (op == ComparisonOp::EQ || op == ComparisonOp::NE) {
-      throw std::invalid_argument(
-          "Cannot use relational operators ==, != to compare Lat(id)");
-    }
-  };
+  Forall(std::vector<Var_id> id_list, Expr subexpr) :
+      ids{std::move(id_list)}, arg{std::move(subexpr)} {};
+
+  NODE_DECL_AND_DEF_OVERRIDES
 };
-
-struct CompareLon {
-  Lon lhs;
-  ComparisonOp op;
-  std::variant<double, Lat, Lon> rhs;
-
-  CompareLon() = delete;
-  CompareLon(Lon lhs_, ComparisonOp op_, std::variant<double, Lat, Lon> rhs_) :
-      lhs{std::move(lhs_)}, op{op_}, rhs{std::move(rhs_)} {
-    if (op == ComparisonOp::EQ || op == ComparisonOp::NE) {
-      throw std::invalid_argument(
-          "Cannot use relational operators ==, != to compare Lon(id)");
-    }
-  };
-};
-
-CompareLat operator>(const double lhs, const Lat& rhs);
-CompareLat operator>=(const double lhs, const Lat& rhs);
-CompareLat operator<(const double lhs, const Lat& rhs);
-CompareLat operator<=(const double lhs, const Lat& rhs);
-CompareLat operator>(const Lat& lhs, const double rhs);
-CompareLat operator>=(const Lat& lhs, const double rhs);
-CompareLat operator<(const Lat& lhs, const double rhs);
-CompareLat operator<=(const Lat& lhs, const double rhs);
-CompareLat operator>(const Lat& lhs, const Lat& rhs);
-CompareLat operator>=(const Lat& lhs, const Lat& rhs);
-CompareLat operator<(const Lat& lhs, const Lat& rhs);
-CompareLat operator<=(const Lat& lhs, const Lat& rhs);
-CompareLat operator>(const Lat& lhs, const Lon& rhs);
-CompareLat operator>=(const Lat& lhs, const Lon& rhs);
-CompareLat operator<(const Lat& lhs, const Lon& rhs);
-CompareLat operator<=(const Lat& lhs, const Lon& rhs);
-
-CompareLon operator>(const double lhs, const Lon& rhs);
-CompareLon operator>=(const double lhs, const Lon& rhs);
-CompareLon operator<(const double lhs, const Lon& rhs);
-CompareLon operator<=(const double lhs, const Lon& rhs);
-CompareLon operator>(const Lon& lhs, const double rhs);
-CompareLon operator>=(const Lon& lhs, const double rhs);
-CompareLon operator<(const Lon& lhs, const double rhs);
-CompareLon operator<=(const Lon& lhs, const double rhs);
-CompareLon operator>(const Lon& lhs, const Lon& rhs);
-CompareLon operator>=(const Lon& lhs, const Lon& rhs);
-CompareLon operator<(const Lon& lhs, const Lon& rhs);
-CompareLon operator<=(const Lon& lhs, const Lon& rhs);
-CompareLon operator>(const Lon& lhs, const Lat& rhs);
-CompareLon operator>=(const Lon& lhs, const Lat& rhs);
-CompareLon operator<(const Lon& lhs, const Lat& rhs);
-CompareLon operator<=(const Lon& lhs, const Lat& rhs);
-
-struct AreaOf {
-  Var_id id;
-  double scale = 1.0;
-
-  AreaOf() = delete;
-  AreaOf(Var_id id_, double scale_ = 1.0) : id{std::move(id_)}, scale{scale_} {}
-
-  AreaOf& operator*=(const double rhs) {
-    this->scale *= rhs;
-    return *this;
-  };
-  friend AreaOf operator*(const AreaOf& lhs, const double rhs) {
-    return AreaOf{lhs.id, lhs.scale * rhs};
-  }
-
-  friend AreaOf operator*(const double lhs, const AreaOf& rhs) { return rhs * lhs; }
-};
-
-struct CompareArea {
-  AreaOf lhs;
-  ComparisonOp op;
-  std::variant<double, AreaOf> rhs;
-
-  CompareArea() = delete;
-  CompareArea(AreaOf lhs_, ComparisonOp op_, std::variant<double, AreaOf> rhs_) :
-      lhs{std::move(lhs_)}, op{op_}, rhs{std::move(rhs_)} {
-    if (op == ComparisonOp::EQ || op == ComparisonOp::NE) {
-      throw std::invalid_argument(
-          "Cannot use relational operators ==, != to compare AreaOf(id)");
-    }
-  };
-};
-CompareArea operator>(const AreaOf& lhs, const double rhs);
-CompareArea operator>=(const AreaOf& lhs, const double rhs);
-CompareArea operator<(const AreaOf& lhs, const double rhs);
-CompareArea operator<=(const AreaOf& lhs, const double rhs);
-CompareArea operator>(const double lhs, const AreaOf& rhs);
-CompareArea operator>=(const double lhs, const AreaOf& rhs);
-CompareArea operator<(const double lhs, const AreaOf& rhs);
-CompareArea operator<=(const double lhs, const AreaOf& rhs);
-CompareArea operator>(const AreaOf& lhs, const AreaOf& rhs);
-CompareArea operator>=(const AreaOf& lhs, const AreaOf& rhs);
-CompareArea operator<(const AreaOf& lhs, const AreaOf& rhs);
-CompareArea operator<=(const AreaOf& lhs, const AreaOf& rhs);
-} // namespace primitives
-
-// Forward declarations for std::variant
-
-struct Exists;
-using ExistsPtr = std::shared_ptr<Exists>;
-struct Forall;
-using ForallPtr = std::shared_ptr<Forall>;
-struct Pin;
-using PinPtr = std::shared_ptr<Pin>;
-struct Not;
-using NotPtr = std::shared_ptr<Not>;
-struct And;
-using AndPtr = std::shared_ptr<And>;
-struct Or;
-using OrPtr = std::shared_ptr<Or>;
-struct Previous;
-using PreviousPtr = std::shared_ptr<Previous>;
-struct Always;
-using AlwaysPtr = std::shared_ptr<Always>;
-struct Sometimes;
-using SometimesPtr = std::shared_ptr<Sometimes>;
-struct Since;
-using SincePtr = std::shared_ptr<Since>;
-struct BackTo;
-using BackToPtr = std::shared_ptr<BackTo>;
-
-// Spatio Temporal subset
-struct Complement;
-using ComplementPtr = std::shared_ptr<Complement>;
-struct Intersect;
-using IntersectPtr = std::shared_ptr<Intersect>;
-struct Union;
-using UnionPtr = std::shared_ptr<Union>;
-struct Interior;
-using InteriorPtr = std::shared_ptr<Interior>;
-struct Closure;
-using ClosurePtr = std::shared_ptr<Closure>;
-
-struct SpExists;
-using SpExistsPtr = std::shared_ptr<SpExists>;
-struct SpForall;
-using SpForallPtr = std::shared_ptr<SpForall>;
-
-struct SpPrevious;
-using SpPreviousPtr = std::shared_ptr<SpPrevious>;
-struct SpAlways;
-using SpAlwaysPtr = std::shared_ptr<SpAlways>;
-struct SpSometimes;
-using SpSometimesPtr = std::shared_ptr<SpSometimes>;
-struct SpSince;
-using SpSincePtr = std::shared_ptr<SpSince>;
-struct SpBackTo;
-using SpBackToPtr = std::shared_ptr<SpBackTo>;
-
-struct CompareSpArea;
-using CompareSpAreaPtr = std::shared_ptr<CompareSpArea>;
-
-using namespace primitives;
-
-using Expr = std::variant<
-    // Primitives.
-    Const,
-    // Functions on Primitives
-    TimeBound,
-    FrameBound,
-    CompareId,
-    CompareProb,
-    CompareClass,
-    CompareED,
-    CompareLat,
-    CompareLon,
-    CompareArea,
-    // Quantifiers
-    ExistsPtr,
-    ForallPtr,
-    PinPtr,
-    // Temporal Operators
-    NotPtr,
-    AndPtr,
-    OrPtr,
-    PreviousPtr,
-    AlwaysPtr,
-    SometimesPtr,
-    SincePtr,
-    BackToPtr,
-    // Spatio-temporal operators
-    CompareSpAreaPtr,
-    SpExistsPtr,
-    SpForallPtr>;
-
-using SpatialExpr = std::variant<
-    EmptySet,
-    UniverseSet,
-    BBox,
-    ComplementPtr,
-    IntersectPtr,
-    UnionPtr,
-    InteriorPtr,
-    ClosurePtr,
-    SpPreviousPtr,
-    SpAlwaysPtr,
-    SpSometimesPtr,
-    SpSincePtr,
-    SpBackToPtr>;
-
-Expr operator~(const Expr& e);
-Expr operator&(const Expr& lhs, const Expr& rhs);
-Expr operator|(const Expr& lhs, const Expr& rhs);
-Expr operator>>(const Expr& lhs, const Expr& rhs);
 
 /**
  * Datastructure to pin frames
  */
-struct Pin {
+struct Pin final : public virtual BaseExpr {
   std::optional<Var_x> x;
   std::optional<Var_f> f;
 
-  Expr phi = Expr{Const{false}};
+  Expr arg;
 
-  Pin(const std::optional<Var_x>& x_, const std::optional<Var_f>& f_) : x{x_}, f{f_} {
+  Pin(const std::optional<Var_x>& x_, const std::optional<Var_f>& f_, Expr subexpr) :
+      x{x_}, f{f_}, arg{std::move(subexpr)} {
     if (!x_.has_value() and !f_.has_value()) {
       throw std::invalid_argument(
           "Either time variable or frame variable must be specified when a frame is pinned.");
     }
   };
 
-  Pin(const std::optional<Var_x>& x_) : Pin{x_, {}} {};
-  Pin(const std::optional<Var_f>& f_) : Pin{{}, f_} {};
+  Pin(const std::optional<Var_x>& x_, Expr subexpr) :
+      Pin{x_, {}, std::move(subexpr)} {};
+  Pin(const std::optional<Var_f>& f_, Expr subexpr) :
+      Pin{{}, f_, std::move(subexpr)} {};
 
   Pin(const Pin&)            = default;
   Pin& operator=(const Pin&) = default;
   Pin(Pin&&)                 = default;
   Pin& operator=(Pin&&)      = default;
 
-  PinPtr dot(const Expr& e) {
-    auto ret = std::make_shared<Pin>(x, f);
-    ret->phi = e;
-    return ret;
-  };
+  NODE_DECL_AND_DEF_OVERRIDES
 };
 
-/**
- * Existential quantifier over IDs in either the current frame or a pinned frame.
- */
-struct Exists {
-  std::vector<Var_id> ids;
-  std::optional<Pin> pinned_at = {};
-  std::optional<Expr> phi      = {};
-
-  Exists(std::vector<Var_id> id_list) : ids{std::move(id_list)}, pinned_at{}, phi{} {};
-
-  ExistsPtr at(const Pin& pin) {
-    auto ret       = std::make_shared<Exists>(ids);
-    ret->pinned_at = pin;
-    return ret;
-  };
-
-  ExistsPtr at(Pin&& pin) {
-    auto ret       = std::make_shared<Exists>(ids);
-    ret->pinned_at = std::move(pin);
-    return ret;
-  };
-
-  ExistsPtr dot(const Expr& e) {
-    auto ret = std::make_shared<Exists>(ids);
-    if (auto& pin = this->pinned_at) {
-      ret->pinned_at      = pin;
-      ret->pinned_at->phi = e;
-    } else {
-      ret->phi = e;
-    }
-    return ret;
-  };
-};
-
-/**
- * Universal quantifier over IDs in either the current frame or a pinned frame.
- */
-struct Forall {
-  std::vector<Var_id> ids;
-  std::optional<Pin> pinned_at = {};
-  std::optional<Expr> phi      = {};
-
-  Forall(std::vector<Var_id> id_list) : ids{std::move(id_list)}, pinned_at{}, phi{} {};
-
-  ForallPtr at(const Pin& pin) {
-    auto ret       = std::make_shared<Forall>(ids);
-    ret->pinned_at = pin;
-    return ret;
-  };
-
-  ForallPtr at(Pin&& pin) {
-    auto ret       = std::make_shared<Forall>(ids);
-    ret->pinned_at = std::move(pin);
-    return ret;
-  };
-
-  ForallPtr dot(const Expr& e) {
-    auto ret = std::make_shared<Forall>(ids);
-    if (auto& pin = this->pinned_at) {
-      ret->pinned_at      = pin;
-      ret->pinned_at->phi = e;
-    } else {
-      ret->phi = e;
-    }
-    return ret;
-  };
-};
-
-struct Not {
+struct Not final : public virtual BaseExpr {
   Expr arg;
 
   Not() = delete;
   Not(Expr arg_) : arg{std::move(arg_)} {};
+  NODE_DECL_AND_DEF_OVERRIDES
 };
 
-struct And {
+struct And final : public virtual BaseExpr {
   std::vector<Expr> args;
-  std::vector<TemporalBoundExpr> temporal_bound_args;
 
   And() = delete;
-  And(const std::vector<Expr>& args_) {
+  And(const std::vector<Expr>& args_) : args{args_} {
     if (args_.size() < 2) {
       throw std::invalid_argument(
           "It doesn't make sense to have an And operator with < 2 operands");
     }
-    for (auto&& e : args_) {
-      if (auto tb_ptr = std::get_if<TimeBound>(&e)) {
-        temporal_bound_args.emplace_back(*tb_ptr);
-      } else if (auto fb_ptr = std::get_if<FrameBound>(&e)) {
-        temporal_bound_args.emplace_back(*fb_ptr);
-      } else {
-        args.push_back(e);
-      }
-    }
   };
+  NODE_DECL_AND_DEF_OVERRIDES
 };
 
-struct Or {
+struct Or final : public virtual BaseExpr {
   std::vector<Expr> args;
-  std::vector<TemporalBoundExpr> temporal_bound_args;
 
   Or() = delete;
-  Or(const std::vector<Expr>& args_) {
+  Or(const std::vector<Expr>& args_) : args{args_} {
     if (args_.size() < 2) {
       throw std::invalid_argument(
           "It doesn't make sense to have an Or operator with < 2 operands");
     }
-    for (auto&& e : args_) {
-      if (auto tb_ptr = std::get_if<TimeBound>(&e)) {
-        temporal_bound_args.emplace_back(*tb_ptr);
-      } else if (auto fb_ptr = std::get_if<FrameBound>(&e)) {
-        temporal_bound_args.emplace_back(*fb_ptr);
-      } else {
-        args.push_back(e);
-      }
-    }
   };
+  NODE_DECL_AND_DEF_OVERRIDES
 };
 
-struct Previous {
+struct Next final : public virtual BaseExpr {
   Expr arg;
+  size_t steps = 1;
+
+  Next() = delete;
+  Next(Expr arg, size_t steps = 0) : arg{std::move(arg)}, steps{steps} {};
+  NODE_DECL_AND_DEF_OVERRIDES
+};
+
+struct Previous final : public virtual BaseExpr {
+  Expr arg;
+  size_t steps = 1;
 
   Previous() = delete;
-  Previous(Expr arg_) : arg{std::move(arg_)} {};
+  Previous(Expr arg, size_t steps = 0) : arg{std::move(arg)}, steps{steps} {};
+  NODE_DECL_AND_DEF_OVERRIDES
 };
 
-struct Always {
+struct Always final : public virtual BaseExpr {
   Expr arg;
 
   Always() = delete;
   Always(Expr arg_) : arg{std::move(arg_)} {};
+  NODE_DECL_AND_DEF_OVERRIDES
 };
 
-struct Sometimes {
+struct Holds final : public virtual BaseExpr {
+  Expr arg;
+
+  Holds() = delete;
+  Holds(Expr arg_) : arg{std::move(arg_)} {};
+  NODE_DECL_AND_DEF_OVERRIDES
+};
+struct Eventually final : public virtual BaseExpr {
+  Expr arg;
+
+  Eventually() = delete;
+  Eventually(Expr arg_) : arg{std::move(arg_)} {};
+  NODE_DECL_AND_DEF_OVERRIDES
+};
+
+struct Sometimes final : public virtual BaseExpr {
   Expr arg;
 
   Sometimes() = delete;
   Sometimes(Expr arg_) : arg{std::move(arg_)} {};
+  NODE_DECL_AND_DEF_OVERRIDES
 };
 
-struct Since {
+struct Until final : public virtual BaseExpr {
+  std::pair<Expr, Expr> args;
+
+  Until() = delete;
+  Until(const Expr& arg0, const Expr& arg1) : args{std::make_pair(arg0, arg1)} {};
+  NODE_DECL_AND_DEF_OVERRIDES
+};
+
+struct Since final : public virtual BaseExpr {
   std::pair<Expr, Expr> args;
 
   Since() = delete;
   Since(const Expr& arg0, const Expr& arg1) : args{std::make_pair(arg0, arg1)} {};
+  NODE_DECL_AND_DEF_OVERRIDES
 };
 
-struct BackTo {
+struct Release final : public virtual BaseExpr {
+  std::pair<Expr, Expr> args;
+
+  Release() = delete;
+  Release(const Expr& arg0, const Expr& arg1) : args{arg0, arg1} {};
+  NODE_DECL_AND_DEF_OVERRIDES
+};
+
+struct BackTo final : public virtual BaseExpr {
   std::pair<Expr, Expr> args;
 
   BackTo() = delete;
   BackTo(const Expr& arg0, const Expr& arg1) : args{std::make_pair(arg0, arg1)} {};
+  NODE_DECL_AND_DEF_OVERRIDES
 };
 
-struct SpArea {
+using MaybeAreaOf = std::variant<double, AreaOf>;
+using CompareArea = OrderingOpNode<AreaOf, MaybeAreaOf>;
+
+struct SpExists final : public virtual BaseExpr {
   SpatialExpr arg;
-  double scale = 1.0;
-
-  SpArea(SpatialExpr arg_, double scale_ = 1.0) : arg{std::move(arg_)}, scale{scale_} {}
-
-  SpArea& operator*=(const double rhs) {
-    this->scale *= rhs;
-    return *this;
-  };
-  friend SpArea operator*(const SpArea& lhs, const double rhs) {
-    return SpArea{lhs.arg, lhs.scale * rhs};
-  }
-  friend SpArea operator*(const double lhs, const SpArea& rhs) { return rhs * lhs; }
+  SpExists() = delete;
+  SpExists(SpatialExpr arg_) : arg{std::move(arg_)} {};
+  NODE_DECL_AND_DEF_OVERRIDES
 };
 
-struct CompareSpArea {
-  SpArea lhs;
-  ComparisonOp op;
-  std::variant<double, SpArea> rhs;
-
-  CompareSpArea() = delete;
-  CompareSpArea(SpArea lhs_, ComparisonOp op_, std::variant<double, SpArea> rhs_) :
-      lhs{std::move(lhs_)}, op{op_}, rhs{std::move(rhs_)} {
-    if (op == ComparisonOp::EQ || op == ComparisonOp::NE) {
-      throw std::invalid_argument(
-          "Cannot use relational operators ==, != to compare SpArea(id)");
-    }
-  };
+struct SpForall final : public virtual BaseExpr {
+  SpatialExpr arg;
+  SpForall() = delete;
+  SpForall(SpatialExpr arg_) : arg{std::move(arg_)} {};
+  NODE_DECL_AND_DEF_OVERRIDES
 };
-CompareSpArea operator>(const SpArea& lhs, const double rhs);
-CompareSpArea operator>=(const SpArea& lhs, const double rhs);
-CompareSpArea operator<(const SpArea& lhs, const double rhs);
-CompareSpArea operator<=(const SpArea& lhs, const double rhs);
-CompareSpArea operator>(const double lhs, const SpArea& rhs);
-CompareSpArea operator>=(const double lhs, const SpArea& rhs);
-CompareSpArea operator<(const double lhs, const SpArea& rhs);
-CompareSpArea operator<=(const double lhs, const SpArea& rhs);
-CompareSpArea operator>(const SpArea& lhs, const SpArea& rhs);
-CompareSpArea operator>=(const SpArea& lhs, const SpArea& rhs);
-CompareSpArea operator<(const SpArea& lhs, const SpArea& rhs);
-CompareSpArea operator<=(const SpArea& lhs, const SpArea& rhs);
 
-struct Complement {
+struct BBox final : public virtual BaseSpatialExpr {
+  Var_id id;
+  NODE_DECL_AND_DEF_OVERRIDES
+};
+
+struct Complement final : public virtual BaseSpatialExpr {
   SpatialExpr arg;
   Complement() = delete;
   Complement(SpatialExpr arg_) : arg{std::move(arg_)} {};
+  NODE_DECL_AND_DEF_OVERRIDES
 };
 
-struct Intersect {
+struct Intersect final : public virtual BaseSpatialExpr {
   std::vector<SpatialExpr> args;
   Intersect() = delete;
   Intersect(const std::vector<SpatialExpr>& args_) : args{args_} {
@@ -887,9 +717,10 @@ struct Intersect {
           "It doesn't make sense to have an Intersect operator with < 2 operands");
     }
   };
+  NODE_DECL_AND_DEF_OVERRIDES
 };
 
-struct Union {
+struct Union final : public virtual BaseSpatialExpr {
   std::vector<SpatialExpr> args;
   Union() = delete;
   Union(const std::vector<SpatialExpr>& args_) : args{args_} {
@@ -898,58 +729,93 @@ struct Union {
           "It doesn't make sense to have an Union operator with < 2 operands");
     }
   };
+  NODE_DECL_AND_DEF_OVERRIDES
 };
 
-struct Interior {
+struct Interior final : public virtual BaseSpatialExpr {
   SpatialExpr arg;
   Interior() = delete;
   Interior(SpatialExpr arg_) : arg{std::move(arg_)} {};
+  NODE_DECL_AND_DEF_OVERRIDES
 };
 
-struct Closure {
+struct Closure final : public virtual BaseSpatialExpr {
   SpatialExpr arg;
   Closure() = delete;
   Closure(SpatialExpr arg_) : arg{std::move(arg_)} {};
+  NODE_DECL_AND_DEF_OVERRIDES
 };
 
-struct SpExists {
+struct SpNext final : public virtual BaseSpatialExpr {
   SpatialExpr arg;
-  SpExists() = delete;
-  SpExists(SpatialExpr arg_) : arg{std::move(arg_)} {};
+
+  SpNext() = delete;
+  SpNext(SpatialExpr arg_) : arg{std::move(arg_)} {};
+  NODE_DECL_AND_DEF_OVERRIDES
 };
 
-struct SpForall {
-  SpatialExpr arg;
-  SpForall() = delete;
-  SpForall(SpatialExpr arg_) : arg{std::move(arg_)} {};
-};
-
-struct SpPrevious {
+struct SpPrevious final : public virtual BaseSpatialExpr {
   SpatialExpr arg;
 
   SpPrevious() = delete;
   SpPrevious(SpatialExpr arg_) : arg{std::move(arg_)} {};
+  NODE_DECL_AND_DEF_OVERRIDES
 };
 
-struct SpAlways {
+struct SpAlways final : public virtual BaseSpatialExpr {
   std::optional<FrameInterval> interval = {};
   SpatialExpr arg;
 
   SpAlways() = delete;
   SpAlways(SpatialExpr arg_) : arg{std::move(arg_)} {};
   SpAlways(FrameInterval i, SpatialExpr arg_) : interval{i}, arg{std::move(arg_)} {};
+  NODE_DECL_AND_DEF_OVERRIDES
 };
 
-struct SpSometimes {
+struct SpHolds final : public virtual BaseSpatialExpr {
+  std::optional<FrameInterval> interval = {};
+  SpatialExpr arg;
+
+  SpHolds() = delete;
+  SpHolds(SpatialExpr arg_) : arg{std::move(arg_)} {};
+  SpHolds(FrameInterval i, SpatialExpr arg_) : interval{i}, arg{std::move(arg_)} {};
+  NODE_DECL_AND_DEF_OVERRIDES
+};
+
+struct SpEventually final : public virtual BaseSpatialExpr {
+  std::optional<FrameInterval> interval = {};
+  SpatialExpr arg;
+
+  SpEventually() = delete;
+  SpEventually(SpatialExpr arg_) : arg{std::move(arg_)} {};
+  SpEventually(FrameInterval i, SpatialExpr arg_) :
+      interval{i}, arg{std::move(arg_)} {};
+  NODE_DECL_AND_DEF_OVERRIDES
+};
+
+struct SpSometimes final : public virtual BaseSpatialExpr {
   std::optional<FrameInterval> interval = {};
   SpatialExpr arg;
 
   SpSometimes() = delete;
   SpSometimes(SpatialExpr arg_) : arg{std::move(arg_)} {};
   SpSometimes(FrameInterval i, SpatialExpr arg_) : interval{i}, arg{std::move(arg_)} {};
+  NODE_DECL_AND_DEF_OVERRIDES
 };
 
-struct SpSince {
+struct SpUntil final : public virtual BaseSpatialExpr {
+  std::optional<FrameInterval> interval = {};
+  std::pair<SpatialExpr, SpatialExpr> args;
+
+  SpUntil() = delete;
+  SpUntil(const SpatialExpr& arg0, const SpatialExpr& arg1) :
+      args{std::make_pair(arg0, arg1)} {};
+  SpUntil(FrameInterval i, const SpatialExpr& arg0, const SpatialExpr& arg1) :
+      interval{i}, args{std::make_pair(arg0, arg1)} {};
+  NODE_DECL_AND_DEF_OVERRIDES
+};
+
+struct SpSince final : public virtual BaseSpatialExpr {
   std::optional<FrameInterval> interval = {};
   std::pair<SpatialExpr, SpatialExpr> args;
 
@@ -958,9 +824,22 @@ struct SpSince {
       args{std::make_pair(arg0, arg1)} {};
   SpSince(FrameInterval i, const SpatialExpr& arg0, const SpatialExpr& arg1) :
       interval{i}, args{std::make_pair(arg0, arg1)} {};
+  NODE_DECL_AND_DEF_OVERRIDES
 };
 
-struct SpBackTo {
+struct SpRelease final : public virtual BaseSpatialExpr {
+  std::optional<FrameInterval> interval = {};
+  std::pair<SpatialExpr, SpatialExpr> args;
+
+  SpRelease() = delete;
+  SpRelease(const SpatialExpr& arg0, const SpatialExpr& arg1) :
+      args{std::make_pair(arg0, arg1)} {};
+  SpRelease(FrameInterval i, const SpatialExpr& arg0, const SpatialExpr& arg1) :
+      interval{i}, args{std::make_pair(arg0, arg1)} {};
+  NODE_DECL_AND_DEF_OVERRIDES
+};
+
+struct SpBackTo final : public virtual BaseSpatialExpr {
   std::optional<FrameInterval> interval = {};
   std::pair<SpatialExpr, SpatialExpr> args;
 
@@ -969,57 +848,24 @@ struct SpBackTo {
       args{std::make_pair(arg0, arg1)} {};
   SpBackTo(FrameInterval i, const SpatialExpr& arg0, const SpatialExpr& arg1) :
       interval{i}, args{std::make_pair(arg0, arg1)} {};
+  NODE_DECL_AND_DEF_OVERRIDES
 };
 
-} // namespace ast
+// Some convenience aliases
+using PastNext       = Previous;
+using PastAlways     = Holds;
+using PastEventually = Sometimes;
+using PastUntil      = Since;
+using PastRelease    = BackTo;
 
-using ast::Expr;
-using ast::Pin;
-using namespace ast::primitives;
+using PastSpNext       = SpPrevious;
+using PastSpAlways     = SpHolds;
+using PastSpEventually = SpSometimes;
+using PastSpUntil      = SpSince;
+using PastSpRelease    = SpBackTo;
 
-ast::PinPtr Pinned(Var_x x, Var_f f);
-ast::PinPtr Pinned(Var_x x);
-ast::PinPtr Pinned(Var_f f);
+} // namespace percemon::ast
 
-ast::ExistsPtr Exists(std::initializer_list<Var_id> id_list);
-ast::ForallPtr Forall(std::initializer_list<Var_id> id_list);
-
-ast::NotPtr Not(const Expr& arg);
-ast::AndPtr And(const std::vector<Expr>& args);
-ast::OrPtr Or(const std::vector<Expr>& args);
-ast::PreviousPtr Previous(const Expr& arg);
-ast::AlwaysPtr Always(const Expr& arg);
-ast::SometimesPtr Sometimes(const Expr& arg);
-ast::SincePtr Since(const Expr& a, const Expr& b);
-ast::BackToPtr BackTo(const Expr& a, const Expr& b);
-
-ast::AreaOf Area(Var_id id, double scale = 1.0);
-ast::SpArea Area(const ast::SpatialExpr& expr, double scale = 1.0);
-
-ast::SpExistsPtr SpExists(const ast::SpatialExpr&);
-ast::SpForallPtr SpForall(const ast::SpatialExpr&);
-ast::ComplementPtr Complement(const ast::SpatialExpr&);
-ast::IntersectPtr Intersect(const std::vector<ast::SpatialExpr>&);
-ast::UnionPtr Union(const std::vector<ast::SpatialExpr>&);
-ast::InteriorPtr Interior(const ast::SpatialExpr&);
-ast::ClosurePtr Closure(const ast::SpatialExpr&);
-
-ast::SpPreviousPtr SpPrevious(const ast::SpatialExpr&);
-
-ast::SpAlwaysPtr SpAlways(const ast::SpatialExpr&);
-ast::SpAlwaysPtr SpAlways(const FrameInterval&, const ast::SpatialExpr&);
-
-ast::SpSometimesPtr SpSometimes(const ast::SpatialExpr&);
-ast::SpSometimesPtr SpSometimes(const FrameInterval&, const ast::SpatialExpr&);
-
-ast::SpSincePtr SpSince(const ast::SpatialExpr&, const ast::SpatialExpr&);
-ast::SpSincePtr
-SpSince(const FrameInterval&, const ast::SpatialExpr&, const ast::SpatialExpr&);
-
-ast::SpBackToPtr SpBackTo(const ast::SpatialExpr&, const ast::SpatialExpr&);
-ast::SpBackToPtr
-SpBackTo(const FrameInterval&, const ast::SpatialExpr&, const ast::SpatialExpr&);
-
-} // namespace percemon
+#undef NODE_DECL_AND_DEF_OVERRIDES
 
 #endif /* end of include guard: __PERCEMON_AST_HPP__ */

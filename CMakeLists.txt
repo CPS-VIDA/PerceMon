@@ -66,8 +66,9 @@ find_package(cppitertools REQUIRED)
 
 # Sources and actual library Add library and module
 set(PERCEMON_SOURCES
-    csrc/ast.cc csrc/topo.cc csrc/monitoring/default_monitor.cc
-    csrc/monitoring/horizon.cc csrc/fmt.cc)
+    csrc/ast.cc csrc/fmt.cc csrc/topo.cc csrc/monitoring/horizon.cc
+    # csrc/monitoring/online_monitor.cc csrc/monitoring/offline_monitor.cc
+)
 
 add_library(PerceMon ${PERCEMON_SOURCES})
 add_library(PerceMon::PerceMon ALIAS PerceMon)
@@ -78,6 +79,9 @@ target_include_directories(PerceMon PRIVATE ${PROJECT_SOURCE_DIR}/csrc)
 target_compile_features(PerceMon PUBLIC cxx_std_17)
 target_link_libraries(PerceMon PUBLIC fmt::fmt cppitertools::cppitertools)
 set_target_properties(PerceMon PROPERTIES POSITION_INDEPENDENT_CODE ON)
+if(PERCEMON_MASTER_PROJECT)
+  set_target_properties(PerceMon PROPERTIES CXX_CPPCHECK cppcheck)
+endif(PERCEMON_MASTER_PROJECT)
 
 if(BUILD_PYTHON_BINDINGS)
   if(CMAKE_VERSION VERSION_LESS 3.18)
@@ -108,7 +112,7 @@ if(PERCEMON_COVERAGE)
   add_coverage(PerceMon)
 endif()
 
-if(_PERCEMON_BUILD_THE_TESTS)
+if(BUILD_TESTING)
   add_subdirectory(tests)
 endif()
 

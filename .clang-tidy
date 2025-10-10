@@ -2,9 +2,6 @@
 Checks: |
   -*,
   bugprone-*,
-  -bugprone-forward-declaration-namespace,
-  -bugprone-macro-parentheses,
-  -bugprone-lambda-function-name,
   cppcoreguidelines-*,
   -cppcoreguidelines-avoid-magic-numbers,
   -cppcoreguidelines-interfaces-global-init,
@@ -18,6 +15,7 @@ Checks: |
   -cppcoreguidelines-pro-type-union-access,
   -cppcoreguidelines-pro-type-vararg,
   -cppcoreguidelines-special-member-functions,
+  -cppcoreguidelines-macro-usage,
   hicpp-exception-baseclass,
   hicpp-avoid-goto,
   modernize-*,

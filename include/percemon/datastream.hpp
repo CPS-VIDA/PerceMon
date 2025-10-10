@@ -18,6 +18,7 @@
 #ifndef __PERCEMON_STREAM_HH__
 #define __PERCEMON_STREAM_HH__
 
+#include <cstdint>
 #include <map>
 #include <string>
 
@@ -35,10 +36,10 @@ namespace percemon::datastream {
  *
  */
 struct BoundingBox {
-  size_t xmin;
-  size_t xmax;
-  size_t ymin;
-  size_t ymax;
+  double xmin;
+  double xmax;
+  double ymin;
+  double ymax;
 };
 
 struct Object {
@@ -55,7 +56,7 @@ struct Frame {
   /**
    * Frame number
    */
-  size_t frame_num;
+  std::int64_t frame_num;
 
   /**
    * The size of the frame/image in pixels

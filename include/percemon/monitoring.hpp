@@ -12,29 +12,10 @@
 // TODO: Consider performance/space efficiency of deque vs vector.
 #include <deque>
 
+#include <cstdint>
 #include <optional>
 
 namespace percemon::monitoring {
-
-/**
- * Returns if the formula is purely past-time. Only place where this can be true is in
- * the TimeBound and FrameBound constraints.
- *
- * @todo This can be enforced in the TimeBound and FrameBound constructors.
- */
-// bool is_past_time(const percemon::ast::Expr& expr);
-
-/**
- * Get the horizon for a formula in number of frames.  This function will throw an
- * exception if there are TimeBound constraints in the formula.
- */
-std::optional<size_t> get_horizon(const percemon::ast::Expr& expr);
-
-/**
- * Get the horizon for a formula in number of frames. This uses the frames per second of
- * the stream to convert TimeBound constraints to FrameBound constraints.
- */
-std::optional<size_t> get_horizon(const percemon::ast::Expr& expr, double fps);
 
 /**
  * Object representing the online monitor.
@@ -44,7 +25,7 @@ struct OnlineMonitor {
   OnlineMonitor() = delete;
   OnlineMonitor(
       ast::Expr phi_,
-      const double fps_,
+      const std::int64_t fps_,
       double x_boundary,
       double y_boundary);
 
@@ -59,8 +40,8 @@ struct OnlineMonitor {
    */
   double eval();
 
-  [[nodiscard]] size_t get_max_horizon() const { return max_horizon; }
-  [[nodiscard]] size_t get_fps() const { return fps; };
+  [[nodiscard]] size_t buffer_capacity() const { return max_buffer_size; }
+  [[nodiscard]] std::int64_t get_fps() const { return fps; };
   const ast::Expr& get_phi() { return phi; }
 
  private:
@@ -71,7 +52,7 @@ struct OnlineMonitor {
   /**
    * Frames per second for the datastream
    */
-  const double fps;
+  const std::int64_t fps;
 
   /**
    * A buffer containing the history of Frames required to compute robustness of phi
@@ -82,7 +63,47 @@ struct OnlineMonitor {
   /**
    * Maximum width of buffer.
    */
-  size_t max_horizon;
+  size_t max_buffer_size;
+  /**
+   * Track the center (time 0) of the buffer
+   */
+  size_t _zero_idx;
+
+  /**
+   * Boundary for UNIVERSE
+   */
+  double universe_x, universe_y;
+};
+
+/**
+ * Offline monitor
+ */
+struct OfflineMonitor {
+ public:
+  OfflineMonitor() = delete;
+  OfflineMonitor(
+      ast::Expr phi_,
+      const std::int64_t fps_,
+      double x_boundary,
+      double y_boundary);
+
+  /**
+   * Add a new frame to the monitor buffer
+   */
+  std::vector<bool> eval_trace(const std::vector<datastream::Frame>& frame);
+
+  [[nodiscard]] std::int64_t get_fps() const { return fps; };
+  const ast::Expr& get_phi() { return phi; }
+
+ private:
+  /**
+   * The formula being monitored
+   */
+  const ast::Expr phi;
+  /**
+   * Frames per second for the datastream
+   */
+  const std::int64_t fps;
 
   /**
    * Boundary for UNIVERSE

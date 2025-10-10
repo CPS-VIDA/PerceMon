@@ -97,10 +97,10 @@ struct HorizonCompute {
   std::optional<size_t> eval(const SpArea& expr) { return this->eval(expr.arg); }
   std::optional<size_t> eval(const FrameInterval& expr) {
     switch (expr.bound) {
-      case FrameInterval::OPEN: return expr.high - 1;
-      case FrameInterval::LOPEN:
-      case FrameInterval::ROPEN: return expr.high;
-      case FrameInterval::CLOSED: return expr.high + 1;
+      case Bound::OPEN: return expr.high - 1;
+      case Bound::LOPEN:
+      case Bound::ROPEN: return expr.high;
+      case Bound::CLOSED: return expr.high + 1;
       default: std::abort();
     }
   }

@@ -1,439 +1,103 @@
 #include "percemon/ast.hpp"
-#include "percemon/utils.hpp"
+#include "percemon/fmt.hpp"
+
+#include "utils.hpp"
 
 #include <algorithm>
 #include <iterator>
 #include <memory>
 #include <numeric>
+#include <optional>
 
-namespace percemon {
-namespace ast {
-namespace primitives {
-
-TimeBound operator-(const Var_x& lhs, C_TIME) { return TimeBound{lhs}; }
-FrameBound operator-(const Var_f& lhs, C_FRAME) { return FrameBound{lhs}; }
-TimeBound operator>(const TimeBound& lhs, const double bound) {
-  return TimeBound{lhs.x, ComparisonOp::GT, bound};
-}
-TimeBound operator>=(const TimeBound& lhs, const double bound) {
-  return TimeBound{lhs.x, ComparisonOp::GE, bound};
-}
-TimeBound operator<(const TimeBound& lhs, const double bound) {
-  return TimeBound{lhs.x, ComparisonOp::LT, bound};
-}
-TimeBound operator<=(const TimeBound& lhs, const double bound) {
-  return TimeBound{lhs.x, ComparisonOp::LE, bound};
-}
-TimeBound operator<(const double bound, const TimeBound& rhs) { return rhs > bound; }
-TimeBound operator<=(const double bound, const TimeBound& rhs) { return rhs >= bound; }
-TimeBound operator>(const double bound, const TimeBound& rhs) { return rhs < bound; }
-TimeBound operator>=(const double bound, const TimeBound& rhs) { return rhs <= bound; }
-FrameBound operator>(const FrameBound& lhs, const size_t bound) {
-  return FrameBound{lhs.f, ComparisonOp::GT, bound};
-}
-FrameBound operator>=(const FrameBound& lhs, const size_t bound) {
-  return FrameBound{lhs.f, ComparisonOp::GE, bound};
-}
-FrameBound operator<(const FrameBound& lhs, const size_t bound) {
-  return FrameBound{lhs.f, ComparisonOp::LT, bound};
-}
-FrameBound operator<=(const FrameBound& lhs, const size_t bound) {
-  return FrameBound{lhs.f, ComparisonOp::LE, bound};
-}
-FrameBound operator<(const size_t bound, const FrameBound& rhs) { return rhs > bound; }
-FrameBound operator<=(const size_t bound, const FrameBound& rhs) {
-  return rhs >= bound;
-}
-FrameBound operator>(const size_t bound, const FrameBound& rhs) { return rhs < bound; }
-FrameBound operator>=(const size_t bound, const FrameBound& rhs) {
-  return rhs <= bound;
-}
-
-CompareId operator==(const Var_id& lhs, const Var_id& rhs) {
-  return CompareId{lhs, ComparisonOp::EQ, rhs};
-}
-CompareId operator!=(const Var_id& lhs, const Var_id& rhs) {
-  return CompareId{lhs, ComparisonOp::NE, rhs};
-}
-CompareClass operator==(const Class& lhs, const int rhs) {
-  return CompareClass{lhs, ComparisonOp::EQ, rhs};
-}
-CompareClass operator==(const int lhs, const Class& rhs) {
-  return CompareClass{rhs, ComparisonOp::EQ, lhs};
-}
-CompareClass operator==(const Class& lhs, const Class& rhs) {
-  return CompareClass{lhs, ComparisonOp::EQ, rhs};
-}
-CompareClass operator!=(const Class& lhs, const int rhs) {
-  return CompareClass{lhs, ComparisonOp::NE, rhs};
-}
-CompareClass operator!=(const int lhs, const Class& rhs) {
-  return CompareClass{rhs, ComparisonOp::NE, lhs};
-}
-CompareClass operator!=(const Class& lhs, const Class& rhs) {
-  return CompareClass{lhs, ComparisonOp::NE, rhs};
-}
-
-CompareProb operator>(const Prob& lhs, const double rhs) {
-  return CompareProb{lhs, ComparisonOp::GT, rhs};
-}
-CompareProb operator>=(const Prob& lhs, const double rhs) {
-  return CompareProb{lhs, ComparisonOp::GE, rhs};
-}
-CompareProb operator<(const Prob& lhs, const double rhs) {
-  return CompareProb{lhs, ComparisonOp::LT, rhs};
-}
-CompareProb operator<=(const Prob& lhs, const double rhs) {
-  return CompareProb{lhs, ComparisonOp::LE, rhs};
-}
-CompareProb operator>(const Prob& lhs, const Prob& rhs) {
-  return CompareProb{lhs, ComparisonOp::GT, rhs};
-}
-CompareProb operator>=(const Prob& lhs, const Prob& rhs) {
-  return CompareProb{lhs, ComparisonOp::GE, rhs};
-}
-CompareProb operator<(const Prob& lhs, const Prob& rhs) {
-  return CompareProb{lhs, ComparisonOp::LT, rhs};
-}
-CompareProb operator<=(const Prob& lhs, const Prob& rhs) {
-  return CompareProb{lhs, ComparisonOp::LE, rhs};
-}
-
-CompareED operator>(const ED& lhs, const double rhs) {
-  return CompareED{lhs, ComparisonOp::GT, rhs};
-}
-CompareED operator>=(const ED& lhs, const double rhs) {
-  return CompareED{lhs, ComparisonOp::GE, rhs};
-}
-CompareED operator<(const ED& lhs, const double rhs) {
-  return CompareED{lhs, ComparisonOp::LT, rhs};
-}
-CompareED operator<=(const ED& lhs, const double rhs) {
-  return CompareED{lhs, ComparisonOp::LE, rhs};
-}
-
-CompareLat operator>(const Lat& lhs, const double rhs) {
-  return {lhs, ComparisonOp::GT, rhs};
-}
-CompareLat operator>=(const Lat& lhs, const double rhs) {
-  return {lhs, ComparisonOp::GE, rhs};
-}
-CompareLat operator<(const Lat& lhs, const double rhs) {
-  return {lhs, ComparisonOp::LT, rhs};
-}
-CompareLat operator<=(const Lat& lhs, const double rhs) {
-  return {lhs, ComparisonOp::LE, rhs};
-}
-CompareLat operator>(const double lhs, const Lat& rhs) { return rhs < lhs; }
-CompareLat operator>=(const double lhs, const Lat& rhs) { return rhs <= lhs; }
-CompareLat operator<(const double lhs, const Lat& rhs) { return rhs > lhs; }
-CompareLat operator<=(const double lhs, const Lat& rhs) { return rhs >= lhs; }
-
-CompareLat operator>(const Lat& lhs, const Lat& rhs) {
-  return {lhs, ComparisonOp::GT, rhs};
-}
-CompareLat operator>=(const Lat& lhs, const Lat& rhs) {
-  return {lhs, ComparisonOp::GE, rhs};
-}
-CompareLat operator<(const Lat& lhs, const Lat& rhs) {
-  return {lhs, ComparisonOp::LT, rhs};
-}
-CompareLat operator<=(const Lat& lhs, const Lat& rhs) {
-  return {lhs, ComparisonOp::LE, rhs};
-}
-CompareLat operator>(const Lat& lhs, const Lon& rhs) {
-  return {lhs, ComparisonOp::GT, rhs};
-}
-CompareLat operator>=(const Lat& lhs, const Lon& rhs) {
-  return {lhs, ComparisonOp::GE, rhs};
-}
-CompareLat operator<(const Lat& lhs, const Lon& rhs) {
-  return {lhs, ComparisonOp::LT, rhs};
-}
-CompareLat operator<=(const Lat& lhs, const Lon& rhs) {
-  return {lhs, ComparisonOp::LE, rhs};
-}
-
-CompareLon operator>(const Lon& lhs, const double rhs) {
-  return {lhs, ComparisonOp::GT, rhs};
-}
-CompareLon operator>=(const Lon& lhs, const double rhs) {
-  return {lhs, ComparisonOp::GE, rhs};
-}
-CompareLon operator<(const Lon& lhs, const double rhs) {
-  return {lhs, ComparisonOp::LT, rhs};
-}
-CompareLon operator<=(const Lon& lhs, const double rhs) {
-  return {lhs, ComparisonOp::LE, rhs};
-}
-CompareLon operator>(const double lhs, const Lon& rhs) { return rhs < lhs; }
-CompareLon operator>=(const double lhs, const Lon& rhs) { return rhs <= lhs; }
-CompareLon operator<(const double lhs, const Lon& rhs) { return rhs > lhs; }
-CompareLon operator<=(const double lhs, const Lon& rhs) { return rhs >= lhs; }
-
-CompareLon operator>(const Lon& lhs, const Lon& rhs) {
-  return {lhs, ComparisonOp::GT, rhs};
-}
-CompareLon operator>=(const Lon& lhs, const Lon& rhs) {
-  return {lhs, ComparisonOp::GE, rhs};
-}
-CompareLon operator<(const Lon& lhs, const Lon& rhs) {
-  return {lhs, ComparisonOp::LT, rhs};
-}
-CompareLon operator<=(const Lon& lhs, const Lon& rhs) {
-  return {lhs, ComparisonOp::LE, rhs};
-}
-CompareLon operator>(const Lon& lhs, const Lat& rhs) {
-  return {lhs, ComparisonOp::GT, rhs};
-}
-CompareLon operator>=(const Lon& lhs, const Lat& rhs) {
-  return {lhs, ComparisonOp::GE, rhs};
-}
-CompareLon operator<(const Lon& lhs, const Lat& rhs) {
-  return {lhs, ComparisonOp::LT, rhs};
-}
-CompareLon operator<=(const Lon& lhs, const Lat& rhs) {
-  return {lhs, ComparisonOp::LE, rhs};
-}
-
-CompareArea operator>(const AreaOf& lhs, const double rhs) {
-  return {lhs, ComparisonOp::GT, rhs};
-}
-CompareArea operator>=(const AreaOf& lhs, const double rhs) {
-  return {lhs, ComparisonOp::GE, rhs};
-}
-CompareArea operator<(const AreaOf& lhs, const double rhs) {
-  return {lhs, ComparisonOp::LT, rhs};
-}
-CompareArea operator<=(const AreaOf& lhs, const double rhs) {
-  return {lhs, ComparisonOp::LE, rhs};
-}
-CompareArea operator>(const double lhs, const AreaOf& rhs) { return rhs < lhs; }
-CompareArea operator>=(const double lhs, const AreaOf& rhs) { return rhs <= lhs; }
-CompareArea operator<(const double lhs, const AreaOf& rhs) { return rhs > lhs; }
-CompareArea operator<=(const double lhs, const AreaOf& rhs) { return rhs >= lhs; }
-
-CompareArea operator>(const AreaOf& lhs, const AreaOf& rhs) {
-  return {lhs, ComparisonOp::GT, rhs};
-}
-CompareArea operator>=(const AreaOf& lhs, const AreaOf& rhs) {
-  return {lhs, ComparisonOp::GE, rhs};
-}
-CompareArea operator<(const AreaOf& lhs, const AreaOf& rhs) {
-  return {lhs, ComparisonOp::LT, rhs};
-}
-CompareArea operator<=(const AreaOf& lhs, const AreaOf& rhs) {
-  return {lhs, ComparisonOp::LE, rhs};
-}
-
-} // namespace primitives
-
-CompareSpArea operator>(const SpArea& lhs, const double rhs) {
-  return {lhs, ComparisonOp::GT, rhs};
-}
-CompareSpArea operator>=(const SpArea& lhs, const double rhs) {
-  return {lhs, ComparisonOp::GE, rhs};
-}
-CompareSpArea operator<(const SpArea& lhs, const double rhs) {
-  return {lhs, ComparisonOp::LT, rhs};
-}
-CompareSpArea operator<=(const SpArea& lhs, const double rhs) {
-  return {lhs, ComparisonOp::LE, rhs};
-}
-CompareSpArea operator>(const double lhs, const SpArea& rhs) { return rhs < lhs; }
-CompareSpArea operator>=(const double lhs, const SpArea& rhs) { return rhs <= lhs; }
-CompareSpArea operator<(const double lhs, const SpArea& rhs) { return rhs > lhs; }
-CompareSpArea operator<=(const double lhs, const SpArea& rhs) { return rhs >= lhs; }
-
-CompareSpArea operator>(const SpArea& lhs, const SpArea& rhs) {
-  return {lhs, ComparisonOp::GT, rhs};
-}
-CompareSpArea operator>=(const SpArea& lhs, const SpArea& rhs) {
-  return {lhs, ComparisonOp::GE, rhs};
-}
-CompareSpArea operator<(const SpArea& lhs, const SpArea& rhs) {
-  return {lhs, ComparisonOp::LT, rhs};
-}
-CompareSpArea operator<=(const SpArea& lhs, const SpArea& rhs) {
-  return {lhs, ComparisonOp::LE, rhs};
-}
+namespace percemon::ast {
 
 namespace {
-using percemon::utils::overloaded;
-
-Expr AndHelper(const AndPtr& lhs, const Expr& rhs) {
-  if (const Const* c_ptr = std::get_if<Const>(&rhs)) {
-    return (c_ptr->value) ? Expr{lhs}
-                          : Expr{*c_ptr}; // If True, return lhs, else return False
+template <typename BinOp, bool identity>
+Expr BinOpFlatten(const Expr& lhs, const Expr& rhs) {
+  // Check if lhs is constant
+  if (auto c_ptr = std::dynamic_pointer_cast<Const>(lhs)) {
+    // If lhs is the identity value, return the rhs, otherwise, return the lhs
+    return (c_ptr->value == identity) ? rhs : lhs;
   }
-
-  auto args = lhs->args;
-  for (auto& e : lhs->temporal_bound_args) {
-    args.push_back(std::visit([](auto&& c) { return Expr{c}; }, e));
+  // Check if rhs is constant
+  if (auto c_ptr = std::dynamic_pointer_cast<Const>(rhs)) {
+    return (c_ptr->value == identity) ? lhs : rhs;
   }
-
-  if (const AndPtr* e_ptr = std::get_if<AndPtr>(&rhs)) {
-    args.insert(args.end(), std::begin((*e_ptr)->args), std::end((*e_ptr)->args));
-    for (auto& e : (*e_ptr)->temporal_bound_args) {
-      args.push_back(std::visit([](auto&& c) { return Expr{c}; }, e));
+  if (const auto& cast_lhs = std::dynamic_pointer_cast<BinOp>(lhs)) {
+    std::vector<Expr> args = cast_lhs->args;
+    if (const auto rhs_ptr = std::dynamic_pointer_cast<BinOp>(rhs)) {
+      args.reserve(args.size() + rhs_ptr->args.size());
+      args.insert(args.end(), std::begin(rhs_ptr->args), std::end(rhs_ptr->args));
+    } else {
+      args.insert(args.end(), rhs);
     }
-  } else {
-    args.insert(args.end(), rhs);
+    return std::make_shared<BinOp>(args);
   }
-  return std::make_shared<And>(args);
+  return std::make_shared<BinOp>(std::vector{lhs, rhs});
 }
 
-Expr OrHelper(const OrPtr& lhs, const Expr& rhs) {
-  if (const Const* c_ptr = std::get_if<Const>(&rhs)) {
-    return (!c_ptr->value) ? Expr{lhs}
-                           : Expr{*c_ptr}; // If False, return lhs, else return True
+template <typename BinOp, typename Identity, typename Annihilator>
+SpatialExpr SpBinOpFlatten(const SpatialExpr& lhs, const SpatialExpr& rhs) {
+  // If lhs is the identity value, return the rhs
+  if (std::dynamic_pointer_cast<Identity>(lhs)) { return rhs; }
+  // If rhs is the identity value, return the lhs
+  if (std::dynamic_pointer_cast<Identity>(rhs)) { return lhs; }
+
+  // If rhs or lhs is the annihilator, return the annihilator
+  if (std::dynamic_pointer_cast<Annihilator>(rhs) == nullptr ||
+      std::dynamic_pointer_cast<Annihilator>(lhs) == nullptr) {
+    return std::make_shared<Annihilator>();
   }
 
-  std::vector<Expr> args{lhs->args};
-  for (auto& e : lhs->temporal_bound_args) {
-    args.push_back(std::visit([](auto&& c) { return Expr{c}; }, e));
-  }
+  if (const auto& lhs_ptr = std::dynamic_pointer_cast<BinOp>(lhs)) {
+    std::vector<SpatialExpr> args = lhs_ptr->args;
 
-  if (const OrPtr* e_ptr = std::get_if<OrPtr>(&rhs)) {
-    args.insert(args.end(), std::begin((*e_ptr)->args), std::end((*e_ptr)->args));
-    for (auto& e : (*e_ptr)->temporal_bound_args) {
-      args.push_back(std::visit([](auto&& c) { return Expr{c}; }, e));
+    if (const auto rhs_ptr = std::dynamic_pointer_cast<BinOp>(rhs)) {
+      args.reserve(args.size() + rhs_ptr->args.size());
+      args.insert(args.end(), std::begin(rhs_ptr->args), std::end(rhs_ptr->args));
+    } else {
+      args.insert(args.end(), rhs);
     }
-  } else {
-    args.insert(args.end(), rhs);
+    return std::make_shared<BinOp>(args);
   }
-  return std::make_shared<Or>(args);
+  return std::make_shared<BinOp>(std::vector{lhs, rhs});
 }
 
 } // namespace
 
-Expr operator&(const Expr& lhs, const Expr& rhs) {
-  if (const Const* c_ptr = std::get_if<Const>(&lhs)) {
-    return (c_ptr->value) ? rhs : *c_ptr;
-  } else if (const AndPtr* e_ptr = std::get_if<AndPtr>(&lhs)) {
-    return AndHelper(*e_ptr, rhs);
+Expr BaseExpr::operator~() {
+  auto expr = shared_from_this();
+  if (auto constant = std::dynamic_pointer_cast<Const>(expr)) {
+    return Const{!constant->value}.ptr();
   }
-  return std::make_shared<And>(std::vector{lhs, rhs});
+  return Not(expr).ptr();
+}
+
+Expr operator&(const Expr& lhs, const Expr& rhs) {
+  return BinOpFlatten<And, true>(lhs, rhs);
 }
 
 Expr operator|(const Expr& lhs, const Expr& rhs) {
-  if (const auto e_ptr = std::get_if<Const>(&lhs)) {
-    return (e_ptr->value) ? *e_ptr : rhs;
-  } else if (const OrPtr* e_ptr = std::get_if<OrPtr>(&lhs)) {
-    return OrHelper(*e_ptr, rhs);
+  return BinOpFlatten<Or, false>(lhs, rhs);
+}
+
+SpatialExpr BaseSpatialExpr::operator~() {
+  auto expr = shared_from_this();
+  if (std::dynamic_pointer_cast<EmptySet>(expr)) {
+    return std::make_shared<UniverseSet>();
   }
-  return std::make_shared<Or>(std::vector{lhs, rhs});
+  if (std::dynamic_pointer_cast<UniverseSet>(expr)) {
+    return std::make_shared<EmptySet>();
+  }
+  return Complement{expr}.ptr();
 }
 
-Expr operator~(const Expr& expr) {
-  if (const auto e = std::get_if<Const>(&expr)) { return Const{!(*e).value}; }
-  return std::make_shared<Not>(expr);
+SpatialExpr operator&(const SpatialExpr& lhs, const SpatialExpr& rhs) {
+  return SpBinOpFlatten<Intersect, UniverseSet, EmptySet>(lhs, rhs);
 }
 
-Expr operator>>(const Expr& lhs, const Expr& rhs) { return ~(lhs) | rhs; }
-
-} // namespace ast
-
-ast::PinPtr Pinned(Var_x x, Var_f f) { return std::make_shared<Pin>(x, f); }
-ast::PinPtr Pinned(Var_x x) { return std::make_shared<Pin>(x); }
-ast::PinPtr Pinned(Var_f f) { return std::make_shared<Pin>(f); }
-
-ast::ExistsPtr Exists(std::initializer_list<Var_id> id_list) {
-  return std::make_shared<ast::Exists>(id_list);
+SpatialExpr operator|(const SpatialExpr& lhs, const SpatialExpr& rhs) {
+  return SpBinOpFlatten<Union, EmptySet, UniverseSet>(lhs, rhs);
 }
 
-ast::ForallPtr Forall(std::initializer_list<Var_id> id_list) {
-  return std::make_shared<ast::Forall>(id_list);
-}
-
-ast::NotPtr Not(const Expr& arg) { return std::make_shared<ast::Not>(arg); }
-
-ast::AndPtr And(const std::vector<Expr>& args) {
-  return std::make_shared<ast::And>(args);
-}
-
-ast::OrPtr Or(const std::vector<Expr>& args) { return std::make_shared<ast::Or>(args); }
-
-ast::PreviousPtr Previous(const Expr& arg) {
-  return std::make_shared<ast::Previous>(arg);
-}
-
-ast::AlwaysPtr Always(const Expr& arg) { return std::make_shared<ast::Always>(arg); }
-
-ast::SometimesPtr Sometimes(const Expr& arg) {
-  return std::make_shared<ast::Sometimes>(arg);
-}
-
-ast::SincePtr Since(const Expr& a, const Expr& b) {
-  return std::make_shared<ast::Since>(a, b);
-}
-
-ast::BackToPtr BackTo(const Expr& a, const Expr& b) {
-  return std::make_shared<ast::BackTo>(a, b);
-}
-
-ast::AreaOf Area(Var_id id, double scale) { return ast::AreaOf{std::move(id), scale}; }
-ast::SpArea Area(const ast::SpatialExpr& expr, double scale) {
-  return ast::SpArea{expr, scale};
-}
-
-ast::SpExistsPtr SpExists(const ast::SpatialExpr& e) {
-  return std::make_shared<ast::SpExists>(e);
-}
-ast::SpForallPtr SpForall(const ast::SpatialExpr& e) {
-  return std::make_shared<ast::SpForall>(e);
-}
-
-ast::ComplementPtr Complement(const ast::SpatialExpr& e) {
-  return std::make_shared<ast::Complement>(e);
-}
-
-ast::IntersectPtr Intersect(const std::vector<ast::SpatialExpr>& e) {
-  return std::make_shared<ast::Intersect>(e);
-}
-ast::UnionPtr Union(const std::vector<ast::SpatialExpr>& e) {
-  return std::make_shared<ast::Union>(e);
-}
-ast::InteriorPtr Interior(const ast::SpatialExpr& e) {
-  return std::make_shared<ast::Interior>(e);
-}
-ast::ClosurePtr Closure(const ast::SpatialExpr& e) {
-  return std::make_shared<ast::Closure>(e);
-}
-
-ast::SpPreviousPtr SpPrevious(const ast::SpatialExpr& e) {
-  return std::make_shared<ast::SpPrevious>(e);
-}
-
-ast::SpAlwaysPtr SpAlways(const ast::SpatialExpr& e) {
-  return std::make_shared<ast::SpAlways>(e);
-}
-ast::SpAlwaysPtr SpAlways(const FrameInterval& i, const ast::SpatialExpr& e) {
-  return std::make_shared<ast::SpAlways>(i, e);
-}
-
-ast::SpSometimesPtr SpSometimes(const ast::SpatialExpr& e) {
-  return std::make_shared<ast::SpSometimes>(e);
-}
-ast::SpSometimesPtr SpSometimes(const FrameInterval& i, const ast::SpatialExpr& e) {
-  return std::make_shared<ast::SpSometimes>(i, e);
-}
-
-ast::SpSincePtr SpSince(const ast::SpatialExpr& a, const ast::SpatialExpr& b) {
-  return std::make_shared<ast::SpSince>(a, b);
-}
-ast::SpSincePtr
-SpSince(const FrameInterval& i, const ast::SpatialExpr& a, const ast::SpatialExpr& b) {
-  return std::make_shared<ast::SpSince>(i, a, b);
-}
-
-ast::SpBackToPtr SpBackTo(const ast::SpatialExpr& a, const ast::SpatialExpr& b) {
-  return std::make_shared<ast::SpBackTo>(a, b);
-}
-
-ast::SpBackToPtr
-SpBackTo(const FrameInterval& i, const ast::SpatialExpr& a, const ast::SpatialExpr& b) {
-  return std::make_shared<ast::SpBackTo>(i, a, b);
-}
-
-} // namespace percemon
+} // namespace percemon::ast

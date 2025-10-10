@@ -1,15 +1,66 @@
 #pragma once
-
-#include <utility>
-#ifndef __PERCEMON_ITER_PRODUCT_HPP__
-#define __PERCEMON_ITER_PRODUCT_HPP__
+#ifndef __CSRC_UTILS_HPP__
+#define __CSRC_UTILS_HPP__
 
 #include <algorithm>
 #include <iterator>
+#include <memory>
+#include <optional>
+#include <type_traits>
+#include <utility>
 #include <vector>
 
-namespace percemon::iter_helpers {
-namespace details {
+namespace percemon {
+namespace utils {
+
+/**
+ * Helper for SNIFAE: checks if given variable is any one of the Args
+ */
+template <typename T, typename... Args>
+struct is_one_of : std::disjunction<std::is_same<std::decay_t<T>, Args>...> {};
+template <typename T, typename... Args>
+inline constexpr bool is_one_of_v = is_one_of<T, Args...>::value;
+
+/**
+ * SFINAE base checking if type `T` is derived from one of `Args...`
+ */
+template <typename T, typename... Args>
+struct base_is_one_of : std::disjunction<std::is_base_of<Args, std::decay_t<T>>...> {};
+template <typename T, typename... Args>
+inline constexpr bool base_is_one_of_v = is_one_of<T, Args...>::value;
+
+/**
+ * Visit helper for a set of visitor lambdas.
+ *
+ * @see https://en.cppreference.com/w/cpp/utility/variant/visit
+ */
+template <class... Ts>
+struct overloaded : Ts... {
+  using Ts::operator()...;
+};
+// explicit deduction guide (not needed as of C++20)
+template <class... Ts>
+overloaded(Ts...) -> overloaded<Ts...>;
+
+/**
+ * Visit helper for virtual visitor pattern
+ */
+template <typename Visitor, typename Base, typename MaybeDerived>
+constexpr bool try_visit(Visitor op, const std::shared_ptr<Base>& base) {
+  if (const auto& derived = std::dynamic_pointer_cast<MaybeDerived>(base)) {
+    op(derived);
+    return true;
+  }
+  return false;
+}
+
+template <typename Visitor, typename Base, typename... Derived>
+constexpr void visit_one_of(Visitor op, const std::shared_ptr<Base>& base) {
+  (try_visit<Visitor, Base, Derived>(op, base) || ...);
+}
+
+} // namespace utils
+namespace iter_helpers {
 /**
  * Product iterator for a single vector repeated k times.
  */
@@ -114,16 +165,26 @@ struct product_range {
   }
 };
 
-} // namespace details
-
 template <
     typename Container,
     typename Iter = decltype(std::begin(std::declval<Container>())),
     typename      = decltype(std::end(std::declval<Container>()))>
 constexpr auto product(Container&& iterable, size_t k = 1) {
-  return details::product_range<Container, Iter>{iterable, k};
+  return product_range<Container, Iter>{iterable, k};
 }
 
-} // namespace percemon::iter_helpers
+// template <typename T, typename Func>
+// auto map(std::optional<T> opt, Func func) -> std::optional<decltype(func(*opt))> {
+//   return opt ? std::optional(func(*opt)) : std::nullopt;
+// }
 
-#endif /* end of include guard: __PERCEMON_ITER_PRODUCT_HPP__ */
+template <typename Func, typename... Optionals>
+auto map_optionals(Func func, const Optionals&... opts)
+    -> std::optional<decltype(func(*opts...))> {
+  if ((... && opts)) { return func(*opts...); }
+  return std::nullopt;
+}
+} // namespace iter_helpers
+} // namespace percemon
+
+#endif // __CSRC_UTILS_HPP__

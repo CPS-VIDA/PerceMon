@@ -7,8 +7,7 @@
 
 #include <cppitertools/itertools.hpp>
 
-#include "percemon/utils.hpp"
-
+#include "utils.hpp"
 using percemon::utils::overloaded;
 
 namespace {
@@ -198,54 +197,53 @@ Region complement_of(BoundingBox bbox, const BoundingBox& universe) {
   // Get left fragment
   if (bbox.xmin > universe.xmin || (bbox.xmin == universe.xmin && bbox.lopen)) {
     fragments.emplace_back(
-        BoundingBox{
-            universe.xmin,
-            bbox.xmin,
-            bbox.ymin,
-            bbox.ymax,
-            false,
-            !bbox.lopen,
-            bbox.topen,
-            bbox.bopen});
+        universe.xmin,
+        bbox.xmin,
+        bbox.ymin,
+        bbox.ymax,
+        false,
+        !bbox.lopen,
+        bbox.topen,
+        bbox.bopen);
   }
   // Get right fragment
   if (bbox.xmax < universe.xmax || (bbox.xmax == universe.xmax && bbox.ropen)) {
     fragments.emplace_back(
-        BoundingBox{
-            bbox.xmax,
-            universe.xmax,
-            bbox.ymin,
-            bbox.ymax,
-            !bbox.ropen,
-            false,
-            bbox.topen,
-            bbox.bopen});
+
+        bbox.xmax,
+        universe.xmax,
+        bbox.ymin,
+        bbox.ymax,
+        !bbox.ropen,
+        false,
+        bbox.topen,
+        bbox.bopen);
   }
   // Get top fragment
   if (bbox.ymin > universe.ymin || (bbox.ymin == universe.ymin && bbox.topen)) {
     fragments.emplace_back(
-        BoundingBox{
-            universe.xmin,
-            universe.xmax,
-            universe.ymin,
-            bbox.ymin,
-            false,
-            false,
-            false,
-            !bbox.topen});
+
+        universe.xmin,
+        universe.xmax,
+        universe.ymin,
+        bbox.ymin,
+        false,
+        false,
+        false,
+        !bbox.topen);
   }
   // Get bottom fragment
   if (bbox.ymax < universe.ymax || (bbox.ymax == universe.ymax && bbox.bopen)) {
     fragments.emplace_back(
-        BoundingBox{
-            universe.xmin,
-            universe.xmax,
-            bbox.ymax,
-            universe.ymax,
-            false,
-            false,
-            !bbox.bopen,
-            false});
+
+        universe.xmin,
+        universe.xmax,
+        bbox.ymax,
+        universe.ymax,
+        false,
+        false,
+        !bbox.bopen,
+        false);
   }
 
   return TopoUnion{std::begin(fragments), std::end(fragments)};
@@ -281,10 +279,7 @@ struct TopoSimplify {
    */
   struct Interval {
     double low, high;
-    Interval(double l, double h) {
-      low  = (l < h) ? l : h;
-      high = (l + h) - low;
-    }
+    Interval(double l, double h) : low((l < h) ? l : h), high((l + h) - low) {}
     constexpr bool is_overlapping(const Interval& other) {
       return !(low > other.high || other.low > high);
     }
@@ -367,7 +362,7 @@ struct TopoSimplify {
       // Merge the corresponding ranges to BoundingBoxes
       // TODO: Open Closed Bounds?
       for (auto&& y_int : y_intervals) {
-        ret.emplace_back(BoundingBox{x_int.low, x_int.high, y_int.low, y_int.high});
+        ret.emplace_back(x_int.low, x_int.high, y_int.low, y_int.high);
       }
     }
 

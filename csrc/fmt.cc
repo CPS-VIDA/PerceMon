@@ -1,430 +1,289 @@
+#include <cppitertools/imap.hpp>
+#include <cppitertools/starmap.hpp>
+#include <fmt/base.h>
 #include <fmt/format.h>
 #include <fmt/ranges.h>
 #include <fmt/std.h>
+#include <type_traits>
 #include <variant>
 
 #include "percemon/ast.hpp"
-#include "percemon/fmt.hpp"
+// #include "percemon/fmt.hpp"
 
-namespace percemon::ast::primitives {
+#include "utils.hpp"
 
-auto format_as(ComparisonOp op) -> std::string {
-  switch (op) {
-    case percemon::ast::ComparisonOp::GE: return (">=");
-    case percemon::ast::ComparisonOp::GT: return (">");
-    case percemon::ast::ComparisonOp::LE: return ("<=");
-    case percemon::ast::ComparisonOp::LT: return ("<");
-    case percemon::ast::ComparisonOp::EQ: return ("==");
-    case percemon::ast::ComparisonOp::NE: return ("!=");
-    default: std::abort();
+#define FMT_UNARY_OP(NODE_NAME, NODE_REPR)                         \
+  [[nodiscard]] std::string NODE_NAME::to_string() const {         \
+    return fmt::format(#NODE_REPR "({})", this->arg->to_string()); \
   }
+
+#define FMT_BINARY_OP(NODE_NAME, NODE_REPR)                                        \
+  [[nodiscard]] std::string NODE_NAME::to_string() const {                         \
+    const auto [a, b] = this->args;                                                \
+    return fmt::format("({}) " #NODE_REPR "({})", a->to_string(), b->to_string()); \
+  }
+
+#define FMT_UNARY_OP_WITH_INTERVAL(NODE_NAME, NODE_REPR)                         \
+  [[nodiscard]] std::string NODE_NAME::to_string() const {                       \
+    const auto interval =                                                        \
+        (this->interval) ? fmt::format("_{}", this->interval->to_string()) : ""; \
+    return fmt::format(#NODE_REPR "{}({})", interval, this->arg->to_string());   \
+  }
+
+#define FMT_BINARY_OP_WITH_INTERVAL(NODE_NAME, NODE_REPR)                        \
+  [[nodiscard]] std::string NODE_NAME::to_string() const {                       \
+    const auto [a, b] = this->args;                                              \
+    const auto interval =                                                        \
+        (this->interval) ? fmt::format("_{}", this->interval->to_string()) : ""; \
+    return fmt::format(                                                          \
+        "({}) " #NODE_REPR "{} ({})", a->to_string(), interval, b->to_string()); \
+  }
+
+namespace percemon::ast {
+template <typename T>
+auto format_as(const T& node) -> decltype(node.to_string()) {
+  return node.to_string();
 }
 
-auto format_as(Const e) -> bool { return e.value; }
-auto format_as(C_TIME) -> std::string { return "C_TIME"; }
-auto format_as(C_FRAME) -> std::string { return "C_FRAME"; }
-auto format_as(const Var_f& v) -> std::string { return fmt::format("f_{}", v.name); }
-auto format_as(const Var_x& v) -> std::string { return fmt::format("x_{}", v.name); }
-auto format_as(const Var_id& v) -> std::string { return fmt::format("id_{}", v.name); }
-auto format_as(EmptySet) -> std::string { return "EMPTYSET"; }
-auto format_as(UniverseSet) -> std::string { return "UNIVERSESET"; }
+namespace {
 
-auto format_as(CRT e) -> std::string {
-  switch (e) {
-    case percemon::ast::CRT::LM: return "LM";
-    case percemon::ast::CRT::RM: return "RM";
-    case percemon::ast::CRT::TM: return "TM";
-    case percemon::ast::CRT::BM: return "BM";
-    case percemon::ast::CRT::CT: return "CT";
-    default: std::abort();
-  }
+template <typename T>
+auto into_string(const T& v) -> decltype(fmt::to_string(v)) {
+  return fmt::to_string(v);
 }
-} // namespace percemon::ast::primitives
 
-auto fmt::formatter<percemon::ast::TimeInterval>::format(
-    const percemon::ast::TimeInterval& e,
-    fmt::format_context& ctx) const -> fmt::format_context::iterator {
-  using namespace percemon::ast;
+template <typename T>
+auto into_string(const std::shared_ptr<T>& v) -> decltype(v->to_string()) {
+  return v->to_string();
+}
+
+template <typename T>
+auto into_string(const Difference<T>& v) -> std::string {
+  return fmt::format("{} - {}", v.lhs, v.rhs);
+}
+
+auto into_string(const RefPoint& v) -> std::string {
+  return fmt::format("({}, {})", v.id, v.crt);
+}
+
+template <typename... Args>
+auto into_string(const std::variant<Args...>& v) -> std::string {
+  return std::visit([](const auto& val) { return into_string(val); }, v);
+}
+
+template <typename Seq>
+auto args_into_string(const Seq& seq) -> std::vector<std::string> {
+  const auto nargs  = seq.size();
+  auto args_str_vec = std::vector<std::string>();
+  args_str_vec.reserve(nargs);
+  for (const auto& arg : seq) { args_str_vec.push_back(into_string(arg)); }
+  return args_str_vec;
+}
+template <typename... Args>
+auto args_into_string(const std::tuple<Args...>& seq) -> std::vector<std::string> {
+  constexpr auto nargs = sizeof...(Args);
+  auto args_str_vec    = std::vector<std::string>();
+  args_str_vec.reserve(nargs);
+
+  std::apply(
+      [&args_str_vec](Args const&... args) {
+        ((args_str_vec.push_back(into_string(args))), ...);
+      },
+      seq);
+  return args_str_vec;
+}
+
+// template <typename... Args>
+// auto args_into_string(const std::tuple<Args...>& seq) -> std::vector<std::string> {
+//   auto args_str_vec = std::vector<std::string>();
+//   for (const auto& arg : seq) { args_str_vec.push_back(arg->to_string()); }
+//   return args_str_vec;
+// }
+} // namespace
+
+template <typename T>
+[[nodiscard]] std::string Interval<T>::to_string() const {
   auto fmt_str = "";
-  switch (e.bound) {
-    case TimeInterval::OPEN: fmt_str = "({}, {})"; break;
-    case TimeInterval::LOPEN: fmt_str = "({}, {}]"; break;
-    case TimeInterval::ROPEN: fmt_str = "[{}, {})"; break;
-    case TimeInterval::CLOSED: fmt_str = "[{}, {}]"; break;
+  switch (this->bound) {
+    case Bound::OPEN: fmt_str = "({}, {})"; break;
+    case Bound::LOPEN: fmt_str = "({}, {}]"; break;
+    case Bound::ROPEN: fmt_str = "[{}, {})"; break;
+    case Bound::CLOSED: fmt_str = "[{}, {}]"; break;
   }
-  return format_to(ctx.out(), fmt_str, e.low, e.high);
+  return fmt::format(fmt_str, this->low, this->high);
+}
+template struct Interval<double>;
+template struct Interval<std::int64_t>;
+
+template <typename T>
+[[nodiscard]] std::string Difference<T>::to_string() const {
+  return fmt::format("{} - {}", lhs, rhs);
 }
 
-auto fmt::formatter<percemon::ast::FrameInterval>::format(
-    const percemon::ast::FrameInterval& e,
-    fmt::format_context& ctx) const -> fmt::format_context::iterator {
-  using namespace percemon::ast;
-  auto fmt_str = "";
-  switch (e.bound) {
-    case FrameInterval::OPEN: fmt_str = "({}, {})"; break;
-    case FrameInterval::LOPEN: fmt_str = "({}, {}]"; break;
-    case FrameInterval::ROPEN: fmt_str = "[{}, {})"; break;
-    case FrameInterval::CLOSED: fmt_str = "[{}, {}]"; break;
-  }
-  return format_to(ctx.out(), fmt_str, e.low, e.high);
+template struct Difference<Var_x>;
+template struct Difference<Var_f>;
+
+template <typename... Args>
+[[nodiscard]] std::string FuncNode<Args...>::to_string() const {
+  const auto name = this->get_name();
+
+  std::vector<std::string> args_str_vec = args_into_string(this->args);
+  const auto args_str                   = fmt::join(args_str_vec, ", ");
+
+  return fmt::format("{}({})", args_str_vec);
+}
+template struct FuncNode<Var_id>;
+template struct FuncNode<RefPoint, RefPoint>;
+template struct FuncNode<RefPoint>;
+template struct FuncNode<SpatialExpr>;
+
+[[nodiscard]] std::string Class::to_string() const {
+  return FuncNode<Var_id>::to_string();
+}
+[[nodiscard]] std::string Prob::to_string() const {
+  return FuncNode<Var_id>::to_string();
+}
+[[nodiscard]] std::string ED::to_string() const {
+  return FuncNode<RefPoint, RefPoint>::to_string();
+}
+[[nodiscard]] std::string Lat::to_string() const {
+  return FuncNode<RefPoint>::to_string();
+}
+[[nodiscard]] std::string Lon::to_string() const {
+  return FuncNode<RefPoint>::to_string();
+}
+[[nodiscard]] std::string AreaOf::to_string() const {
+  return FuncNode<SpatialExpr>::to_string();
 }
 
-auto fmt::formatter<percemon::ast::TimeBound>::format(
-    const percemon::ast::TimeBound& e,
-    fmt::format_context& ctx) const -> fmt::format_context::iterator {
-  return format_to(ctx.out(), "({} - C_TIME {} {})", e.x, e.op, e.bound);
+[[nodiscard]] std::string Const::to_string() const {
+  return fmt::to_string(this->value);
+}
+[[nodiscard]] std::string EmptySet::to_string() const { return "EMPTYSET"; }
+[[nodiscard]] std::string UniverseSet::to_string() const { return "UNIVERSESET"; }
+
+template <typename Lhs, typename Rhs, ComparisonOp... Ops>
+[[nodiscard]] std::string CompareNode<Lhs, Rhs, Ops...>::to_string() const {
+  const auto lhs_str = this->lhs.to_string();
+  const auto rhs_str = into_string(this->rhs);
+  const auto op_str  = format_as(this->op);
+  return fmt::format("({:s} {} {:s})", lhs_str, this->op, rhs_str);
+}
+template struct OrderingOpNode<TimeDiff, double>;
+template struct OrderingOpNode<FrameDiff, std::int64_t>;
+template struct EqualityOpNode<Var_id, Var_id>;
+template struct EqualityOpNode<Class, MaybeClass>;
+template struct OrderingOpNode<Prob, MaybeProb>;
+template struct OrderingOpNode<ED, double>;
+template struct OrderingOpNode<Lat, MaybeLatLon>;
+template struct OrderingOpNode<Lon, MaybeLatLon>;
+template struct OrderingOpNode<AreaOf, MaybeAreaOf>;
+
+[[nodiscard]] std::string Exists::to_string() const {
+  std::vector<std::string> ids_vec = args_into_string(this->ids);
+  return fmt::format(
+      "Exists {{{0}}} . {1}", fmt::join(ids_vec, ", "), this->arg->to_string());
 }
 
-auto fmt::formatter<percemon::ast::FrameBound>::format(
-    const percemon::ast::FrameBound& e,
-    fmt::format_context& ctx) const -> fmt::format_context::iterator {
-  return format_to(ctx.out(), "({} - C_FRAME {} {})", e.f, e.op, e.bound);
+[[nodiscard]] std::string Forall::to_string() const {
+  std::vector<std::string> ids_vec = args_into_string(this->ids);
+  return fmt::format(
+      "Forall {{{0}}} . {1}", fmt::join(ids_vec, ", "), this->arg->to_string());
 }
 
-auto fmt::formatter<percemon::ast::CompareId>::format(
-    const percemon::ast::CompareId& e,
-    fmt::format_context& ctx) const -> fmt::format_context::iterator {
-  return format_to(ctx.out(), "({} {} {})", e.lhs, e.op, e.rhs);
-}
-
-auto fmt::formatter<percemon::ast::Class>::format(
-    const percemon::ast::Class& e,
-    fmt::format_context& ctx) const -> fmt::format_context::iterator {
-  return format_to(ctx.out(), "Class({})", e.id);
-}
-
-auto fmt::formatter<percemon::ast::CompareClass>::format(
-    const percemon::ast::CompareClass& e,
-    fmt::format_context& ctx) const -> fmt::format_context::iterator {
-  std::string rhs = std::visit([](const auto& r) { return fmt::to_string(r); }, e.rhs);
-  return format_to(ctx.out(), "({} {} {})", e.lhs, e.op, rhs);
-}
-
-auto fmt::formatter<percemon::ast::Prob>::format(
-    const percemon::ast::Prob& e,
-    fmt::format_context& ctx) const -> fmt::format_context::iterator {
-  if (e.scale == 1.0) { return format_to(ctx.out(), "Prob({})", e.id); }
-  return format_to(ctx.out(), "{} * Prob({})", e.scale, e.id);
-}
-
-auto fmt::formatter<percemon::ast::CompareProb>::format(
-    const percemon::ast::CompareProb& e,
-    fmt::format_context& ctx) const -> fmt::format_context::iterator {
-  std::string rhs = std::visit([](const auto& r) { return fmt::to_string(r); }, e.rhs);
-  return format_to(ctx.out(), "({} {} {})", e.lhs, e.op, rhs);
-}
-
-auto fmt::formatter<percemon::ast::BBox>::format(
-    const percemon::ast::BBox& e,
-    fmt::format_context& ctx) const -> fmt::format_context::iterator {
-  return format_to(ctx.out(), "BBox({})", e.id);
-}
-
-auto fmt::formatter<percemon::ast::ED>::format(
-    const percemon::ast::ED& e,
-    fmt::format_context& ctx) const -> fmt::format_context::iterator {
-  return format_to(
-      ctx.out(), "{} * ED({}, {}, {}, {})", e.scale, e.id1, e.crt1, e.id2, e.crt2);
-}
-
-auto fmt::formatter<percemon::ast::Lat>::format(
-    const percemon::ast::Lat& e,
-    fmt::format_context& ctx) const -> fmt::format_context::iterator {
-  return format_to(ctx.out(), "{} * Lat({}, {})", e.scale, e.id, e.crt);
-}
-
-auto fmt::formatter<percemon::ast::Lon>::format(
-    const percemon::ast::Lon& e,
-    fmt::format_context& ctx) const -> fmt::format_context::iterator {
-  return format_to(ctx.out(), "{} * Lon({}, {})", e.scale, e.id, e.crt);
-}
-
-auto fmt::formatter<percemon::ast::AreaOf>::format(
-    const percemon::ast::AreaOf& e,
-    fmt::format_context& ctx) const -> fmt::format_context::iterator {
-  return format_to(ctx.out(), "{} * Area({})", e.scale, e.id);
-}
-
-auto fmt::formatter<percemon::ast::CompareED>::format(
-    const percemon::ast::CompareED& e,
-    fmt::format_context& ctx) const -> fmt::format_context::iterator {
-  return format_to(ctx.out(), "({} {} {})", e.lhs, e.op, e.rhs);
-}
-
-auto fmt::formatter<percemon::ast::CompareLon>::format(
-    const percemon::ast::CompareLon& e,
-    fmt::format_context& ctx) const -> fmt::format_context::iterator {
-  auto rhs = std::visit([](const auto& r) { return fmt::to_string(r); }, e.rhs);
-  return format_to(ctx.out(), "({} {} {})", e.lhs, e.op, rhs);
-}
-
-auto fmt::formatter<percemon::ast::CompareLat>::format(
-    const percemon::ast::CompareLat& e,
-    fmt::format_context& ctx) const -> fmt::format_context::iterator {
-  auto rhs = std::visit([](const auto& r) { return fmt::to_string(r); }, e.rhs);
-  return format_to(ctx.out(), "({} {} {})", e.lhs, e.op, rhs);
-}
-
-auto fmt::formatter<percemon::ast::CompareArea>::format(
-    const percemon::ast::CompareArea& e,
-    fmt::format_context& ctx) const -> fmt::format_context::iterator {
-  auto rhs = std::visit([](const auto& r) { return fmt::to_string(r); }, e.rhs);
-  return format_to(ctx.out(), "({} {} {})", e.lhs, e.op, rhs);
-}
-
-auto fmt::formatter<percemon::ast::SpArea>::format(
-    const percemon::ast::SpArea& e,
-    fmt::format_context& ctx) const -> fmt::format_context::iterator {
-  return format_to(ctx.out(), "{} * Area({})", e.scale, e.arg);
-}
-
-auto fmt::formatter<percemon::ast::CompareSpArea>::format(
-    const percemon::ast::CompareSpArea& e,
-    fmt::format_context& ctx) const -> fmt::format_context::iterator {
-  auto rhs = std::visit([](const auto& a) { return fmt::to_string(a); }, e.rhs);
-  return format_to(ctx.out(), "({} {} {})", e.lhs, e.op, rhs);
-}
-
-auto fmt::formatter<percemon::ast::Complement>::format(
-    const percemon::ast::Complement& e,
-    fmt::format_context& ctx) const -> fmt::format_context::iterator {
-  return format_to(ctx.out(), "~{}", e.arg);
-}
-
-auto fmt::formatter<percemon::ast::Interior>::format(
-    const percemon::ast::Interior& e,
-    fmt::format_context& ctx) const -> fmt::format_context::iterator {
-  return format_to(ctx.out(), "Interior ({})", e.arg);
-}
-
-auto fmt::formatter<percemon::ast::Closure>::format(
-    const percemon::ast::Closure& e,
-    fmt::format_context& ctx) const -> fmt::format_context::iterator {
-  return format_to(ctx.out(), "Closure ({})", e.arg);
-}
-
-auto fmt::formatter<percemon::ast::Intersect>::format(
-    const percemon::ast::Intersect& e,
-    fmt::format_context& ctx) const -> fmt::format_context::iterator {
-  return format_to(ctx.out(), "({})", fmt::join(e.args, " & "));
-}
-
-auto fmt::formatter<percemon::ast::Union>::format(
-    const percemon::ast::Union& e,
-    fmt::format_context& ctx) const -> fmt::format_context::iterator {
-  return format_to(ctx.out(), "({})", fmt::join(e.args, " | "));
-}
-
-auto fmt::formatter<percemon::ast::SpExists>::format(
-    const percemon::ast::SpExists& e,
-    fmt::format_context& ctx) const -> fmt::format_context::iterator {
-  return format_to(ctx.out(), "SPEXISTS ({})", e.arg);
-}
-
-auto fmt::formatter<percemon::ast::SpForall>::format(
-    const percemon::ast::SpForall& e,
-    fmt::format_context& ctx) const -> fmt::format_context::iterator {
-  return format_to(ctx.out(), "SPFORALL ({})", e.arg);
-}
-
-auto fmt::formatter<percemon::ast::SpPrevious>::format(
-    const percemon::ast::SpPrevious& e,
-    fmt::format_context& ctx) const -> fmt::format_context::iterator {
-  return format_to(ctx.out(), "SpPrev {}", e.arg);
-}
-
-auto fmt::formatter<percemon::ast::SpAlways>::format(
-    const percemon::ast::SpAlways& e,
-    fmt::format_context& ctx) const -> fmt::format_context::iterator {
-  if (e.interval.has_value()) {
-    return format_to(ctx.out(), "SpAlw_{} {}", *(e.interval), e.arg);
-  }
-  return format_to(ctx.out(), "SpAlw {}", e.arg);
-}
-
-auto fmt::formatter<percemon::ast::SpSometimes>::format(
-    const percemon::ast::SpSometimes& e,
-    fmt::format_context& ctx) const -> fmt::format_context::iterator {
-  if (e.interval.has_value()) {
-    return format_to(ctx.out(), "SpSometimes_{} {}", *(e.interval), e.arg);
-  }
-  return format_to(ctx.out(), "SpSometimes {}", e.arg);
-}
-
-auto fmt::formatter<percemon::ast::SpSince>::format(
-    const percemon::ast::SpSince& e,
-    fmt::format_context& ctx) const -> fmt::format_context::iterator {
-  const auto [a, b] = e.args;
-  if (e.interval.has_value()) {
-    return format_to(ctx.out(), "{} SpSince_{} {}", a, *(e.interval), b);
-  }
-  return format_to(ctx.out(), "{} SpSince {}", a, b);
-}
-
-auto fmt::formatter<percemon::ast::SpBackTo>::format(
-    const percemon::ast::SpBackTo& e,
-    fmt::format_context& ctx) const -> fmt::format_context::iterator {
-  const auto [a, b] = e.args;
-  if (e.interval.has_value()) {
-    return format_to(ctx.out(), "{} SpBackTo_{} {}", a, *(e.interval), b);
-  }
-  return format_to(ctx.out(), "{} SpBackTo {}", a, b);
-}
-
-auto fmt::formatter<percemon::ast::Pin>::format(
-    const percemon::ast::Pin& e,
-    fmt::format_context& ctx) const -> fmt::format_context::iterator {
+[[nodiscard]] std::string Pin::to_string() const {
   std::string x = "_", f = "_";
-  if (e.x) { x = fmt::to_string(*e.x); }
-  if (e.f) { f = fmt::to_string(*e.f); }
-  return format_to(ctx.out(), "{{{0}, {1}}} . {2}", x, f, e.phi);
+  if (this->x) { x = this->x->to_string(); }
+  if (this->f) { f = this->f->to_string(); }
+  return fmt::format("@ {{{0}, {1}}} . {2}", x, f, this->arg->to_string());
 }
 
-auto fmt::formatter<percemon::ast::Exists>::format(
-    const percemon::ast::Exists& e,
-    fmt::format_context& ctx) const -> fmt::format_context::iterator {
-  if (e.pinned_at.has_value()) {
-    return format_to(
-        ctx.out(), "EXISTS {{{0}}} @ {1}", fmt::join(e.ids, ", "), *e.pinned_at);
-  } else if (e.phi.has_value()) {
-    return format_to(ctx.out(), "EXISTS {{{0}}} . {1}", fmt::join(e.ids, ", "), *e.phi);
-  }
-  return format_to(ctx.out(), "EXISTS {{{}}}", fmt::join(e.ids, ", "));
+[[nodiscard]] std::string Not::to_string() const {
+  return fmt::format("~{}", this->arg->to_string());
 }
 
-auto fmt::formatter<percemon::ast::Forall>::format(
-    const percemon::ast::Forall& e,
-    fmt::format_context& ctx) const -> fmt::format_context::iterator {
-  if (e.pinned_at.has_value()) {
-    return format_to(
-        ctx.out(), "FORALL {{{0}}} @ {1}", fmt::join(e.ids, ", "), *e.pinned_at);
-  } else if (e.phi.has_value()) {
-    return format_to(ctx.out(), "FORALL {{{0}}} . {1}", fmt::join(e.ids, ", "), *e.phi);
-  }
-  return format_to(ctx.out(), "FORALL {{{}}}", fmt::join(e.ids, ", "));
+[[nodiscard]] std::string And::to_string() const {
+  const std::vector<std::string> args_str = args_into_string(this->args);
+  return fmt::format("({})", fmt::join(args_str, " & "));
 }
 
-auto fmt::formatter<percemon::ast::Not>::format(
-    const percemon::ast::Not& e,
-    fmt::format_context& ctx) const -> fmt::format_context::iterator {
-  return format_to(ctx.out(), "~{}", e.arg);
+[[nodiscard]] std::string Or::to_string() const {
+  const std::vector<std::string> args_str = args_into_string(this->args);
+  return fmt::format("({})", fmt::join(args_str, " | "));
 }
 
-auto fmt::formatter<percemon::ast::And>::format(
-    const percemon::ast::And& e,
-    fmt::format_context& ctx) const -> fmt::format_context::iterator {
-  if (e.temporal_bound_args.empty()) {
-    return format_to(ctx.out(), "({})", fmt::join(e.args, " & "));
-  } else if (e.args.empty()) {
-    return format_to(ctx.out(), "({})", fmt::join(e.temporal_bound_args, " & "));
-  } else {
-    return format_to(
-        ctx.out(),
-        "({} & {})",
-        fmt::join(e.temporal_bound_args, " & "),
-        fmt::join(e.args, " & "));
-  }
+[[nodiscard]] std::string Next::to_string() const {
+  const auto interval = (this->steps > 1) ? fmt::format("[{}]", this->steps) : "";
+  return fmt::format("next{}({})", interval, this->arg->to_string());
 }
 
-auto fmt::formatter<percemon::ast::Or>::format(
-    const percemon::ast::Or& e,
-    fmt::format_context& ctx) const -> fmt::format_context::iterator {
-  if (e.temporal_bound_args.empty()) {
-    return format_to(ctx.out(), "({})", fmt::join(e.args, " | "));
-  } else if (e.args.empty()) {
-    return format_to(ctx.out(), "({})", fmt::join(e.temporal_bound_args, " | "));
-  } else {
-    return format_to(
-        ctx.out(),
-        "({} | {})",
-        fmt::join(e.temporal_bound_args, " | "),
-        fmt::join(e.args, " | "));
-  }
+[[nodiscard]] std::string Previous::to_string() const {
+  const auto interval = (this->steps > 1) ? fmt::format("[{}]", this->steps) : "";
+  return fmt::format("prev{}({})", interval, this->arg->to_string());
 }
 
-auto fmt::formatter<percemon::ast::Previous>::format(
-    const percemon::ast::Previous& e,
-    fmt::format_context& ctx) const -> fmt::format_context::iterator {
-  return format_to(ctx.out(), "Prev {}", e.arg);
+FMT_UNARY_OP(percemon::ast::Always, always);
+FMT_UNARY_OP(percemon::ast::Holds, holds);
+FMT_UNARY_OP(percemon::ast::Eventually, eventually);
+FMT_UNARY_OP(percemon::ast::Sometimes, sometimes);
+FMT_BINARY_OP(percemon::ast::Until, until);
+FMT_BINARY_OP(percemon::ast::Since, since);
+FMT_BINARY_OP(percemon::ast::Release, release);
+FMT_BINARY_OP(percemon::ast::BackTo, back_to);
+
+[[nodiscard]] std::string SpExists::to_string() const {
+  return fmt::format("SpExists ({})", this->arg->to_string());
 }
 
-auto fmt::formatter<percemon::ast::Always>::format(
-    const percemon::ast::Always& e,
-    fmt::format_context& ctx) const -> fmt::format_context::iterator {
-  return format_to(ctx.out(), "Alw {}", e.arg);
+[[nodiscard]] std::string SpForall::to_string() const {
+  return fmt::format("SpForall ({})", this->arg->to_string());
 }
 
-auto fmt::formatter<percemon::ast::Sometimes>::format(
-    const percemon::ast::Sometimes& e,
-    fmt::format_context& ctx) const -> fmt::format_context::iterator {
-  return format_to(ctx.out(), "Sometimes {}", e.arg);
+[[nodiscard]] std::string BBox::to_string() const {
+  return fmt::format("BBox({})", this->id.to_string());
 }
 
-auto fmt::formatter<percemon::ast::Since>::format(
-    const percemon::ast::Since& e,
-    fmt::format_context& ctx) const -> fmt::format_context::iterator {
-  const auto [a, b] = e.args;
-  return format_to(ctx.out(), "{} S {}", a, b);
+[[nodiscard]] std::string Complement::to_string() const {
+  return fmt::format("~{}", this->arg->to_string());
 }
 
-auto fmt::formatter<percemon::ast::BackTo>::format(
-    const percemon::ast::BackTo& e,
-    fmt::format_context& ctx) const -> fmt::format_context::iterator {
-  const auto [a, b] = e.args;
-  return format_to(ctx.out(), "{} B {}", a, b);
+[[nodiscard]] std::string Interior::to_string() const {
+  return fmt::format("Interior ({})", this->arg->to_string());
 }
 
-auto fmt::formatter<percemon::ast::TemporalBoundExpr>::format(
-    const percemon::ast::TemporalBoundExpr& expr,
-    fmt::format_context& ctx) const -> fmt::format_context::iterator {
-  return std::visit(
-      [&ctx](auto const& v) { return fmt::format_to(ctx.out(), "{}", v); }, expr);
+[[nodiscard]] std::string Closure::to_string() const {
+  return fmt::format("Closure ({})", this->arg->to_string());
 }
 
-auto fmt::formatter<percemon::ast::SpatialExpr>::format(
-    const percemon::ast::SpatialExpr& expr,
-    fmt::format_context& ctx) const -> fmt::format_context::iterator {
-  return std::visit(
-      [&ctx](auto const& v) { return fmt::format_to(ctx.out(), "{}", v); }, expr);
+[[nodiscard]] std::string Intersect::to_string() const {
+  std::vector<std::string> args_str_vec = args_into_string(this->args);
+  return fmt::format("({})", fmt::join(args_str_vec, " & "));
 }
 
-auto fmt::formatter<percemon::ast::Expr>::format(
-    const percemon::ast::Expr& expr,
-    fmt::format_context& ctx) const -> fmt::format_context::iterator {
-  return std::visit(
-      [&ctx](auto const& v) { return fmt::format_to(ctx.out(), "{}", v); }, expr);
+[[nodiscard]] std::string Union::to_string() const {
+  std::vector<std::string> args_str_vec = args_into_string(this->args);
+  return fmt::format("({})", fmt::join(args_str_vec, " | "));
 }
 
-#define FMT_AST_SHARED_PTR(AST_PTR_T)                        \
-  auto fmt::formatter<AST_PTR_T>::format(                    \
-      const AST_PTR_T& expr, fmt::format_context& ctx) const \
-      -> fmt::format_context::iterator {                     \
-    return fmt::format_to(ctx.out(), "{}", *expr);           \
-  }
+[[nodiscard]] std::string SpNext::to_string() const {
+  return fmt::format("sp_next({})", this->arg->to_string());
+}
 
-FMT_AST_SHARED_PTR(percemon::ast::ExistsPtr);
-FMT_AST_SHARED_PTR(percemon::ast::ForallPtr);
-FMT_AST_SHARED_PTR(percemon::ast::PinPtr);
-FMT_AST_SHARED_PTR(percemon::ast::NotPtr);
-FMT_AST_SHARED_PTR(percemon::ast::AndPtr);
-FMT_AST_SHARED_PTR(percemon::ast::OrPtr);
-FMT_AST_SHARED_PTR(percemon::ast::PreviousPtr);
-FMT_AST_SHARED_PTR(percemon::ast::AlwaysPtr);
-FMT_AST_SHARED_PTR(percemon::ast::SometimesPtr);
-FMT_AST_SHARED_PTR(percemon::ast::SincePtr);
-FMT_AST_SHARED_PTR(percemon::ast::BackToPtr);
-FMT_AST_SHARED_PTR(percemon::ast::CompareSpAreaPtr);
-FMT_AST_SHARED_PTR(percemon::ast::SpExistsPtr);
-FMT_AST_SHARED_PTR(percemon::ast::SpForallPtr);
-FMT_AST_SHARED_PTR(percemon::ast::ComplementPtr);
-FMT_AST_SHARED_PTR(percemon::ast::IntersectPtr);
-FMT_AST_SHARED_PTR(percemon::ast::UnionPtr);
-FMT_AST_SHARED_PTR(percemon::ast::InteriorPtr);
-FMT_AST_SHARED_PTR(percemon::ast::ClosurePtr);
-FMT_AST_SHARED_PTR(percemon::ast::SpPreviousPtr);
-FMT_AST_SHARED_PTR(percemon::ast::SpAlwaysPtr);
-FMT_AST_SHARED_PTR(percemon::ast::SpSometimesPtr);
-FMT_AST_SHARED_PTR(percemon::ast::SpSincePtr);
-FMT_AST_SHARED_PTR(percemon::ast::SpBackToPtr);
+[[nodiscard]] std::string SpPrevious::to_string() const {
+  return fmt::format("sp_prev({})", this->arg->to_string());
+}
+} // namespace percemon::ast
 
-#undef FMT_AST_SHARED_PTR
+FMT_UNARY_OP_WITH_INTERVAL(percemon::ast::SpAlways, sp_always);
+FMT_UNARY_OP_WITH_INTERVAL(percemon::ast::SpHolds, sp_holds);
+FMT_UNARY_OP_WITH_INTERVAL(percemon::ast::SpEventually, sp_eventually);
+FMT_UNARY_OP_WITH_INTERVAL(percemon::ast::SpSometimes, sp_sometimes);
+FMT_BINARY_OP_WITH_INTERVAL(percemon::ast::SpUntil, sp_until);
+FMT_BINARY_OP_WITH_INTERVAL(percemon::ast::SpSince, sp_since);
+FMT_BINARY_OP_WITH_INTERVAL(percemon::ast::SpRelease, sp_release);
+FMT_BINARY_OP_WITH_INTERVAL(percemon::ast::SpBackTo, sp_back_to);
+
+#undef FMT_UNARY_OP
+#undef FMT_BINARY_OP
+#undef FMT_UNARY_OP_WITH_INTERVAL
+#undef FMT_BINARY_OP_WITH_INTERVAL
