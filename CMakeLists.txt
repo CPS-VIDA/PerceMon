@@ -67,15 +67,15 @@ find_package(fmt REQUIRED)
 find_package(cppitertools REQUIRED)
 
 # Sources and actual library Add library and module
-set(PERCEMON_SOURCES src/ast.cc src/topo.cc src/monitoring/default_monitor.cc
-                     src/monitoring/horizon.cc src/fmt.cc)
+set(PERCEMON_SOURCES csrc/ast.cc csrc/topo.cc csrc/monitoring/default_monitor.cc
+                     csrc/monitoring/horizon.cc csrc/fmt.cc)
 
 add_library(PerceMon ${PERCEMON_SOURCES})
 add_library(PerceMon::PerceMon ALIAS PerceMon)
 target_include_directories(
   PerceMon PUBLIC $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
                   $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>)
-target_include_directories(PerceMon PRIVATE ${PROJECT_SOURCE_DIR}/src)
+target_include_directories(PerceMon PRIVATE ${PROJECT_SOURCE_DIR}/csrc)
 target_compile_features(PerceMon PUBLIC cxx_std_17)
 target_link_libraries(PerceMon PUBLIC fmt::fmt cppitertools::cppitertools)
 
