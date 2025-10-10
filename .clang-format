@@ -41,7 +41,7 @@ BreakBeforeBraces: Attach
 BreakBeforeTernaryOperators: true
 BreakConstructorInitializers: AfterColon
 BreakStringLiterals: false
-ColumnLimit: 88
+ColumnLimit: 100
 CompactNamespaces: false
 ConstructorInitializerAllOnOneLineOrOnePerLine: true
 ConstructorInitializerIndentWidth: 4
@@ -57,7 +57,7 @@ Language: Cpp
 MaxEmptyLinesToKeep: 1
 NamespaceIndentation: None
 PointerAlignment: Left
-Standard: "c++17"
+Standard: "c++20"
 TabWidth: 2
 UseTab: Never
 

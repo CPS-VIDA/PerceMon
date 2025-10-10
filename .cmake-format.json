@@ -1,0 +1,50 @@
+{
+  "parse": {
+    "additional_commands": {
+      "nanobind_add_module": {
+        "pargs": [
+          {
+            "nargs": "1"
+          },
+          {
+            "flags": [
+              "STABLE_ABI",
+              "FREE_THREADED",
+              "NB_STATIC",
+              "NB_SHARED",
+              "NB_SUPPRESS_WARNINGS",
+              "PROTECT_STACK",
+              "LTO",
+              "NOMINSIZE",
+              "NOSTRIP",
+              "MUSL_DYNAMIC_LIBCPP"
+            ]
+          },
+          {
+            "nargs": "+"
+          }
+        ]
+      },
+      "nanobind_add_stub": {
+        "flags": [
+          "INSTALL_TIME",
+          "RECURSIVE",
+          "VERBOSE",
+          "EXCLUDE_DOCSTRINGS",
+          "INCLUDE_PRIVATE",
+          "EXCLUDE_FROM_ALL"
+        ],
+        "kwargs": {
+          "MODULE": "1",
+          "OUTPUT": "+",
+          "OUTPUT_PATH": "1",
+          "PYTHON_PATH": "+",
+          "DEPENDS": "+",
+          "MARKER_FILE": "*",
+          "PATTERN_FILE": "1",
+          "COMPONENT": "+"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,48 @@
+[project]
+name = "percemon"
+version = "0.1.0"
+readme = "README.md"
+authors = [{ name = "Anand Balakrishnan", email = "anandbala1597@gmail.com" }]
+requires-python = ">=3.10"
+dependencies = []
+
+[tool.scikit-build]
+minimum-version = "build-system.requires"
+build-dir = "build/{wheel_tag}"
+
+[tool.scikit-build.cmake.define]
+BUILD_PYTHON_BINDINGS = true
+
+[tool.uv]
+cache-keys = [
+  { file = "pyproject.toml" },
+  { file = "csrc/**/*.{h,c,hpp,cpp}" },
+  { file = "python/**/*.{h,c,hpp,cpp}" },
+  { file = "CMakeLists.txt" },
+]
+managed = false
+
+[tool.uv.build-backend]
+module-root = "python"
+
+[build-system]
+requires = ["scikit-build-core>=0.10", "nanobind"]
+build-backend = "scikit_build_core.build"
+
+[tool.mypy]
+strict = true
+files = ["scripts/*.py", "scripts/**/*.py", "python/*.py", "python/**/*.py"]
+exclude = ["^build/", "^csrc/", "^doc/", "^include/"]
+show_error_codes = true
+namespace_packages = false
+
+[tool.ruff]
+line-length = 127
+
+[tool.ruff.lint]
+extend-select = ["E", "F", "W", "N", "B", "ANN", "PYI", "I"]
+extend-ignore = ["F722", "PYI041"]
+
+[tool.ruff.lint.extend-per-file-ignores]
+"*.py" = ["B905", "E203", "E501", "W291", "W293"]
+"*.pyi" = ["B", "E501", "E701"]

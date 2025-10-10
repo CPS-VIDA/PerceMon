@@ -1,28 +1,31 @@
 [workspace]
-authors = ["Anand Balakrishnan <anandbala1597@gmail.com>"]
 channels = ["conda-forge"]
-name = "PerceMon"
-version = "0.1.0"
 platforms = ["win-64", "linux-64", "osx-64"]
 
-
 [dependencies]
-python = "*"
-
-
-[build-dependencies]
+# build-dependencies
 cmake = ">=3.20"
 ninja = ">=1.11"
-compilers = ">=1.11.0,<2"
-doxygen = ">=1.13.2,<2"
-lcov = ">=1.16,<2"
+compilers = ">=1.11.0"
+doxygen = ">=1.13.2"
+lcov = ">=1.16"
+scikit-build-core = ">=0.11.6,<0.12"
 
-[host-dependencies]
-# C++ deps
+# C++ deps to link against
 cli11 = ">=2.5.0,<3"
 libcppitertools = ">=2.3,<3"
 fmt = ">=11.2.0,<12"
 catch2 = ">=3.8.0,<4"
+
 # Python things
 python = "*"
 nanobind = ">=2.9.2,<3"
+pip = ">=25.2,<26"
+
+# dev dependencies
+cppcheck = "*"
+# clang-tools = "*"
+
+[pypi-dependencies]
+ruff = ">=0.14.0"
+zuban = ">=0.1.1"
