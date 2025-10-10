@@ -8,8 +8,7 @@
 
 namespace percemon {
 namespace ast {
-
-namespace functions {
+namespace primitives {
 
 TimeBound operator-(const Var_x& lhs, C_TIME) { return TimeBound{lhs}; }
 FrameBound operator-(const Var_f& lhs, C_FRAME) { return FrameBound{lhs}; }
@@ -227,7 +226,7 @@ CompareArea operator<=(const AreaOf& lhs, const AreaOf& rhs) {
   return {lhs, ComparisonOp::LE, rhs};
 }
 
-} // namespace functions
+} // namespace primitives
 
 CompareSpArea operator>(const SpArea& lhs, const double rhs) {
   return {lhs, ComparisonOp::GT, rhs};

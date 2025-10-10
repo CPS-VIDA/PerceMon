@@ -104,9 +104,6 @@ endif()
 
 include(GNUInstallDirs)
 
-# Install catkin package.xml
-install(FILES package.xml DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/PerceMon)
-
 install(
   TARGETS PerceMon
   EXPORT PerceMonTargets

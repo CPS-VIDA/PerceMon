@@ -1,5 +1,6 @@
 #pragma once
 
+#include <utility>
 #ifndef __PERCEMON_ITER_PRODUCT_HPP__
 #define __PERCEMON_ITER_PRODUCT_HPP__
 
@@ -7,8 +8,7 @@
 #include <iterator>
 #include <vector>
 
-namespace percemon {
-namespace iter_helpers {
+namespace percemon::iter_helpers {
 namespace details {
 /**
  * Product iterator for a single vector repeated k times.
@@ -124,7 +124,6 @@ constexpr auto product(Container&& iterable, size_t k = 1) {
   return details::product_range<Container, Iter>{iterable, k};
 }
 
-} // namespace iter_helpers
-} // namespace percemon
+} // namespace percemon::iter_helpers
 
 #endif /* end of include guard: __PERCEMON_ITER_PRODUCT_HPP__ */

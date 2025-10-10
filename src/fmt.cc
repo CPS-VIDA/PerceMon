@@ -4,10 +4,6 @@
 #include <variant>
 
 #include "percemon/ast.hpp"
-#include "percemon/ast/functions.hpp"
-#include "percemon/ast/primitives.hpp"
-#include "percemon/ast/s4u.hpp"
-#include "percemon/ast/tqtl.hpp"
 #include "percemon/fmt.hpp"
 
 namespace percemon::ast::primitives {
