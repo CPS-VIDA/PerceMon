@@ -1,0 +1,17 @@
+name: default
+channels:
+- conda-forge
+- nodefaults
+dependencies:
+- python *
+- cli11 >=2.5.0,<3
+- libcppitertools >=2.3,<3
+- fmt >=11.2.0,<12
+- catch2 >=3.8.0,<4
+- nanobind >=2.9.2,<3
+- cmake >=3.20
+- ninja >=1.11
+- compilers >=1.11.0,<2
+- doxygen >=1.13.2,<2
+- lcov >=1.16,<2
+
