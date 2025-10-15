@@ -1843,6 +1843,74 @@ inline auto spatial_intersect(std::vector<SpatialExpr> args) -> SpatialExpr {
 inline auto spatial_exists(SpatialExpr e) -> Expr { return SpatialExistsExpr{std::move(e)}; }
 inline auto spatial_forall(SpatialExpr e) -> Expr { return SpatialForallExpr{std::move(e)}; }
 
+// Perception primitive helper factories
+// ============================================================================
+// These helpers make it easier to construct perception-based conditions
+// for use within quantifiers and temporal operators.
+
+/**
+ * @brief Check if an object is of a specific class.
+ *
+ * In STQL syntax: C(id) = class_id
+ *
+ * Example:
+ * @code
+ * auto obj = ObjectVar{"obj"};
+ * auto is_car = is_class(obj, 1);  // Check if obj is a car
+ * auto has_car = exists({obj}, is_car);  // At least one car exists
+ * @endcode
+ */
+inline auto is_class(const ObjectVar& obj, int class_id) -> Expr {
+  return ClassCompareExpr{ClassFunc{obj}, CompareOp::Equal, class_id};
+}
+
+/**
+ * @brief Check if an object is NOT of a specific class.
+ *
+ * In STQL syntax: C(id) ≠ class_id
+ *
+ * Example:
+ * @code
+ * auto obj = ObjectVar{"obj"};
+ * auto not_car = is_not_class(obj, 1);
+ * auto has_non_car = exists({obj}, not_car);
+ * @endcode
+ */
+inline auto is_not_class(const ObjectVar& obj, int class_id) -> Expr {
+  return ClassCompareExpr{ClassFunc{obj}, CompareOp::NotEqual, class_id};
+}
+
+/**
+ * @brief Check if an object has high confidence/probability.
+ *
+ * In STQL syntax: P(id) ≥ threshold
+ *
+ * Example:
+ * @code
+ * auto obj = ObjectVar{"obj"};
+ * auto high_conf = high_confidence(obj, 0.9);
+ * auto has_confident_obj = exists({obj}, high_conf);
+ * @endcode
+ */
+inline auto high_confidence(const ObjectVar& obj, double threshold = 0.8) -> Expr {
+  return ProbCompareExpr{ProbFunc{obj}, CompareOp::GreaterEqual, threshold};
+}
+
+/**
+ * @brief Check if an object has low confidence/probability.
+ *
+ * In STQL syntax: P(id) < threshold
+ *
+ * Example:
+ * @code
+ * auto obj = ObjectVar{"obj"};
+ * auto low_conf = low_confidence(obj, 0.5);
+ * @endcode
+ */
+inline auto low_confidence(const ObjectVar& obj, double threshold = 0.5) -> Expr {
+  return ProbCompareExpr{ProbFunc{obj}, CompareOp::LessThan, threshold};
+}
+
 // =============================================================================
 // Operator Overloads for Convenient Formula Construction
 // =============================================================================

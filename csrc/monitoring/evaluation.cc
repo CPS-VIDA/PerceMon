@@ -12,6 +12,7 @@
 #include <format>
 #include <functional>
 #include <iterator>
+#include <limits>
 #include <optional>
 #include <ranges>
 #include <stdexcept>
@@ -183,6 +184,10 @@ template <std::bidirectional_iterator Iter, std::sentinel_for<Iter> Sentinel = I
   } else {
     // Do nothing...
   }
+
+  // Make sure C_TIME and C_FRAME points to the current frame
+  new_ctx.frozen_times["C_TIME"]   = new_ctx.current_frame->timestamp;
+  new_ctx.frozen_frames["C_FRAME"] = new_ctx.current_frame->frame_num;
 
   return new_ctx;
 }
@@ -770,25 +775,21 @@ template <std::bidirectional_iterator Iter, std::sentinel_for<Iter> Sentinel = I
 [[nodiscard]] auto
 eval_time_bound(const stql::TimeBoundExpr& e, const EvaluationContext<Iter, Sentinel>& ctx)
     -> bool {
-  double c_time = ctx.current_frame->timestamp;
-
   // Set the value for the frozen time variables.
   const auto& diff = e.diff;
-  double lhs       = c_time;
-  if (diff.lhs != stql::C_TIME) {
-    auto it = ctx.frozen_times.find(diff.lhs.name);
-    if (it == ctx.frozen_times.end()) {
-      throw std::logic_error(std::format("Variable not frozen {}", diff.lhs.name));
-    }
+
+  auto lhs = std::numeric_limits<double>::infinity();
+  if (auto it = ctx.frozen_times.find(diff.lhs.name); it != ctx.frozen_times.end()) {
     lhs = it->second;
+  } else {
+    throw std::logic_error(std::format("Variable not frozen {}", diff.lhs.name));
   }
-  double rhs = c_time;
-  if (diff.rhs != stql::C_TIME) {
-    auto it = ctx.frozen_times.find(diff.rhs.name);
-    if (it == ctx.frozen_times.end()) {
-      throw std::logic_error(std::format("Variable not frozen {}", diff.rhs.name));
-    }
+
+  auto rhs = std::numeric_limits<double>::infinity();
+  if (auto it = ctx.frozen_times.find(diff.rhs.name); it != ctx.frozen_times.end()) {
     rhs = it->second;
+  } else {
+    throw std::logic_error(std::format("Variable not frozen {}", diff.rhs.name));
   }
 
   return compare_op(lhs - rhs, e.op, e.value);
@@ -806,25 +807,21 @@ template <std::bidirectional_iterator Iter, std::sentinel_for<Iter> Sentinel = I
 [[nodiscard]] auto
 eval_frame_bound(const stql::FrameBoundExpr& e, const EvaluationContext<Iter, Sentinel>& ctx)
     -> bool {
-  int64_t c_frame = ctx.current_frame->frame_num;
-
   // Set the value for the frozen frame variables.
   const auto& diff = e.diff;
-  int64_t lhs      = c_frame;
-  if (diff.lhs != stql::C_FRAME) {
-    auto it = ctx.frozen_frames.find(diff.lhs.name);
-    if (it == ctx.frozen_frames.end()) {
-      throw std::logic_error(std::format("Variable not frozen {}", diff.lhs.name));
-    }
+
+  int64_t lhs = UNBOUNDED;
+  if (auto it = ctx.frozen_frames.find(diff.lhs.name); it != ctx.frozen_frames.end()) {
     lhs = it->second;
+  } else {
+    throw std::logic_error(std::format("Variable not frozen {}", diff.lhs.name));
   }
-  int64_t rhs = c_frame;
-  if (diff.rhs != stql::C_FRAME) {
-    auto it = ctx.frozen_frames.find(diff.rhs.name);
-    if (it == ctx.frozen_frames.end()) {
-      throw std::logic_error(std::format("Variable not frozen {}", diff.rhs.name));
-    }
+
+  int64_t rhs = UNBOUNDED;
+  if (auto it = ctx.frozen_frames.find(diff.rhs.name); it != ctx.frozen_frames.end()) {
     rhs = it->second;
+  } else {
+    throw std::logic_error(std::format("Variable not frozen {}", diff.rhs.name));
   }
 
   return compare_op(static_cast<double>(lhs - rhs), e.op, static_cast<double>(e.value));

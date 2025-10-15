@@ -13,6 +13,10 @@ using namespace percemon2::stql;
 // Test Fixtures and Helpers
 // ============================================================================
 
+// Labels to int mapping in these tests.
+constexpr int CAR    = 1;
+constexpr int PERSON = 2;
+
 /**
  * Create a simple frame with no objects
  */
@@ -31,7 +35,7 @@ auto make_empty_frame(int frame_num = 0, double timestamp = 0.0) -> datastream::
 auto make_frame_with_car(int frame_num = 0, double timestamp = 0.0) -> datastream::Frame {
   datastream::Frame frame = make_empty_frame(frame_num, timestamp);
   datastream::Object car{
-      .object_class = 1,
+      .object_class = CAR,
       .probability  = 0.95,
       .bbox = {.xmin = 100.0, .xmax = 200.0, .ymin = 50.0, .ymax = 150.0} // xmin, xmax, ymin, ymax
   };
@@ -47,17 +51,62 @@ auto make_frame_with_multiple_objects(int frame_num = 0, double timestamp = 0.0)
   datastream::Frame frame = make_empty_frame(frame_num, timestamp);
 
   datastream::Object car{
-      .object_class = 1,
+      .object_class = CAR,
       .probability  = 0.95,
       .bbox         = {.xmin = 100.0, .xmax = 200.0, .ymin = 50.0, .ymax = 150.0}};
   frame.objects["car_001"] = car;
 
   datastream::Object person{
-      .object_class = 2,
+      .object_class = PERSON,
       .probability  = 0.85,
       .bbox         = {.xmin = 300.0, .xmax = 350.0, .ymin = 0.0, .ymax = 200.0}};
   frame.objects["person_001"] = person;
 
+  return frame;
+}
+
+/**
+ * Create a frame with a car object of specific probability
+ */
+auto make_frame_with_car_probability(
+    int frame_num      = 0,
+    double timestamp   = 0.0,
+    double probability = 0.95) -> datastream::Frame {
+  datastream::Frame frame = make_empty_frame(frame_num, timestamp);
+  datastream::Object car{
+      .object_class = CAR,
+      .probability  = probability,
+      .bbox         = {.xmin = 100.0, .xmax = 200.0, .ymin = 50.0, .ymax = 150.0}};
+  frame.objects["car_001"] = car;
+  return frame;
+}
+
+/**
+ * Create a frame with a person object
+ */
+auto make_frame_with_person(int frame_num = 0, double timestamp = 0.0) -> datastream::Frame {
+  datastream::Frame frame = make_empty_frame(frame_num, timestamp);
+  datastream::Object person{
+      .object_class = PERSON,
+      .probability  = 0.85,
+      .bbox         = {.xmin = 300.0, .xmax = 350.0, .ymin = 0.0, .ymax = 200.0}};
+  frame.objects["person_001"] = person;
+  return frame;
+}
+
+/**
+ * Create a frame with multiple cars
+ */
+auto make_frame_with_multiple_cars(int frame_num = 0, double timestamp = 0.0, int count = 2)
+    -> datastream::Frame {
+  datastream::Frame frame = make_empty_frame(frame_num, timestamp);
+  for (int i = 0; i < count; ++i) {
+    datastream::Object car{
+        .object_class = CAR,
+        .probability  = 0.95,
+        .bbox = {.xmin = 100.0 + i * 50.0, .xmax = 200.0 + i * 50.0, .ymin = 50.0, .ymax = 150.0}};
+    frame.objects[std::string("car_") + std::to_string(i + 1)] = car;
+  }
   return frame;
 }
 
@@ -117,7 +166,11 @@ TEST_CASE("BooleanEvaluator - Future-Time Temporal Operators", "[evaluation][tem
   BooleanEvaluator evaluator;
   std::deque<datastream::Frame> empty_history;
 
-  SECTION("NextExpr - with future frame available") {
+  // ==========================================================================
+  // NextExpr Tests
+  // ==========================================================================
+
+  SECTION("NextExpr - with future frame available (constant true)") {
     auto frame1 = make_empty_frame(0, 0.0);
     auto frame2 = make_frame_with_car(1, 1.0);
 
@@ -136,7 +189,61 @@ TEST_CASE("BooleanEvaluator - Future-Time Temporal Operators", "[evaluation][tem
     REQUIRE_FALSE(evaluator.evaluate(formula, frame, empty_history, empty_horizon));
   }
 
-  SECTION("AlwaysExpr - all frames satisfy") {
+  SECTION("NextExpr - condition true on next frame") {
+    auto frame1 = make_empty_frame(0, 0.0);
+    auto frame2 = make_frame_with_car(1, 1.0);
+
+    std::deque<datastream::Frame> horizon;
+    horizon.push_back(frame2);
+
+    // Condition: car exists in next frame
+    auto car_id    = ObjectVar{"car"};
+    auto is_car    = is_class(car_id, CAR);
+    auto condition = exists({car_id}, is_car);
+    auto formula   = next(condition);
+
+    REQUIRE(evaluator.evaluate(formula, frame1, empty_history, horizon));
+  }
+
+  SECTION("NextExpr - condition false on next frame") {
+    auto frame1 = make_empty_frame(0, 0.0);
+    auto frame2 = make_empty_frame(1, 1.0);
+
+    std::deque<datastream::Frame> horizon;
+    horizon.push_back(frame2);
+
+    // Condition: car exists in next frame (but it doesn't)
+    auto car_id    = ObjectVar{"car"};
+    auto is_car    = is_class(car_id, CAR);
+    auto condition = exists({car_id}, is_car);
+    auto formula   = next(condition);
+
+    REQUIRE_FALSE(evaluator.evaluate(formula, frame1, empty_history, horizon));
+  }
+
+  SECTION("NextExpr - multiple next applications") {
+    auto frame1 = make_empty_frame(0, 0.0);
+    auto frame2 = make_empty_frame(1, 1.0);
+    auto frame3 = make_frame_with_car(2, 2.0);
+
+    std::deque<datastream::Frame> horizon;
+    horizon.push_back(frame2);
+    horizon.push_back(frame3);
+
+    // Condition: car exists
+    auto car_id    = ObjectVar{"car"};
+    auto is_car    = is_class(car_id, CAR);
+    auto condition = exists({car_id}, is_car);
+    auto formula   = next(next(condition));
+
+    REQUIRE(evaluator.evaluate(formula, frame1, empty_history, horizon));
+  }
+
+  // ==========================================================================
+  // AlwaysExpr Tests
+  // ==========================================================================
+
+  SECTION("AlwaysExpr - all frames satisfy (constant true)") {
     auto frame = make_empty_frame();
     std::deque<datastream::Frame> horizon;
     horizon.push_back(make_empty_frame(1, 1.0));
@@ -146,23 +253,67 @@ TEST_CASE("BooleanEvaluator - Future-Time Temporal Operators", "[evaluation][tem
     REQUIRE(evaluator.evaluate(formula, frame, empty_history, horizon));
   }
 
-  SECTION("AlwaysExpr - some frame violates") {
+  SECTION("AlwaysExpr - some frame violates (constant false)") {
     auto frame = make_empty_frame();
     std::deque<datastream::Frame> horizon;
     horizon.push_back(make_empty_frame(1, 1.0));
-    horizon.push_back(make_empty_frame(2, 2.0)); // This will violate
+    horizon.push_back(make_empty_frame(2, 2.0));
 
     auto formula = always(make_false());
     REQUIRE_FALSE(evaluator.evaluate(formula, frame, empty_history, horizon));
   }
 
+  SECTION("AlwaysExpr - car in all future frames") {
+    auto frame = make_frame_with_car(0, 0.0);
+    std::deque<datastream::Frame> horizon;
+    horizon.push_back(make_frame_with_car(1, 1.0));
+    horizon.push_back(make_frame_with_car(2, 2.0));
+
+    auto car_id    = ObjectVar{"car"};
+    auto is_car    = is_class(car_id, CAR);
+    auto condition = exists({car_id}, is_car);
+    auto formula   = always(condition);
+
+    REQUIRE(evaluator.evaluate(formula, frame, empty_history, horizon));
+  }
+
+  SECTION("AlwaysExpr - car missing in one future frame") {
+    auto frame = make_frame_with_car(0, 0.0);
+    std::deque<datastream::Frame> horizon;
+    horizon.push_back(make_frame_with_car(1, 1.0));
+    horizon.push_back(make_empty_frame(2, 2.0)); // Car missing here
+
+    auto car_id    = ObjectVar{"car"};
+    auto is_car    = is_class(car_id, CAR);
+    auto condition = exists({car_id}, is_car);
+    auto formula   = always(condition);
+
+    REQUIRE_FALSE(evaluator.evaluate(formula, frame, empty_history, horizon));
+  }
+
+  SECTION("AlwaysExpr - empty horizon is vacuously true") {
+    auto frame = make_empty_frame();
+    std::deque<datastream::Frame> empty_horizon;
+
+    // With empty horizon, always is vacuously true (no frames to check)
+    auto formula = always(make_true());
+    REQUIRE(evaluator.evaluate(formula, frame, empty_history, empty_horizon));
+  }
+
+  // ==========================================================================
+  // EventuallyExpr Tests
+  // ==========================================================================
+
   SECTION("EventuallyExpr - at least one frame satisfies") {
     auto frame = make_empty_frame();
     std::deque<datastream::Frame> horizon;
     horizon.push_back(make_empty_frame(1, 1.0));
-    horizon.push_back(make_frame_with_car(2, 2.0)); // This satisfies
+    horizon.push_back(make_frame_with_car(2, 2.0)); // Car appears here
 
-    auto formula = eventually(make_true());
+    auto car_id    = ObjectVar{"car"};
+    auto is_car    = is_class(car_id, CAR);
+    auto condition = exists({car_id}, is_car);
+    auto formula   = eventually(condition);
     REQUIRE(evaluator.evaluate(formula, frame, empty_history, horizon));
   }
 
@@ -175,6 +326,147 @@ TEST_CASE("BooleanEvaluator - Future-Time Temporal Operators", "[evaluation][tem
     auto formula = eventually(make_false());
     REQUIRE_FALSE(evaluator.evaluate(formula, frame, empty_history, horizon));
   }
+
+  SECTION("EventuallyExpr - person appears in last frame only") {
+    auto frame = make_empty_frame(0, 0.0);
+    std::deque<datastream::Frame> horizon;
+    horizon.push_back(make_empty_frame(1, 1.0));
+    horizon.push_back(make_frame_with_person(2, 2.0));
+
+    auto person_id = ObjectVar{"person"};
+    auto is_person = is_class(person_id, PERSON);
+    auto condition = exists({person_id}, is_person);
+    auto formula   = eventually(condition);
+
+    REQUIRE(evaluator.evaluate(formula, frame, empty_history, horizon));
+  }
+
+  SECTION("EventuallyExpr - person never appears") {
+    auto frame = make_empty_frame(0, 0.0);
+    std::deque<datastream::Frame> horizon;
+    horizon.push_back(make_empty_frame(1, 1.0));
+    horizon.push_back(make_empty_frame(2, 2.0));
+
+    auto person_id = ObjectVar{"person"};
+    auto is_person = is_class(person_id, PERSON);
+    auto condition = exists({person_id}, is_person);
+    auto formula   = eventually(condition);
+
+    REQUIRE_FALSE(evaluator.evaluate(formula, frame, empty_history, horizon));
+  }
+
+  // ==========================================================================
+  // UntilExpr Tests
+  // ==========================================================================
+
+  SECTION("UntilExpr - rhs becomes true, lhs holds until then") {
+    auto frame0 = make_frame_with_car(0, 0.0);
+    std::deque<datastream::Frame> horizon;
+    horizon.push_back(make_frame_with_car(1, 1.0));
+    horizon.push_back(make_frame_with_person(2, 2.0)); // Person appears: rhs becomes true
+
+    auto car_id    = ObjectVar{"car"};
+    auto person_id = ObjectVar{"person"};
+
+    auto is_car    = is_class(car_id, CAR);
+    auto is_person = is_class(person_id, PERSON);
+    auto safe      = exists({car_id}, is_car);       // lhs: car is present
+    auto goal      = exists({person_id}, is_person); // rhs: person is present
+
+    auto formula = until(safe, goal);
+    REQUIRE(evaluator.evaluate(formula, frame0, empty_history, horizon));
+  }
+
+  SECTION("UntilExpr - lhs fails before rhs becomes true") {
+    // Until checks: is there a frame where rhs is true? If yes, does lhs hold until that point?
+    // Here: frame 0 has car, frame 1 has no car, frame 2 has person
+    // So rhs becomes true at frame 2, but lhs (car) fails at frame 1
+    auto frame0 = make_frame_with_car(0, 0.0);
+    std::deque<datastream::Frame> horizon;
+    horizon.push_back(make_empty_frame(1, 1.0));       // Car disappears: lhs fails
+    horizon.push_back(make_frame_with_person(2, 2.0)); // Person appears: rhs becomes true
+
+    auto car_id    = ObjectVar{"car"};
+    auto person_id = ObjectVar{"person"};
+
+    auto is_car    = is_class(car_id, CAR);
+    auto is_person = is_class(person_id, PERSON);
+    auto safe      = exists({car_id}, is_car);
+    auto goal      = exists({person_id}, is_person);
+
+    auto formula = until(safe, goal);
+    // Until semantics: rhs is true at frame 2, but lhs fails at frame 1, so FAIL
+    REQUIRE_FALSE(evaluator.evaluate(formula, frame0, empty_history, horizon));
+  }
+
+  SECTION("UntilExpr - rhs never becomes true") {
+    auto frame0 = make_frame_with_car(0, 0.0);
+    std::deque<datastream::Frame> horizon;
+    horizon.push_back(make_frame_with_car(1, 1.0));
+    horizon.push_back(make_frame_with_car(2, 2.0)); // Person never appears
+
+    auto car_id    = ObjectVar{"car"};
+    auto person_id = ObjectVar{"person"};
+
+    auto is_car    = is_class(car_id, CAR);
+    auto is_person = is_class(person_id, PERSON);
+    auto safe      = exists({car_id}, is_car);
+    auto goal      = exists({person_id}, is_person);
+
+    auto formula = until(safe, goal);
+    // Until semantics: rhs never becomes true, so FAIL (goal never reached)
+    REQUIRE_FALSE(evaluator.evaluate(formula, frame0, empty_history, horizon));
+  }
+
+  // ==========================================================================
+  // ReleaseExpr Tests
+  // ==========================================================================
+
+  SECTION("ReleaseExpr - rhs holds on all frames") {
+    auto frame = make_frame_with_car(0, 0.0);
+    std::deque<datastream::Frame> horizon;
+    horizon.push_back(make_frame_with_car(1, 1.0));
+    horizon.push_back(make_frame_with_car(2, 2.0));
+
+    auto car_id = ObjectVar{"car"};
+    auto is_car = is_class(car_id, CAR);
+    auto safe   = exists({car_id}, is_car);
+
+    auto formula = release(make_false(), safe); // lhs doesn't matter; rhs holds always
+    REQUIRE(evaluator.evaluate(formula, frame, empty_history, horizon));
+  }
+
+  SECTION("ReleaseExpr - rhs becomes false, lhs is true at that point") {
+    auto frame = make_frame_with_car(0, 0.0);
+    std::deque<datastream::Frame> horizon;
+    horizon.push_back(make_frame_with_car(1, 1.0));
+    horizon.push_back(make_empty_frame(2, 2.0)); // Car disappears: rhs becomes false
+
+    auto car_id = ObjectVar{"car"};
+    auto is_car = is_class(car_id, CAR);
+
+    auto demand = make_true();              // lhs is true
+    auto safe   = exists({car_id}, is_car); // rhs fails at frame 2
+
+    auto formula = release(demand, safe);
+    REQUIRE(evaluator.evaluate(formula, frame, empty_history, horizon));
+  }
+
+  SECTION("ReleaseExpr - rhs becomes false, lhs is false at that point") {
+    auto frame = make_frame_with_car(0, 0.0);
+    std::deque<datastream::Frame> horizon;
+    horizon.push_back(make_frame_with_car(1, 1.0));
+    horizon.push_back(make_empty_frame(2, 2.0)); // Car disappears: rhs becomes false
+
+    auto car_id = ObjectVar{"car"};
+    auto is_car = is_class(car_id, CAR);
+
+    auto demand = make_false();             // lhs is false
+    auto safe   = exists({car_id}, is_car); // rhs fails at frame 2
+
+    auto formula = release(demand, safe);
+    REQUIRE_FALSE(evaluator.evaluate(formula, frame, empty_history, horizon));
+  }
 }
 
 // ============================================================================
@@ -185,7 +477,11 @@ TEST_CASE("BooleanEvaluator - Past-Time Temporal Operators", "[evaluation][tempo
   BooleanEvaluator evaluator;
   std::deque<datastream::Frame> empty_horizon;
 
-  SECTION("PreviousExpr - with past frame available") {
+  // ==========================================================================
+  // PreviousExpr Tests
+  // ==========================================================================
+
+  SECTION("PreviousExpr - with past frame available (constant true)") {
     auto frame = make_empty_frame(1, 1.0);
     std::deque<datastream::Frame> history;
     history.push_back(make_frame_with_car(0, 0.0));
@@ -202,7 +498,51 @@ TEST_CASE("BooleanEvaluator - Past-Time Temporal Operators", "[evaluation][tempo
     REQUIRE_FALSE(evaluator.evaluate(formula, frame, empty_history, empty_horizon));
   }
 
-  SECTION("HoldsExpr - all past frames satisfy") {
+  SECTION("PreviousExpr - condition true on previous frame") {
+    auto frame = make_empty_frame(1, 1.0);
+    std::deque<datastream::Frame> history;
+    history.push_back(make_frame_with_car(0, 0.0));
+
+    auto car_id    = ObjectVar{"car"};
+    auto is_car    = is_class(car_id, CAR);
+    auto condition = exists({car_id}, is_car);
+    auto formula   = previous(condition);
+
+    REQUIRE(evaluator.evaluate(formula, frame, history, empty_horizon));
+  }
+
+  SECTION("PreviousExpr - condition false on previous frame") {
+    auto frame = make_empty_frame(1, 1.0);
+    std::deque<datastream::Frame> history;
+    history.push_back(make_empty_frame(0, 0.0));
+
+    auto car_id    = ObjectVar{"car"};
+    auto is_car    = is_class(car_id, CAR);
+    auto condition = exists({car_id}, is_car);
+    auto formula   = previous(condition);
+
+    REQUIRE_FALSE(evaluator.evaluate(formula, frame, history, empty_horizon));
+  }
+
+  SECTION("PreviousExpr - multiple previous applications") {
+    auto frame = make_empty_frame(2, 2.0);
+    std::deque<datastream::Frame> history;
+    history.push_back(make_frame_with_car(0, 0.0));
+    history.push_back(make_empty_frame(1, 1.0));
+
+    auto car_id    = ObjectVar{"car"};
+    auto is_car    = is_class(car_id, CAR);
+    auto condition = exists({car_id}, is_car);
+    auto formula   = previous(previous(condition));
+
+    REQUIRE(evaluator.evaluate(formula, frame, history, empty_horizon));
+  }
+
+  // ==========================================================================
+  // HoldsExpr Tests
+  // ==========================================================================
+
+  SECTION("HoldsExpr - all past frames satisfy (constant true)") {
     auto frame = make_empty_frame();
     std::deque<datastream::Frame> history;
     history.push_back(make_empty_frame(0, 0.0));
@@ -212,14 +552,214 @@ TEST_CASE("BooleanEvaluator - Past-Time Temporal Operators", "[evaluation][tempo
     REQUIRE(evaluator.evaluate(formula, frame, history, empty_horizon));
   }
 
+  SECTION("HoldsExpr - some past frame violates (constant false)") {
+    auto frame = make_empty_frame();
+    std::deque<datastream::Frame> history;
+    history.push_back(make_empty_frame(0, 0.0));
+    history.push_back(make_empty_frame(1, 1.0));
+
+    auto formula = holds(make_false());
+    REQUIRE_FALSE(evaluator.evaluate(formula, frame, history, empty_horizon));
+  }
+
+  SECTION("HoldsExpr - car in all past frames") {
+    auto frame = make_frame_with_car(2, 2.0);
+    std::deque<datastream::Frame> history;
+    history.push_back(make_frame_with_car(0, 0.0));
+    history.push_back(make_frame_with_car(1, 1.0));
+
+    auto car_id    = ObjectVar{"car"};
+    auto is_car    = is_class(car_id, CAR);
+    auto condition = exists({car_id}, is_car);
+    auto formula   = holds(condition);
+
+    REQUIRE(evaluator.evaluate(formula, frame, history, empty_horizon));
+  }
+
+  SECTION("HoldsExpr - car missing in one past frame") {
+    auto frame = make_frame_with_car(2, 2.0);
+    std::deque<datastream::Frame> history;
+    history.push_back(make_empty_frame(0, 0.0)); // Car missing here
+    history.push_back(make_frame_with_car(1, 1.0));
+
+    auto car_id    = ObjectVar{"car"};
+    auto is_car    = is_class(car_id, CAR);
+    auto condition = exists({car_id}, is_car);
+    auto formula   = holds(condition);
+
+    REQUIRE_FALSE(evaluator.evaluate(formula, frame, history, empty_horizon));
+  }
+
+  SECTION("HoldsExpr - empty history is vacuously true") {
+    auto frame = make_empty_frame();
+    std::deque<datastream::Frame> empty_history;
+
+    // With empty history, holds is vacuously true (no past frames to check)
+    auto formula = holds(make_true());
+    REQUIRE(evaluator.evaluate(formula, frame, empty_history, empty_horizon));
+  }
+
+  // ==========================================================================
+  // SometimesExpr Tests
+  // ==========================================================================
+
   SECTION("SometimesExpr - at least one past frame satisfies") {
     auto frame = make_empty_frame();
     std::deque<datastream::Frame> history;
     history.push_back(make_empty_frame(0, 0.0));
+    history.push_back(make_frame_with_car(1, 1.0)); // Car appears here
+
+    auto car_id    = ObjectVar{"car"};
+    auto is_car    = is_class(car_id, CAR);
+    auto condition = exists({car_id}, is_car);
+    auto formula   = sometimes(condition);
+    REQUIRE(evaluator.evaluate(formula, frame, history, empty_horizon));
+  }
+
+  SECTION("SometimesExpr - no past frame satisfies") {
+    auto frame = make_empty_frame();
+    std::deque<datastream::Frame> history;
+    history.push_back(make_empty_frame(0, 0.0));
+    history.push_back(make_empty_frame(1, 1.0));
+
+    auto formula = sometimes(make_false());
+    REQUIRE_FALSE(evaluator.evaluate(formula, frame, history, empty_horizon));
+  }
+
+  SECTION("SometimesExpr - person appears in first past frame only") {
+    auto frame = make_empty_frame(2, 2.0);
+    std::deque<datastream::Frame> history;
+    history.push_back(make_frame_with_person(0, 0.0));
+    history.push_back(make_empty_frame(1, 1.0));
+
+    auto person_id = ObjectVar{"person"};
+    auto is_person = is_class(person_id, PERSON);
+    auto condition = exists({person_id}, is_person);
+    auto formula   = sometimes(condition);
+
+    REQUIRE(evaluator.evaluate(formula, frame, history, empty_horizon));
+  }
+
+  SECTION("SometimesExpr - person never appeared in past") {
+    auto frame = make_empty_frame(2, 2.0);
+    std::deque<datastream::Frame> history;
+    history.push_back(make_empty_frame(0, 0.0));
+    history.push_back(make_empty_frame(1, 1.0));
+
+    auto person_id = ObjectVar{"person"};
+    auto is_person = is_class(person_id, PERSON);
+    auto condition = exists({person_id}, is_person);
+    auto formula   = sometimes(condition);
+
+    REQUIRE_FALSE(evaluator.evaluate(formula, frame, history, empty_horizon));
+  }
+
+  // ==========================================================================
+  // SinceExpr Tests
+  // ==========================================================================
+
+  SECTION("SinceExpr - lhs holds since rhs became true") {
+    auto frame = make_frame_with_car(2, 2.0);
+    std::deque<datastream::Frame> history;
+    history.push_back(make_frame_with_person(0, 0.0)); // Person appears: rhs becomes true
+    history.push_back(make_frame_with_car(1, 1.0));    // Car is present since then
+
+    auto car_id    = ObjectVar{"car"};
+    auto person_id = ObjectVar{"person"};
+
+    auto is_car    = is_class(car_id, CAR);
+    auto is_person = is_class(person_id, PERSON);
+    auto safe      = exists({car_id}, is_car);       // lhs: car is present
+    auto trigger   = exists({person_id}, is_person); // rhs: person is present
+
+    auto formula = since(safe, trigger);
+    REQUIRE(evaluator.evaluate(formula, frame, history, empty_horizon));
+  }
+
+  SECTION("SinceExpr - lhs fails after rhs became true") {
+    auto frame = make_frame_with_car(2, 2.0);
+    std::deque<datastream::Frame> history;
+    history.push_back(make_frame_with_person(0, 0.0)); // Person appears: rhs becomes true
+    history.push_back(make_empty_frame(1, 1.0));       // Car disappears: lhs fails
+
+    auto car_id    = ObjectVar{"car"};
+    auto person_id = ObjectVar{"person"};
+
+    auto is_car    = is_class(car_id, CAR);
+    auto is_person = is_class(person_id, PERSON);
+    auto safe      = exists({car_id}, is_car);
+    auto trigger   = exists({person_id}, is_person);
+
+    auto formula = since(safe, trigger);
+    REQUIRE_FALSE(evaluator.evaluate(formula, frame, history, empty_horizon));
+  }
+
+  SECTION("SinceExpr - rhs never was true in past") {
+    auto frame = make_frame_with_car(2, 2.0);
+    std::deque<datastream::Frame> history;
+    history.push_back(make_frame_with_car(0, 0.0));
+    history.push_back(make_frame_with_car(1, 1.0)); // Person never appeared
+
+    auto car_id    = ObjectVar{"car"};
+    auto person_id = ObjectVar{"person"};
+
+    auto is_car    = is_class(car_id, CAR);
+    auto is_person = is_class(person_id, PERSON);
+    auto safe      = exists({car_id}, is_car);
+    auto trigger   = exists({person_id}, is_person);
+
+    auto formula = since(safe, trigger);
+    REQUIRE_FALSE(evaluator.evaluate(formula, frame, history, empty_horizon));
+  }
+
+  // ==========================================================================
+  // BackToExpr Tests
+  // ==========================================================================
+
+  SECTION("BackToExpr - rhs holds on all past frames") {
+    auto frame = make_frame_with_car(2, 2.0);
+    std::deque<datastream::Frame> history;
+    history.push_back(make_frame_with_car(0, 0.0));
     history.push_back(make_frame_with_car(1, 1.0));
 
-    auto formula = sometimes(make_true());
+    auto car_id = ObjectVar{"car"};
+    auto is_car = is_class(car_id, CAR);
+    auto origin = exists({car_id}, is_car);
+
+    auto formula = backto(make_false(), origin); // lhs doesn't matter; rhs holds always
     REQUIRE(evaluator.evaluate(formula, frame, history, empty_horizon));
+  }
+
+  SECTION("BackToExpr - rhs becomes false going back, lhs is true at that point") {
+    auto frame = make_frame_with_car(2, 2.0);
+    std::deque<datastream::Frame> history;
+    history.push_back(make_frame_with_car(0, 0.0));
+    history.push_back(make_empty_frame(1, 1.0)); // Car disappears: rhs becomes false
+
+    auto car_id = ObjectVar{"car"};
+    auto is_car = is_class(car_id, CAR);
+
+    auto requirement = make_true();              // lhs is true
+    auto origin      = exists({car_id}, is_car); // rhs fails at frame 1
+
+    auto formula = backto(requirement, origin);
+    REQUIRE(evaluator.evaluate(formula, frame, history, empty_horizon));
+  }
+
+  SECTION("BackToExpr - rhs becomes false going back, lhs is false at that point") {
+    auto frame = make_frame_with_car(2, 2.0);
+    std::deque<datastream::Frame> history;
+    history.push_back(make_frame_with_car(0, 0.0));
+    history.push_back(make_empty_frame(1, 1.0)); // Car disappears: rhs becomes false
+
+    auto car_id = ObjectVar{"car"};
+    auto is_car = is_class(car_id, CAR);
+
+    auto requirement = make_false();             // lhs is false
+    auto origin      = exists({car_id}, is_car); // rhs fails at frame 1
+
+    auto formula = backto(requirement, origin);
+    REQUIRE_FALSE(evaluator.evaluate(formula, frame, history, empty_horizon));
   }
 }
 
@@ -269,7 +809,8 @@ TEST_CASE("BooleanEvaluator - Quantifiers", "[evaluation][quantifiers]") {
     auto frame = make_empty_frame();
 
     auto id_var  = ObjectVar{"car"};
-    auto formula = exists({id_var}, make_true());
+    auto is_car  = is_class(id_var, CAR);
+    auto formula = exists({id_var}, is_car);
 
     REQUIRE_FALSE(evaluator.evaluate(formula, frame, empty_history, empty_horizon));
   }
@@ -286,8 +827,9 @@ TEST_CASE("BooleanEvaluator - Quantifiers", "[evaluation][quantifiers]") {
   SECTION("ExistsExpr - with objects") {
     auto frame = make_frame_with_multiple_objects();
 
-    auto id_var  = ObjectVar{"id"};
-    auto formula = exists({id_var}, make_true());
+    auto id_var  = ObjectVar{"car"};
+    auto is_car  = is_class(id_var, CAR);
+    auto formula = exists({id_var}, is_car);
 
     REQUIRE(evaluator.evaluate(formula, frame, empty_history, empty_horizon));
   }
@@ -314,7 +856,7 @@ TEST_CASE("BooleanEvaluator - Perception Operators", "[evaluation][perception]")
     auto frame = make_empty_frame();
 
     auto id_var     = ObjectVar{"car"};
-    auto class_expr = ClassCompareExpr{ClassFunc{id_var}, CompareOp::Equal, 1};
+    auto class_expr = ClassCompareExpr{ClassFunc{id_var}, CompareOp::Equal, CAR};
 
     REQUIRE_THROWS_AS(
         evaluator.evaluate(class_expr, frame, empty_history, empty_horizon), std::logic_error);
@@ -366,6 +908,88 @@ TEST_CASE("OnlineMonitor - Streaming Evaluation", "[online_monitor][integration]
   REQUIRE(verdict2);
 }
 
+TEST_CASE(
+    "OnlineMonitor - Multi-Frame Streaming with Varying Perception Data",
+    "[online_monitor][integration]") {
+  // Formula: sometimes a car appeared (past-time, naturally bounded)
+  auto car_id       = ObjectVar{"car"};
+  auto is_car       = is_class(car_id, CAR);
+  auto car_detected = exists({car_id}, is_car);
+  auto formula      = sometimes(car_detected);
+
+  OnlineMonitor monitor(formula, 1.0);
+
+  // Frame 0: no car
+  auto frame0   = make_empty_frame(0, 0.0);
+  bool verdict0 = monitor.evaluate(frame0);
+  REQUIRE_FALSE(verdict0); // Car hasn't appeared yet
+
+  // Frame 1: still no car
+  auto frame1   = make_empty_frame(1, 1.0);
+  bool verdict1 = monitor.evaluate(frame1);
+  REQUIRE_FALSE(verdict1); // Car still hasn't appeared
+
+  // Frame 2: car appears
+  auto frame2   = make_frame_with_car(2, 2.0);
+  bool verdict2 = monitor.evaluate(frame2);
+  REQUIRE(verdict2); // Now car has appeared
+}
+
+TEST_CASE("OnlineMonitor - Eventually Then Always Pattern", "[online_monitor][integration]") {
+  // Formula: sometimes a car appeared (test the pattern)
+  auto car_id      = ObjectVar{"car"};
+  auto is_car      = is_class(car_id, CAR);
+  auto car_present = exists({car_id}, is_car);
+
+  // Use a past-time formula that can be monitored: sometimes car appeared
+  auto formula = sometimes(car_present);
+  OnlineMonitor monitor(formula, 1.0);
+
+  // Build sequence: empty, empty, car appears, car persists
+  std::vector<datastream::Frame> frames;
+  frames.push_back(make_empty_frame(0, 0.0));
+  frames.push_back(make_empty_frame(1, 1.0));
+  frames.push_back(make_frame_with_car(2, 2.0));
+  frames.push_back(make_frame_with_car(3, 3.0));
+
+  // Evaluate each frame
+  bool verdict0 = monitor.evaluate(frames[0]);
+  REQUIRE_FALSE(verdict0); // No car yet
+
+  bool verdict1 = monitor.evaluate(frames[1]);
+  REQUIRE_FALSE(verdict1); // Still no car
+
+  bool verdict2 = monitor.evaluate(frames[2]);
+  REQUIRE(verdict2); // Car appeared, so sometimes(car) is true
+
+  bool verdict3 = monitor.evaluate(frames[3]);
+  REQUIRE(verdict3); // Still true (car persists)
+}
+
+TEST_CASE("OnlineMonitor - Nested Temporal Operators", "[online_monitor][integration]") {
+  // Formula: a person has always been present in the history (past-time nesting)
+  auto person_id      = ObjectVar{"person"};
+  auto is_person      = is_class(person_id, PERSON);
+  auto person_present = exists({person_id}, is_person);
+  auto formula        = holds(person_present);
+
+  OnlineMonitor monitor(formula, 1.0);
+
+  // All frames have person
+  auto frame0 = make_frame_with_person(0, 0.0);
+  auto frame1 = make_frame_with_person(1, 1.0);
+  auto frame2 = make_frame_with_person(2, 2.0);
+
+  bool verdict0 = monitor.evaluate(frame0);
+  REQUIRE(verdict0); // Person in frame 0
+
+  bool verdict1 = monitor.evaluate(frame1);
+  REQUIRE(verdict1); // Person in both frame 0 and 1
+
+  bool verdict2 = monitor.evaluate(frame2);
+  REQUIRE(verdict2); // Person in all frames
+}
+
 // ============================================================================
 // Property-Based Tests
 // ============================================================================
@@ -407,4 +1031,134 @@ TEST_CASE("BooleanEvaluator - Property: De Morgan's Laws", "[evaluation][propert
   bool result_rhs = evaluator.evaluate(rhs, frame, empty_history, empty_horizon);
 
   REQUIRE(result_lhs == result_rhs);
+}
+
+TEST_CASE(
+    "BooleanEvaluator - Property: Idempotence of Eventually",
+    "[evaluation][properties][temporal]") {
+  // ◇◇φ ≡ ◇φ (eventually eventually equals eventually)
+  BooleanEvaluator evaluator;
+
+  auto car_id    = ObjectVar{"car"};
+  auto is_car    = is_class(car_id, CAR);
+  auto condition = exists({car_id}, is_car);
+
+  auto eventually_once  = eventually(condition);
+  auto eventually_twice = eventually(eventually(condition));
+
+  std::deque<datastream::Frame> horizon;
+  horizon.push_back(make_empty_frame(1, 1.0));
+  horizon.push_back(make_frame_with_car(2, 2.0));
+
+  auto frame = make_empty_frame(0, 0.0);
+  std::deque<datastream::Frame> empty_history;
+
+  bool result_once  = evaluator.evaluate(eventually_once, frame, empty_history, horizon);
+  bool result_twice = evaluator.evaluate(eventually_twice, frame, empty_history, horizon);
+
+  REQUIRE(result_once == result_twice);
+}
+
+TEST_CASE(
+    "BooleanEvaluator - Property: Idempotence of Always",
+    "[evaluation][properties][temporal]") {
+  // □□φ ≡ □φ (always always equals always)
+  BooleanEvaluator evaluator;
+
+  auto car_id    = ObjectVar{"car"};
+  auto is_car    = is_class(car_id, CAR);
+  auto condition = exists({car_id}, is_car);
+
+  auto always_once  = always(condition);
+  auto always_twice = always(always(condition));
+
+  std::deque<datastream::Frame> horizon;
+  horizon.push_back(make_frame_with_car(1, 1.0));
+  horizon.push_back(make_frame_with_car(2, 2.0));
+
+  auto frame = make_frame_with_car(0, 0.0);
+  std::deque<datastream::Frame> empty_history;
+
+  bool result_once  = evaluator.evaluate(always_once, frame, empty_history, horizon);
+  bool result_twice = evaluator.evaluate(always_twice, frame, empty_history, horizon);
+
+  REQUIRE(result_once == result_twice);
+}
+
+TEST_CASE(
+    "BooleanEvaluator - Property: Until Semantics with Eventually",
+    "[evaluation][properties][temporal]") {
+  // until(true, φ) ≡ eventually(φ) (until with true lhs is eventually)
+  BooleanEvaluator evaluator;
+
+  auto car_id    = ObjectVar{"car"};
+  auto is_car    = is_class(car_id, CAR);
+  auto condition = exists({car_id}, is_car);
+
+  auto until_true_lhs = until(make_true(), condition);
+  auto eventually_rhs = eventually(condition);
+
+  std::deque<datastream::Frame> horizon;
+  horizon.push_back(make_empty_frame(1, 1.0));
+  horizon.push_back(make_frame_with_car(2, 2.0));
+
+  auto frame = make_empty_frame(0, 0.0);
+  std::deque<datastream::Frame> empty_history;
+
+  bool result_until      = evaluator.evaluate(until_true_lhs, frame, empty_history, horizon);
+  bool result_eventually = evaluator.evaluate(eventually_rhs, frame, empty_history, horizon);
+
+  REQUIRE(result_until == result_eventually);
+}
+
+TEST_CASE(
+    "BooleanEvaluator - Property: Idempotence of Sometimes (Past)",
+    "[evaluation][properties][temporal]") {
+  // ⧇⧇φ ≡ ⧇φ (sometimes sometimes equals sometimes)
+  BooleanEvaluator evaluator;
+
+  auto car_id    = ObjectVar{"car"};
+  auto is_car    = is_class(car_id, CAR);
+  auto condition = exists({car_id}, is_car);
+
+  auto sometimes_once  = sometimes(condition);
+  auto sometimes_twice = sometimes(sometimes(condition));
+
+  std::deque<datastream::Frame> history;
+  history.push_back(make_empty_frame(0, 0.0));
+  history.push_back(make_frame_with_car(1, 1.0));
+
+  auto frame = make_empty_frame(2, 2.0);
+  std::deque<datastream::Frame> empty_horizon;
+
+  bool result_once  = evaluator.evaluate(sometimes_once, frame, history, empty_horizon);
+  bool result_twice = evaluator.evaluate(sometimes_twice, frame, history, empty_horizon);
+
+  REQUIRE(result_once == result_twice);
+}
+
+TEST_CASE(
+    "BooleanEvaluator - Property: Idempotence of Holds (Past)",
+    "[evaluation][properties][temporal]") {
+  // ■■φ ≡ ■φ (holds holds equals holds)
+  BooleanEvaluator evaluator;
+
+  auto car_id    = ObjectVar{"car"};
+  auto is_car    = is_class(car_id, CAR);
+  auto condition = exists({car_id}, is_car);
+
+  auto holds_once  = holds(condition);
+  auto holds_twice = holds(holds(condition));
+
+  std::deque<datastream::Frame> history;
+  history.push_back(make_frame_with_car(0, 0.0));
+  history.push_back(make_frame_with_car(1, 1.0));
+
+  auto frame = make_frame_with_car(2, 2.0);
+  std::deque<datastream::Frame> empty_horizon;
+
+  bool result_once  = evaluator.evaluate(holds_once, frame, history, empty_horizon);
+  bool result_twice = evaluator.evaluate(holds_twice, frame, history, empty_horizon);
+
+  REQUIRE(result_once == result_twice);
 }
