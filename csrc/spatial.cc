@@ -1,4 +1,4 @@
-#include "percemon2/spatial.hpp"
+#include "percemon/spatial.hpp"
 #include "utils.hpp"
 
 #include <cassert>
@@ -8,7 +8,7 @@
 #include <utility>
 #include <vector>
 
-namespace percemon2::spatial {
+namespace percemon::spatial {
 
 // =============================================================================
 // BBox Implementation
@@ -522,4 +522,4 @@ auto simplify(const Region& region) -> Region {
   return std::visit(visitor, region);
 }
 
-} // namespace percemon2::spatial
+} // namespace percemon::spatial

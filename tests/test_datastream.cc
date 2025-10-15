@@ -1,7 +1,7 @@
-#include "percemon2/datastream.hpp"
+#include "percemon/datastream.hpp"
 #include <catch2/catch_test_macros.hpp>
 
-using namespace percemon2::datastream;
+using namespace percemon::datastream;
 
 TEST_CASE("BoundingBox basic properties", "[datastream][bbox]") {
   auto bbox = BoundingBox{.xmin = 100, .xmax = 200, .ymin = 50, .ymax = 150};

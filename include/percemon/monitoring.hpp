@@ -1,9 +1,9 @@
 #pragma once
 
-#ifndef PERCEMON2_MONITORING_HPP
-#define PERCEMON2_MONITORING_HPP
+#ifndef PERCEMON_MONITORING_HPP
+#define PERCEMON_MONITORING_HPP
 
-#include "percemon2/stql.hpp"
+#include "percemon/stql.hpp"
 #include <cstdint>
 #include <limits>
 #include <string>
@@ -16,7 +16,7 @@
  * required history (past frames) and horizon (future frames) needed for monitoring.
  */
 
-namespace percemon2::monitoring {
+namespace percemon::monitoring {
 
 // Sentinel value for unbounded depth
 constexpr int64_t UNBOUNDED = std::numeric_limits<int64_t>::max();
@@ -198,6 +198,6 @@ auto compute_requirements(const stql::Expr& formula, double fps = 1.0) -> Monito
  */
 auto is_past_time_formula(const stql::Expr& formula) -> bool;
 
-} // namespace percemon2::monitoring
+} // namespace percemon::monitoring
 
-#endif // PERCEMON2_MONITORING_HPP
+#endif // PERCEMON_MONITORING_HPP

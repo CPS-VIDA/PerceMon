@@ -1,13 +1,13 @@
-#include "percemon2/evaluation.hpp"
-#include "percemon2/online_monitor.hpp"
-#include "percemon2/stql.hpp"
+#include "percemon/evaluation.hpp"
+#include "percemon/online_monitor.hpp"
+#include "percemon/stql.hpp"
 
 #include <catch2/catch_test_macros.hpp>
 #include <deque>
 
-using namespace percemon2;
-using namespace percemon2::monitoring;
-using namespace percemon2::stql;
+using namespace percemon;
+using namespace percemon::monitoring;
+using namespace percemon::stql;
 
 // ============================================================================
 // Test Fixtures and Helpers

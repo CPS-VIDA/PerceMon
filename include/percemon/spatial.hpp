@@ -1,9 +1,9 @@
 #pragma once
 
-#ifndef PERCEMON2_SPATIAL_HPP
-#define PERCEMON2_SPATIAL_HPP
+#ifndef PERCEMON_SPATIAL_HPP
+#define PERCEMON_SPATIAL_HPP
 
-#include "percemon2/datastream.hpp"
+#include "percemon/datastream.hpp"
 #include <limits>
 #include <memory>
 #include <set>
@@ -31,7 +31,7 @@
  * - Ω̅: Spatial complement
  */
 
-namespace percemon2::spatial {
+namespace percemon::spatial {
 
 // Forward declarations
 struct Empty;
@@ -396,6 +396,6 @@ inline auto frame_universe(const datastream::Frame& frame) -> BBox {
   return BBox{frame.universe_bbox()};
 }
 
-} // namespace percemon2::spatial
+} // namespace percemon::spatial
 
-#endif // PERCEMON2_SPATIAL_HPP
+#endif // PERCEMON_SPATIAL_HPP

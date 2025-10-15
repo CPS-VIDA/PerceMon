@@ -54,7 +54,7 @@ STQL is a formal logic combining:
 ```
 PerceMon/
 ├── include/
-│   └── percemon2/                # Modern C++20 implementation
+│   └── percemon/                # Modern C++20 implementation
 │       ├── stql.hpp              # Core STQL AST (variant-based)
 │       ├── monitoring.hpp        # Monitoring requirements interface
 │       ├── datastream.hpp        # Runtime data structures
@@ -145,7 +145,7 @@ PerceMon/
 
 ## Legacy Design
 
-The old `include/percemon/ast.hpp` had issues with virtual inheritance, tight coupling, and runtime type checking. The refactoring to `percemon2` is **complete**. All code now uses the modern `percemon2` namespace with C++20 design patterns. The legacy `percemon` namespace has been fully removed.
+The old `include/percemon/ast.hpp` had issues with virtual inheritance, tight coupling, and runtime type checking. The refactoring to `percemon` is **complete**. All code now uses the modern `percemon` namespace with C++20 design patterns. The legacy `percemon` namespace has been fully removed.
 
 ## Development Conventions
 
@@ -174,14 +174,14 @@ See doc/DESIGN.md for detailed documentation template.
 
 ### ✅ Completed
 
-1. **Core STQL AST** (include/percemon2/stql.hpp)
+1. **Core STQL AST** (include/percemon/stql.hpp)
    - All 40+ expression types implemented
    - Variant-based design with Box<T> for recursion
    - Factory functions and operator overloads
    - Comprehensive documentation with STQL syntax references
    - to_string() for all types
 
-2. **Monitoring Requirements Analysis** (include/percemon2/monitoring.hpp, csrc/stql_requirements.cc)
+2. **Monitoring Requirements Analysis** (include/percemon/monitoring.hpp, csrc/stql_requirements.cc)
    - History and Horizon structs
    - compute_requirements() function with scope-aware constraint handling
    - is_online_monitorable() and is_past_time_formula() helpers
@@ -189,25 +189,25 @@ See doc/DESIGN.md for detailed documentation template.
    - Time-to-frame conversion using FPS
    - Scope direction tracking (Future vs Past)
 
-3. **Datastream Runtime Data** (include/percemon2/datastream.hpp, csrc/datastream.cc)
+3. **Datastream Runtime Data** (include/percemon/datastream.hpp, csrc/datastream.cc)
    - BoundingBox, Object, Frame, Trace types
    - RefPointType enum for spatial reference points
    - Utility functions: get_reference_point(), euclidean_distance()
 
-4. **Formula Evaluation** (include/percemon2/evaluation.hpp, csrc/monitoring/evaluation.cc)
+4. **Formula Evaluation** (include/percemon/evaluation.hpp, csrc/monitoring/evaluation.cc)
    - EvaluationContext for managing evaluation state
    - History and horizon buffer management
    - Frozen variable bindings
    - BooleanEvaluator with complete boolean semantics
    - Error handling for missing objects and insufficient buffers
 
-5. **Online Monitoring** (include/percemon2/online_monitor.hpp, csrc/monitoring/online_monitor.cc)
+5. **Online Monitoring** (include/percemon/online_monitor.hpp, csrc/monitoring/online_monitor.cc)
    - OnlineMonitor class for streaming evaluation
    - Automatic buffer management (history/horizon)
    - Frame-by-frame evaluation with verdicts
    - Memory requirement tracking and monitorability checks
 
-6. **Spatial Operations** (include/percemon2/spatial.hpp, csrc/spatial.cc)
+6. **Spatial Operations** (include/percemon/spatial.hpp, csrc/spatial.cc)
    - Spatial region representations and operations
    - Union, intersection, complement operations
    - Membership testing for bounding boxes

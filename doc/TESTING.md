@@ -5,7 +5,7 @@ STQL implementation.
 
 ## Testing Philosophy
 
-All new code in `include/percemon2/` should have corresponding tests in
+All new code in `include/percemon/` should have corresponding tests in
 `tests/`:
 - Use Catch2 framework for all test cases
 - Test both API usability and semantic correctness
@@ -69,7 +69,7 @@ This pattern properly tests:
 
 ## Helper Functions for Readable Tests
 
-Use these helpers (defined in `include/percemon2/stql.hpp`) to simplify
+Use these helpers (defined in `include/percemon/stql.hpp`) to simplify
 constraint construction:
 
 ```cpp

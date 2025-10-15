@@ -1,15 +1,15 @@
-#ifndef PERCEMON2_ONLINE_MONITOR_HPP
-#define PERCEMON2_ONLINE_MONITOR_HPP
+#ifndef PERCEMON_ONLINE_MONITOR_HPP
+#define PERCEMON_ONLINE_MONITOR_HPP
 
-#include "percemon2/datastream.hpp"
-#include "percemon2/evaluation.hpp"
-#include "percemon2/monitoring.hpp"
-#include "percemon2/stql.hpp"
+#include "percemon/datastream.hpp"
+#include "percemon/evaluation.hpp"
+#include "percemon/monitoring.hpp"
+#include "percemon/stql.hpp"
 
 #include <deque>
 #include <memory>
 
-namespace percemon2::monitoring {
+namespace percemon::monitoring {
 
 /**
  * @brief Online monitor for STQL formulas on streaming perception data.
@@ -57,9 +57,9 @@ namespace percemon2::monitoring {
  * - Each instance has independent buffers; multiple monitors can run in parallel
  *
  * **See Also**:
- * - percemon2::monitoring::compute_requirements() for formula analysis
- * - percemon2::monitoring::BooleanEvaluator for evaluation semantics
- * - percemon2::stql for formula construction
+ * - percemon::monitoring::compute_requirements() for formula analysis
+ * - percemon::monitoring::BooleanEvaluator for evaluation semantics
+ * - percemon::stql for formula construction
  */
 class OnlineMonitor {
  public:
@@ -158,6 +158,6 @@ class OnlineMonitor {
   datastream::Frame current_frame_ = {};
 };
 
-} // namespace percemon2::monitoring
+} // namespace percemon::monitoring
 
-#endif // PERCEMON2_ONLINE_MONITOR_HPP
+#endif // PERCEMON_ONLINE_MONITOR_HPP

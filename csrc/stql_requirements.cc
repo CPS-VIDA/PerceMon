@@ -1,5 +1,5 @@
-#include "percemon2/monitoring.hpp"
-#include "percemon2/stql.hpp"
+#include "percemon/monitoring.hpp"
+#include "percemon/stql.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -9,7 +9,7 @@
 
 #include "utils.hpp"
 
-namespace percemon2::monitoring {
+namespace percemon::monitoring {
 
 // =============================================================================
 // Internal Helper Types and Functions
@@ -369,4 +369,4 @@ auto compute_requirements_impl(const stql::Expr& expr, double fps, ScopeDirectio
 
 } // namespace
 
-} // namespace percemon2::monitoring
+} // namespace percemon::monitoring

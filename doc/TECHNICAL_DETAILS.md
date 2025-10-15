@@ -229,7 +229,7 @@ When multiple constraints appear together via logical operators:
 - `intersect_bounds()` and `union_bounds()` helpers
 - `compute_requirements_impl()` recursive visitor
 
-### Public API (in `percemon2::monitoring`)
+### Public API (in `percemon::monitoring`)
 
 - `compute_requirements(const Expr& formula, double fps = 30.0) ->
   MonitoringRequirements`
@@ -450,7 +450,7 @@ Key testing patterns:
 ## References
 
 - Core monitoring API:
-  `include/percemon2/monitoring.hpp`
+  `include/percemon/monitoring.hpp`
 - Implementation:
   `csrc/stql_requirements.cc`
 - Formula evaluation:

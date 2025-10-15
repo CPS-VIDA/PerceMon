@@ -1,6 +1,6 @@
-#include "percemon2/evaluation.hpp"
-#include "percemon2/spatial.hpp"
-#include "percemon2/stql.hpp"
+#include "percemon/evaluation.hpp"
+#include "percemon/spatial.hpp"
+#include "percemon/stql.hpp"
 #include "utils.hpp"
 
 #include <algorithm>
@@ -23,7 +23,7 @@
 namespace ranges = std::ranges;
 namespace views  = std::ranges::views;
 
-namespace percemon2::monitoring {
+namespace percemon::monitoring {
 
 namespace {
 
@@ -1371,4 +1371,4 @@ auto BooleanEvaluator::evaluate(
   return eval_impl(formula, ctx);
 }
 
-} // namespace percemon2::monitoring
+} // namespace percemon::monitoring

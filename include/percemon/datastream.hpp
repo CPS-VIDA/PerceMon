@@ -1,7 +1,7 @@
 #pragma once
 
-#ifndef PERCEMON2_DATASTREAM_HPP
-#define PERCEMON2_DATASTREAM_HPP
+#ifndef PERCEMON_DATASTREAM_HPP
+#define PERCEMON_DATASTREAM_HPP
 
 #include <cstdint>
 #include <map>
@@ -19,7 +19,7 @@
  * detected objects, not symbolic expressions.
  */
 
-namespace percemon2::datastream {
+namespace percemon::datastream {
 
 /**
  * @brief 2D bounding box in image coordinates.
@@ -203,6 +203,6 @@ struct Frame {
  */
 using Trace = std::vector<Frame>;
 
-} // namespace percemon2::datastream
+} // namespace percemon::datastream
 
-#endif // PERCEMON2_DATASTREAM_HPP
+#endif // PERCEMON_DATASTREAM_HPP

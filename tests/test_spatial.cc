@@ -1,7 +1,7 @@
-#include "percemon2/spatial.hpp"
+#include "percemon/spatial.hpp"
 #include <catch2/catch_test_macros.hpp>
 
-using namespace percemon2::spatial;
+using namespace percemon::spatial;
 
 TEST_CASE("Empty region properties", "[spatial][empty]") {
   Region empty = Empty{};
@@ -37,7 +37,7 @@ TEST_CASE("BBox basic operations", "[spatial][bbox]") {
 
   SECTION("Construct from datastream BoundingBox") {
     auto ds_bbox =
-        percemon2::datastream::BoundingBox{.xmin = 100, .xmax = 200, .ymin = 50, .ymax = 150};
+        percemon::datastream::BoundingBox{.xmin = 100, .xmax = 200, .ymin = 50, .ymax = 150};
     auto spatial_bbox = BBox{ds_bbox};
     REQUIRE(spatial_bbox.xmin == 100);
     REQUIRE(spatial_bbox.xmax == 200);
@@ -269,7 +269,7 @@ TEST_CASE("Region simplification", "[spatial][simplify]") {
 TEST_CASE("Datastream conversion helpers", "[spatial][conversion]") {
   SECTION("from_datastream") {
     auto ds_bbox =
-        percemon2::datastream::BoundingBox{.xmin = 100, .xmax = 200, .ymin = 50, .ymax = 150};
+        percemon::datastream::BoundingBox{.xmin = 100, .xmax = 200, .ymin = 50, .ymax = 150};
     auto spatial_bbox = from_datastream(ds_bbox);
 
     REQUIRE(spatial_bbox.xmin == 100);
@@ -280,11 +280,11 @@ TEST_CASE("Datastream conversion helpers", "[spatial][conversion]") {
   }
 
   SECTION("bbox_of_object") {
-    auto obj = percemon2::datastream::Object{
+    auto obj = percemon::datastream::Object{
         .object_class = 1,
         .probability  = 0.95,
         .bbox =
-            percemon2::datastream::BoundingBox{.xmin = 100, .xmax = 200, .ymin = 50, .ymax = 150}};
+            percemon::datastream::BoundingBox{.xmin = 100, .xmax = 200, .ymin = 50, .ymax = 150}};
 
     Region region = bbox_of_object(obj);
 
@@ -295,7 +295,7 @@ TEST_CASE("Datastream conversion helpers", "[spatial][conversion]") {
   }
 
   SECTION("frame_universe") {
-    auto frame = percemon2::datastream::Frame{
+    auto frame = percemon::datastream::Frame{
         .timestamp = 1.5, .frame_num = 45, .size_x = 1920, .size_y = 1080, .objects = {}};
 
     auto universe = frame_universe(frame);

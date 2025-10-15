@@ -1,7 +1,7 @@
 #pragma once
 
-#ifndef PERCEMON2_STQL_HPP
-#define PERCEMON2_STQL_HPP
+#ifndef PERCEMON_STQL_HPP
+#define PERCEMON_STQL_HPP
 
 #include <cmath>
 #include <concepts>
@@ -25,7 +25,7 @@
  *      Logic Properties of Perception Systems" (2021)
  */
 
-namespace percemon2::stql {
+namespace percemon::stql {
 
 // =============================================================================
 // Core Concepts
@@ -2140,6 +2140,6 @@ inline auto SpatialForallExpr::to_string() const -> std::string {
   return "∀(" + std::visit([](const auto& e) { return e.to_string(); }, *arg) + ")";
 }
 
-} // namespace percemon2::stql
+} // namespace percemon::stql
 
-#endif // PERCEMON2_STQL_HPP
+#endif // PERCEMON_STQL_HPP

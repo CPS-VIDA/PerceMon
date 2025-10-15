@@ -1,9 +1,9 @@
-#ifndef PERCEMON2_EVALUATION_HPP
-#define PERCEMON2_EVALUATION_HPP
+#ifndef PERCEMON_EVALUATION_HPP
+#define PERCEMON_EVALUATION_HPP
 
-#include "percemon2/datastream.hpp"
-#include "percemon2/monitoring.hpp"
-#include "percemon2/stql.hpp"
+#include "percemon/datastream.hpp"
+#include "percemon/monitoring.hpp"
+#include "percemon/stql.hpp"
 
 #include <deque>
 #include <iterator>
@@ -11,7 +11,7 @@
 #include <optional>
 #include <string>
 
-namespace percemon2::monitoring {
+namespace percemon::monitoring {
 
 /**
  * @brief Evaluation context for STQL formula evaluation.
@@ -144,7 +144,7 @@ struct EvaluationContext {
  * - Unbound frozen variables in constraints → false
  * - Invalid bindings (variable bound multiple times) → throws exception
  *
- * **See Also**: percemon2::monitoring::compute_requirements() for buffer sizing
+ * **See Also**: percemon::monitoring::compute_requirements() for buffer sizing
  */
 struct BooleanEvaluator {
   /**
@@ -182,6 +182,6 @@ struct BooleanEvaluator {
       const std::deque<datastream::Frame>& horizon) const -> bool;
 };
 
-} // namespace percemon2::monitoring
+} // namespace percemon::monitoring
 
-#endif // PERCEMON2_EVALUATION_HPP
+#endif // PERCEMON_EVALUATION_HPP

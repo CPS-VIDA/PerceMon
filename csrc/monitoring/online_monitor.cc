@@ -1,10 +1,10 @@
-#include "percemon2/online_monitor.hpp"
+#include "percemon/online_monitor.hpp"
 
 #include <fmt/format.h>
 #include <stdexcept>
 #include <utility>
 
-namespace percemon2::monitoring {
+namespace percemon::monitoring {
 
 // ============================================================================
 // OnlineMonitor Implementation
@@ -48,4 +48,4 @@ auto OnlineMonitor::is_monitorable() const -> bool { return requirements_.horizo
 
 auto OnlineMonitor::requirements() const -> const MonitoringRequirements& { return requirements_; }
 
-} // namespace percemon2::monitoring
+} // namespace percemon::monitoring

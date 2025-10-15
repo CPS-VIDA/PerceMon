@@ -2,9 +2,9 @@
 #include <string>
 #include <variant>
 
-#include "percemon2/stql.hpp"
+#include "percemon/stql.hpp"
 
-using namespace percemon2::stql;
+using namespace percemon::stql;
 
 // =============================================================================
 // Variable Types

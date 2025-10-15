@@ -1,7 +1,7 @@
-#include "percemon2/datastream.hpp"
+#include "percemon/datastream.hpp"
 #include <cmath>
 
-namespace percemon2::datastream {
+namespace percemon::datastream {
 
 auto get_reference_point(const BoundingBox& bbox, RefPointType ref_type)
     -> std::pair<double, double> {
@@ -39,4 +39,4 @@ auto euclidean_distance(
     return std::sqrt(dx * dx + dy * dy);
 }
 
-} // namespace percemon2::datastream
+} // namespace percemon::datastream

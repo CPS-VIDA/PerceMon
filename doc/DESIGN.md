@@ -1,7 +1,7 @@
 # PerceMon Implementation Design Guide
 
 This document details C++20 patterns, code style conventions, and implementation
-practices used in the `percemon2` namespace.
+practices used in the `percemon` namespace.
 
 ## C++20 Features Used
 
@@ -184,7 +184,7 @@ struct AlwaysExpr {
 };
 ```
 
-## Implementation Patterns in percemon2
+## Implementation Patterns in percemon
 
 ### 1. Box<T> Wrapper for Recursive Types
 
@@ -497,7 +497,7 @@ std::visit([](const auto& expr) {
 
 ### Zero-Cost Abstractions
 
-The percemon2 design achieves zero-cost abstractions:
+The percemon design achieves zero-cost abstractions:
 
 - **std::variant dispatch**:
   Resolved at compile-time via std::visit

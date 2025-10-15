@@ -3,11 +3,11 @@
 #include <string>
 #include <variant>
 
-#include "percemon2/monitoring.hpp"
-#include "percemon2/stql.hpp"
+#include "percemon/monitoring.hpp"
+#include "percemon/stql.hpp"
 
-using namespace percemon2::monitoring;
-using namespace percemon2::stql;
+using namespace percemon::monitoring;
+using namespace percemon::stql;
 
 // =============================================================================
 // Constants
