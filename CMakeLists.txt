@@ -61,25 +61,24 @@ if(PERCEMON_COVERAGE)
   find_package(codecov)
 endif()
 
-find_package(fmt REQUIRED)
 find_package(cppitertools REQUIRED)
+# find_package(range-v3 REQUIRED)
 
-# Sources and actual library Add library and module
-set(PERCEMON_SOURCES csrc/empty.cpp csrc/spatial.cc csrc/datastream.cc
-                     csrc/monitoring/stql_requirements.cc)
-
-add_library(PerceMon ${PERCEMON_SOURCES})
+add_library(
+  PerceMon
+  csrc/datastream.cc csrc/monitoring/evaluation.cc
+  csrc/monitoring/online_monitor.cc csrc/spatial.cc csrc/stql_requirements.cc)
 add_library(PerceMon::PerceMon ALIAS PerceMon)
 target_include_directories(
   PerceMon PUBLIC $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
                   $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>)
 target_include_directories(PerceMon PRIVATE ${PROJECT_SOURCE_DIR}/csrc)
 target_compile_features(PerceMon PUBLIC cxx_std_20)
-# target_link_libraries(PerceMon PUBLIC fmt::fmt cppitertools::cppitertools)
 set_target_properties(PerceMon PROPERTIES POSITION_INDEPENDENT_CODE ON)
-if(PERCEMON_MASTER_PROJECT)
+target_link_libraries(PerceMon PRIVATE cppitertools::cppitertools)
+if(PERCEMON_MASTER_PROJECT AND BUILD_TESTING)
   set_target_properties(PerceMon PROPERTIES CXX_CPPCHECK cppcheck)
-endif(PERCEMON_MASTER_PROJECT)
+endif()
 
 if(BUILD_PYTHON_BINDINGS)
   if(CMAKE_VERSION VERSION_LESS 3.18)

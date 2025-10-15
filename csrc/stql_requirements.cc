@@ -9,8 +9,6 @@
 
 #include "utils.hpp"
 
-namespace utils = percemon::utils;
-
 namespace percemon2::monitoring {
 
 // =============================================================================
@@ -202,11 +200,6 @@ auto compute_requirements(const stql::Expr& formula, double fps) -> MonitoringRe
   return MonitoringRequirements{.history = History{history}, .horizon = Horizon{horizon}};
 }
 
-auto is_online_monitorable(const stql::Expr& formula) -> bool {
-  auto reqs = compute_requirements(formula);
-  return reqs.horizon.is_bounded();
-}
-
 auto is_past_time_formula(const stql::Expr& formula) -> bool {
   auto reqs = compute_requirements(formula);
   return reqs.horizon.frames == 0;
@@ -285,9 +278,7 @@ auto compute_requirements_impl(const stql::Expr& expr, double fps, ScopeDirectio
           auto [hist, horiz] = compute_requirements_impl(*e.arg, fps, ScopeDirection::Future);
           // If subexpression has bounded horizon from a constraint, use it
           // Otherwise, always requires unbounded horizon
-          if (horiz != 0) {
-            return {hist, horiz};
-          }
+          if (horiz != 0) { return {hist, horiz}; }
           return {hist, UNBOUNDED};
         } else if constexpr (std::is_same_v<T, EventuallyExpr>) {
           // eventually(φ) requires infinite horizon (unless constrained by subexpression)
@@ -295,9 +286,7 @@ auto compute_requirements_impl(const stql::Expr& expr, double fps, ScopeDirectio
           auto [hist, horiz] = compute_requirements_impl(*e.arg, fps, ScopeDirection::Future);
           // If subexpression has bounded horizon from a constraint, use it
           // Otherwise, eventually requires unbounded horizon
-          if (horiz != 0) {
-            return {hist, horiz};
-          }
+          if (horiz != 0) { return {hist, horiz}; }
           return {hist, UNBOUNDED};
         } else if constexpr (std::is_same_v<T, UntilExpr>) {
           // until(φ1, φ2) requires infinite horizon (unless constrained by subexpressions)
@@ -305,9 +294,7 @@ auto compute_requirements_impl(const stql::Expr& expr, double fps, ScopeDirectio
           auto [hist2, horiz2] = compute_requirements_impl(*e.rhs, fps, ScopeDirection::Future);
           // Take max of both horizons; if either has a constraint, use it
           int64_t combined_horiz = std::max(horiz1, horiz2);
-          if (combined_horiz != 0) {
-            return {std::max(hist1, hist2), combined_horiz};
-          }
+          if (combined_horiz != 0) { return {std::max(hist1, hist2), combined_horiz}; }
           return {std::max(hist1, hist2), UNBOUNDED};
         } else if constexpr (std::is_same_v<T, ReleaseExpr>) {
           // release(φ1, φ2) dual of until, also requires infinite horizon (unless constrained)
@@ -315,9 +302,7 @@ auto compute_requirements_impl(const stql::Expr& expr, double fps, ScopeDirectio
           auto [hist2, horiz2] = compute_requirements_impl(*e.rhs, fps, ScopeDirection::Future);
           // Take max of both horizons; if either has a constraint, use it
           int64_t combined_horiz = std::max(horiz1, horiz2);
-          if (combined_horiz != 0) {
-            return {std::max(hist1, hist2), combined_horiz};
-          }
+          if (combined_horiz != 0) { return {std::max(hist1, hist2), combined_horiz}; }
           return {std::max(hist1, hist2), UNBOUNDED};
         }
 
@@ -339,9 +324,7 @@ auto compute_requirements_impl(const stql::Expr& expr, double fps, ScopeDirectio
           // Take max of both histories
           int64_t combined_hist = std::max(hist1, hist2);
           // If either has bounded history, use it; otherwise unbounded
-          if (combined_hist != 0) {
-            return {combined_hist, std::max(horiz1, horiz2)};
-          }
+          if (combined_hist != 0) { return {combined_hist, std::max(horiz1, horiz2)}; }
           return {UNBOUNDED, std::max(horiz1, horiz2)};
         } else if constexpr (std::is_same_v<T, BackToExpr>) {
           // backto(φ1, φ2) dual of since, also requires infinite history (unless constrained)
@@ -351,9 +334,7 @@ auto compute_requirements_impl(const stql::Expr& expr, double fps, ScopeDirectio
           // Take max of both histories
           int64_t combined_hist = std::max(hist1, hist2);
           // If either has bounded history, use it; otherwise unbounded
-          if (combined_hist != 0) {
-            return {combined_hist, std::max(horiz1, horiz2)};
-          }
+          if (combined_hist != 0) { return {combined_hist, std::max(horiz1, horiz2)}; }
           return {UNBOUNDED, std::max(horiz1, horiz2)};
         }
 

@@ -10,7 +10,6 @@
 #include <utility>
 #include <vector>
 
-namespace percemon {
 namespace utils {
 
 /**
@@ -84,17 +83,14 @@ struct product_iterator {
     }
     return false;
   }
-  bool operator==(const product_iterator<Iter>& other) const {
-    return !(*this != other);
-  }
+  bool operator==(const product_iterator<Iter>& other) const { return !(*this != other); }
 
   value_type operator*() const {
     auto _curr_val = std::vector<ElementType>{};
     std::transform(
-        std::begin(_curr),
-        std::end(_curr),
-        std::back_inserter(_curr_val),
-        [](const auto i) { return *i; });
+        std::begin(_curr), std::end(_curr), std::back_inserter(_curr_val), [](const auto i) {
+          return *i;
+        });
     return _curr_val;
   }
 
@@ -156,12 +152,9 @@ struct product_range {
   Container iterable;
   size_t k;
 
-  auto begin() {
-    return product_iterator<Iter>{std::begin(iterable), std::end(iterable), k};
-  }
+  auto begin() { return product_iterator<Iter>{std::begin(iterable), std::end(iterable), k}; }
   auto end() {
-    return product_iterator<Iter>::get_last(
-        std::begin(iterable), std::end(iterable), k);
+    return product_iterator<Iter>::get_last(std::begin(iterable), std::end(iterable), k);
   }
 };
 
@@ -179,12 +172,10 @@ constexpr auto product(Container&& iterable, size_t k = 1) {
 // }
 
 template <typename Func, typename... Optionals>
-auto map_optionals(Func func, const Optionals&... opts)
-    -> std::optional<decltype(func(*opts...))> {
+auto map_optionals(Func func, const Optionals&... opts) -> std::optional<decltype(func(*opts...))> {
   if ((... && opts)) { return func(*opts...); }
   return std::nullopt;
 }
 } // namespace iter_helpers
-} // namespace percemon
 
 #endif // __CSRC_UTILS_HPP__

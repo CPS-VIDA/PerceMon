@@ -53,6 +53,8 @@ struct Union;
  */
 struct Empty {
   auto operator<=>(const Empty&) const = default;
+
+  [[nodiscard]] auto to_string() const -> std::string { return "Empty"; }
 };
 
 /**
@@ -65,6 +67,8 @@ struct Empty {
  */
 struct Universe {
   auto operator<=>(const Universe&) const = default;
+
+  [[nodiscard]] auto to_string() const -> std::string { return "Universe"; }
 };
 
 /**
@@ -120,6 +124,8 @@ struct BBox {
 
   /// Check if any boundary is open
   [[nodiscard]] auto is_open() const -> bool;
+
+  [[nodiscard]] auto to_string() const -> std::string;
 };
 
 /**
@@ -141,7 +147,20 @@ struct BBox {
 struct Union {
   /// Comparator for sorting bounding boxes
   struct BBoxCmp {
-    constexpr auto operator()(const BBox& a, const BBox& b) const -> bool;
+    constexpr auto operator()(const BBox& a, const BBox& b) const -> bool {
+      // TODO: Handling of open and closed sets?
+      if (a.xmin < b.xmin) { return true; }
+      if (a.xmin == b.xmin) {
+        if (a.xmax < b.xmax) { return true; }
+        if (a.xmax == b.xmax) {
+          if (a.ymin < b.ymin) { return true; }
+          if (a.ymin == b.ymin) {
+            if (a.ymax < b.ymax) { return true; }
+          }
+        }
+      }
+      return false;
+    }
   };
 
   using Set            = std::set<BBox, BBoxCmp>;
@@ -175,6 +194,8 @@ struct Union {
   /// Check if empty
   [[nodiscard]] auto empty() const -> bool { return regions.empty(); }
 
+  [[nodiscard]] auto to_string() const -> std::string;
+
  private:
   Set regions;
 };
@@ -192,6 +213,13 @@ struct Union {
  * @endcode
  */
 using Region = std::variant<Empty, Universe, BBox, Union>;
+
+/**
+ * @brief Utility function to print arbitrary regions
+ */
+inline auto to_string(const Region& region) -> std::string {
+  return std::visit([](const auto& r) { return r.to_string(); }, region);
+}
 
 // =============================================================================
 // Topological Operations

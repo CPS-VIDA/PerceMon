@@ -3,11 +3,8 @@ find_package(Catch2)
 
 include(Catch)
 
-set(TEST_SRCS
-    # test_ast.cc
-    # test_horizon.cc
-    # test_intervals.cc
-    test_stql.cc test_monitoring.cc)
+set(TEST_SRCS test_boolean_evaluation.cc test_datastream.cc test_monitoring.cc
+              test_spatial.cc test_stql.cc)
 
 add_executable(percemon_tests ${TEST_SRCS})
 target_include_directories(percemon_tests PRIVATE ${CMAKE_CURRENT_LIST_DIR})

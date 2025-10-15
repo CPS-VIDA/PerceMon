@@ -374,52 +374,6 @@ TEST_CASE("compute_requirements - complex formulas", "[monitoring][compute]") {
 }
 
 // =============================================================================
-// is_online_monitorable Function Tests
-// =============================================================================
-// Note: These are placeholder tests. The actual implementation of
-// is_online_monitorable() needs to be provided for these tests to pass.
-
-TEST_CASE("is_online_monitorable - bounded formulas", "[monitoring][online]") {
-  SECTION("True constant is online monitorable") {
-    auto phi = make_true();
-    REQUIRE(is_online_monitorable(phi));
-  }
-
-  SECTION("Next operator is online monitorable") {
-    auto phi     = make_true();
-    auto formula = next(phi, 10);
-    REQUIRE(is_online_monitorable(formula));
-  }
-
-  SECTION("Previous operator is online monitorable") {
-    auto phi     = make_true();
-    auto formula = previous(phi, 5);
-    REQUIRE(is_online_monitorable(formula));
-  }
-}
-
-TEST_CASE("is_online_monitorable - unbounded formulas", "[monitoring][online]") {
-  SECTION("Always (unbounded) is not online monitorable") {
-    auto phi     = make_true();
-    auto formula = always(phi);
-    REQUIRE_FALSE(is_online_monitorable(formula));
-  }
-
-  SECTION("Eventually (unbounded) is not online monitorable") {
-    auto phi     = make_true();
-    auto formula = eventually(phi);
-    REQUIRE_FALSE(is_online_monitorable(formula));
-  }
-
-  SECTION("Until (unbounded) is not online monitorable") {
-    auto safe    = make_true();
-    auto goal    = make_false();
-    auto formula = until(safe, goal);
-    REQUIRE_FALSE(is_online_monitorable(formula));
-  }
-}
-
-// =============================================================================
 // is_past_time_formula Function Tests
 // =============================================================================
 // Note: These are placeholder tests. The actual implementation of

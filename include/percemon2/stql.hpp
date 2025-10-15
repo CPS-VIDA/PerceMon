@@ -388,7 +388,9 @@ struct OrExpr;
 struct NextExpr;
 struct PreviousExpr;
 struct AlwaysExpr;
+struct HoldsExpr;
 struct EventuallyExpr;
+struct SometimesExpr;
 struct UntilExpr;
 struct SinceExpr;
 struct ReleaseExpr;
@@ -451,7 +453,9 @@ using Expr = std::variant<
     NextExpr,
     PreviousExpr,
     AlwaysExpr,
+    HoldsExpr,
     EventuallyExpr,
+    SometimesExpr,
     UntilExpr,
     SinceExpr,
     ReleaseExpr,
@@ -687,6 +691,36 @@ struct AlwaysExpr {
 };
 
 /**
+ * @brief STQL holds (past always) temporal operator.
+ *
+ * In STQL syntax: ■φ (past always)
+ *
+ * Past-time temporal operator. ■φ evaluates to true if φ holds in all
+ * past frames. This is a derived operator: ■φ ≡ false S φ (i.e., φ holds
+ * until false, meaning φ holds holds).
+ *
+ * Note: Without interval bounds, this operator requires infinite history
+ * and is not online-monitorable.
+ *
+ * Example:
+ * @code
+ * auto phi = make_true();
+ * auto holds_phi = HoldsExpr{phi};  // ■φ
+ * // Or using factory: auto holds_phi = holds(phi);
+ * @endcode
+ *
+ * @see STQL Definition in paper Section 2 (Definition 1)
+ * @see Related: SometimesExpr (dual), AlwaysExpr (past version), UntilExpr
+ */
+struct HoldsExpr {
+  Box<Expr> arg;
+
+  explicit HoldsExpr(Expr e);
+
+  [[nodiscard]] auto to_string() const -> std::string;
+};
+
+/**
  * @brief STQL eventually (finally) temporal operator.
  *
  * In STQL syntax: ◇φ (eventually/finally)
@@ -712,6 +746,36 @@ struct EventuallyExpr {
   Box<Expr> arg;
 
   explicit EventuallyExpr(Expr e);
+
+  [[nodiscard]] auto to_string() const -> std::string;
+};
+
+/**
+ * @brief STQL sometimes (past eventually) temporal operator.
+ *
+ * In STQL syntax: ♦φ (sometimes/past eventually)
+ *
+ * Past-time temporal operator. ♦φ evaluates to true if φ holds in some
+ * past frame. This is a derived operator: ♦φ ≡ true S φ (i.e., true holds
+ * since φ, meaning φ sometimes holds).
+ *
+ * Note: Without interval bounds, this operator requires infinite history
+ * and is not online-monitorable.
+ *
+ * Example:
+ * @code
+ * auto phi = make_true();
+ * auto sometimes_phi = SometimesExpr{phi};  // ♦φ
+ * // Or using factory: auto sometimes_phi = sometimes(phi);
+ * @endcode
+ *
+ * @see STQL Definition in paper Section 2 (Definition 1)
+ * @see Related: AlwaysExpr (dual), SometimesExpr (past version), UntilExpr
+ */
+struct SometimesExpr {
+  Box<Expr> arg;
+
+  explicit SometimesExpr(Expr e);
 
   [[nodiscard]] auto to_string() const -> std::string;
 };
@@ -833,10 +897,6 @@ struct BackToExpr {
 
   [[nodiscard]] auto to_string() const -> std::string;
 };
-
-// Convenient aliases for past-time operators
-using HoldsExpr     = AlwaysExpr;     ///< Alias: ■φ (past always) ≡ □φ semantics for past
-using SometimesExpr = EventuallyExpr; ///< Alias: ⧇φ (past eventually) ≡ ◇φ semantics for past
 
 // =============================================================================
 // Quantifiers and Freeze
@@ -1268,6 +1328,9 @@ struct EuclideanDistFunc {
  *
  * @see STQL Definition in paper Section 2 (Definition 1)
  * @see Related: EuclideanDistFunc, CompareOp
+ *
+ * @note This function doesn't actually make sense for CRTs that aren't centroids. If
+ * you think otherwise, contributions are welcome.
  */
 struct DistCompareExpr {
   EuclideanDistFunc lhs;
@@ -1661,7 +1724,11 @@ inline PreviousExpr::PreviousExpr(Expr e, size_t n) : arg(std::move(e)), steps(n
 
 inline AlwaysExpr::AlwaysExpr(Expr e) : arg(std::move(e)) {}
 
+inline HoldsExpr::HoldsExpr(Expr e) : arg(std::move(e)) {}
+
 inline EventuallyExpr::EventuallyExpr(Expr e) : arg(std::move(e)) {}
+
+inline SometimesExpr::SometimesExpr(Expr e) : arg(std::move(e)) {}
 
 inline UntilExpr::UntilExpr(Expr l, Expr r) : lhs(std::move(l)), rhs(std::move(r)) {}
 
@@ -1742,8 +1809,8 @@ inline auto backto(Expr lhs, Expr rhs) -> Expr {
 }
 
 // Past-time aliases
-inline auto holds(Expr e) -> Expr { return always(std::move(e)); }
-inline auto sometimes(Expr e) -> Expr { return eventually(std::move(e)); }
+inline auto holds(Expr e) -> Expr { return HoldsExpr{std::move(e)}; }
+inline auto sometimes(Expr e) -> Expr { return SometimesExpr(std::move(e)); }
 
 // Quantifier factories
 inline auto exists(std::vector<ObjectVar> vars, Expr body) -> Expr {
@@ -1843,6 +1910,14 @@ inline auto AlwaysExpr::to_string() const -> std::string {
 
 inline auto EventuallyExpr::to_string() const -> std::string {
   return "◇(" + std::visit([](const auto& e) { return e.to_string(); }, *arg) + ")";
+}
+
+inline auto HoldsExpr::to_string() const -> std::string {
+  return "holds(" + std::visit([](const auto& e) { return e.to_string(); }, *arg) + ")";
+}
+
+inline auto SometimesExpr::to_string() const -> std::string {
+  return "sometimes(" + std::visit([](const auto& e) { return e.to_string(); }, *arg) + ")";
 }
 
 inline auto UntilExpr::to_string() const -> std::string {

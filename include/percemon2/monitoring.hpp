@@ -41,17 +41,15 @@ constexpr int64_t UNBOUNDED = std::numeric_limits<int64_t>::max();
  * @endcode
  */
 struct History {
-    int64_t frames;  ///< Number of frames to look back (0 = no history needed)
+  int64_t frames; ///< Number of frames to look back (0 = no history needed)
 
-    [[nodiscard]] auto to_string() const -> std::string {
-        if (frames == UNBOUNDED) {
-            return "History{unbounded}";
-        }
-        return "History{" + std::to_string(frames) + " frames}";
-    }
+  [[nodiscard]] auto to_string() const -> std::string {
+    if (frames == UNBOUNDED) { return "History{unbounded}"; }
+    return "History{" + std::to_string(frames) + " frames}";
+  }
 
-    /// Check if history is bounded
-    [[nodiscard]] auto is_bounded() const -> bool { return frames != UNBOUNDED; }
+  /// Check if history is bounded
+  [[nodiscard]] auto is_bounded() const -> bool { return frames != UNBOUNDED; }
 };
 
 /**
@@ -75,17 +73,15 @@ struct History {
  * @endcode
  */
 struct Horizon {
-    int64_t frames;  ///< Number of frames to look ahead (0 = no horizon needed)
+  int64_t frames; ///< Number of frames to look ahead (0 = no horizon needed)
 
-    [[nodiscard]] auto to_string() const -> std::string {
-        if (frames == UNBOUNDED) {
-            return "Horizon{unbounded}";
-        }
-        return "Horizon{" + std::to_string(frames) + " frames}";
-    }
+  [[nodiscard]] auto to_string() const -> std::string {
+    if (frames == UNBOUNDED) { return "Horizon{unbounded}"; }
+    return "Horizon{" + std::to_string(frames) + " frames}";
+  }
 
-    /// Check if horizon is bounded
-    [[nodiscard]] auto is_bounded() const -> bool { return frames != UNBOUNDED; }
+  /// Check if horizon is bounded
+  [[nodiscard]] auto is_bounded() const -> bool { return frames != UNBOUNDED; }
 };
 
 /**
@@ -102,13 +98,13 @@ struct Horizon {
  * @endcode
  */
 struct MonitoringRequirements {
-    History history;
-    Horizon horizon;
+  History history;
+  Horizon horizon;
 
-    [[nodiscard]] auto to_string() const -> std::string {
-        return "MonitoringRequirements{\n  " + history.to_string() + ",\n  " +
-               horizon.to_string() + "\n}";
-    }
+  [[nodiscard]] auto to_string() const -> std::string {
+    return "MonitoringRequirements{\n  " + history.to_string() + ",\n  " + horizon.to_string() +
+           "\n}";
+  }
 };
 
 /**
@@ -173,38 +169,7 @@ struct MonitoringRequirements {
  * @note This function computes a syntactic bound - the actual runtime requirement
  *       may be less depending on the formula evaluation.
  */
-auto compute_requirements(
-    const stql::Expr& formula,
-    double fps = 1.0
-) -> MonitoringRequirements;
-
-/**
- * @brief Check if formula can be monitored online (finite horizon).
- *
- * A formula is online-monitorable if it requires only a finite future horizon.
- * Unbounded future operators like Always (without interval bounds) make a
- * formula not online-monitorable.
- *
- * @param formula The STQL formula to check
- * @return true if the formula has finite horizon, false otherwise
- *
- * Example:
- * @code
- * auto phi = make_true();
- * auto bounded = next(phi, 10);      // Finite horizon
- * auto unbounded = always(phi);       // Infinite horizon (unbounded)
- *
- * assert(is_online_monitorable(bounded));
- * assert(!is_online_monitorable(unbounded));  // Unless bounded variant
- * @endcode
- *
- * Implementation:
- * @code
- * auto reqs = compute_requirements(formula);
- * return reqs.horizon.is_bounded();
- * @endcode
- */
-auto is_online_monitorable(const stql::Expr& formula) -> bool;
+auto compute_requirements(const stql::Expr& formula, double fps = 1.0) -> MonitoringRequirements;
 
 /**
  * @brief Check if formula requires only past data (no future operators).
