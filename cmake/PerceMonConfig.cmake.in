@@ -1,9 +1,9 @@
-include(CMakeFindDependencyMacro)
+@PACKAGE_INIT@
 
-find_dependency(fmt REQUIRED)
-find_dependency(cppitertools REQUIRED)
-
-# Any extra setup
-
-# Add the targets file
+# Include the exported targets
 include("${CMAKE_CURRENT_LIST_DIR}/PerceMonTargets.cmake")
+
+set(PerceMon_INCLUDE_DIRS "@PACKAGE_INSTALL_INCLUDEDIR@")
+
+# Make PerceMon::PerceMon available
+set(PerceMon_FOUND TRUE)

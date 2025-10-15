@@ -28,7 +28,6 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
 
 # Options
 option(PERCEMON_COVERAGE "Generate coverage.xml for test suite?" OFF)
-option(PERCEMON_EXAMPLES "Build the examples?" OFF)
 option(PERCEMON_DOCS "Build the docs?" OFF)
 option(BUILD_PYTHON_BINDINGS "Build the percemon Python bindings" ON)
 
@@ -101,8 +100,8 @@ if(BUILD_PYTHON_BINDINGS)
     OUTPUT_VARIABLE nanobind_ROOT)
   find_package(nanobind CONFIG REQUIRED)
 
-  nanobind_add_module(percemon NB_STATIC STABLE_ABI python/main.cpp)
-  target_link_libraries(percemon PUBLIC PerceMon::PerceMon)
+  nanobind_add_module(PyPerceMon NB_STATIC STABLE_ABI python/main.cpp)
+  target_link_libraries(PyPerceMon PUBLIC PerceMon::PerceMon)
 endif()
 
 if(PERCEMON_COVERAGE)
@@ -115,10 +114,6 @@ endif()
 
 if(PERCEMON_DOCS)
   add_subdirectory(doc)
-endif()
-
-if(PERCEMON_EXAMPLES)
-  add_subdirectory(examples)
 endif()
 
 if(PERCEMON_COVERAGE)
@@ -137,21 +132,21 @@ install(
 install(DIRECTORY include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 
 if(BUILD_PYTHON_BINDINGS)
-  install(TARGETS percemon LIBRARY DESTINATION .)
+  install(TARGETS PyPerceMon LIBRARY DESTINATION .)
   nanobind_add_stub(
     percemon_stubs
     MODULE percemon
     OUTPUT percemon.pyi
-    PYTHON_PATH $<TARGET_FILE_DIR:percemon>
-    DEPENDS percemon
+    PYTHON_PATH $<TARGET_FILE_DIR:PyPerceMon>
+    DEPENDS PyPerceMon
     INSTALL_TIME)
 endif()
 
 include(CMakePackageConfigHelpers)
 write_basic_package_version_file(
   PerceMonConfigVersion.cmake
-  VERSION ${PACKAGE_VERSION}
-  COMPATIBILITY AnyNewerVersion)
+  VERSION ${PROJECT_VERSION}
+  COMPATIBILITY SameMajorVersion)
 
 install(
   EXPORT PerceMonTargets
@@ -159,7 +154,10 @@ install(
   NAMESPACE PerceMon::
   DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/PerceMon)
 
-configure_file(cmake/PerceMonConfig.cmake.in PerceMonConfig.cmake @ONLY)
+configure_package_config_file(
+  cmake/PerceMonConfig.cmake.in ${CMAKE_CURRENT_BINARY_DIR}/PerceMonConfig.cmake
+  INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/PerceMon)
+
 install(FILES "${CMAKE_CURRENT_BINARY_DIR}/PerceMonConfig.cmake"
               "${CMAKE_CURRENT_BINARY_DIR}/PerceMonConfigVersion.cmake"
         DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/PerceMon)
