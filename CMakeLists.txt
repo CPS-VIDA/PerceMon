@@ -1,15 +1,8 @@
 cmake_minimum_required(VERSION 3.15)
 
-file(
-  STRINGS ${CMAKE_CURRENT_LIST_DIR}/VERSION PERCEMON_VERSION
-  LIMIT_COUNT 1
-  REGEX
-    "^(0|[1-9][0-9]*)[.](0|[1-9][0-9]*)[.](0|[1-9][0-9]*)(-[.0-9A-Za-z-]+)?([+][.0-9A-Za-z-]+)?$"
-)
-
 project(
   PerceMon
-  VERSION ${PERCEMON_VERSION}
+  VERSION 1.0.0
   DESCRIPTION
     "A library for efficient online monitoring for Spatio-Temporal Quality Logic on streams of perception data."
   LANGUAGES CXX)
