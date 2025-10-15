@@ -1,6 +1,5 @@
 #include "percemon/online_monitor.hpp"
 
-#include <fmt/format.h>
 #include <stdexcept>
 #include <utility>
 

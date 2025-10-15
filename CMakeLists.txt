@@ -41,6 +41,12 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
   set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug" "Release"
                                                "MinSizeRel" "RelWithDebInfo")
 endif()
+# Force building of python bindings if using scikit-build
+if(SKBUILD)
+  set(BUILD_PYTHON_BINDINGS
+      ON
+      CACHE BOOL "Force build Python bindings" FORCE)
+endif()
 
 if(PERCEMON_MASTER_PROJECT)
   # Force color in compiler output as it will be easier to debug...
@@ -75,8 +81,12 @@ target_include_directories(PerceMon PRIVATE ${PROJECT_SOURCE_DIR}/csrc)
 target_compile_features(PerceMon PUBLIC cxx_std_20)
 set_target_properties(PerceMon PROPERTIES POSITION_INDEPENDENT_CODE ON)
 target_link_libraries(PerceMon PRIVATE cppitertools::cppitertools)
-if(PERCEMON_MASTER_PROJECT AND BUILD_TESTING)
-  set_target_properties(PerceMon PROPERTIES CXX_CPPCHECK cppcheck)
+if(PERCEMON_MASTER_PROJECT
+   AND BUILD_TESTING
+   AND (NOT SKBUILD))
+  set_target_properties(
+    PerceMon PROPERTIES CXX_CPPCHECK cppcheck CXX_INCLUDE_WHAT_YOU_USE
+                                              include-what-you-use)
 endif()
 
 if(BUILD_PYTHON_BINDINGS)
@@ -100,15 +110,25 @@ if(BUILD_PYTHON_BINDINGS)
     OUTPUT_VARIABLE nanobind_ROOT)
   find_package(nanobind CONFIG REQUIRED)
 
-  nanobind_add_module(PyPerceMon NB_STATIC STABLE_ABI python/main.cpp)
-  target_link_libraries(PyPerceMon PUBLIC PerceMon::PerceMon)
+  nanobind_add_module(
+    percemon
+    NB_STATIC
+    STABLE_ABI
+    python/percemon/bindings/datastream_bindings.cpp
+    python/percemon/bindings/evaluation_bindings.cpp
+    python/percemon/bindings/monitoring_bindings.cpp
+    python/percemon/bindings/online_monitor_bindings.cpp
+    python/percemon/bindings/spatial_bindings.cpp
+    python/percemon/bindings/stql_bindings.cpp
+    python/percemon/main.cpp)
+  target_link_libraries(percemon PUBLIC PerceMon::PerceMon)
 endif()
 
 if(PERCEMON_COVERAGE)
   add_coverage(PerceMon)
 endif()
 
-if(BUILD_TESTING)
+if(BUILD_TESTING AND NOT (SKBUILD))
   add_subdirectory(tests)
 endif()
 
@@ -132,14 +152,11 @@ install(
 install(DIRECTORY include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 
 if(BUILD_PYTHON_BINDINGS)
-  install(TARGETS PyPerceMon LIBRARY DESTINATION .)
-  nanobind_add_stub(
-    percemon_stubs
-    MODULE percemon
-    OUTPUT percemon.pyi
-    PYTHON_PATH $<TARGET_FILE_DIR:PyPerceMon>
-    DEPENDS PyPerceMon
-    INSTALL_TIME)
+  install(TARGETS percemon LIBRARY DESTINATION .)
+  if(SKBUILD)
+    install(FILES python/percemon/__init__.pyi python/percemon/py.typed
+            DESTINATION ${SKBUILD_PLATLIB_DIR}/percemon)
+  endif()
 endif()
 
 include(CMakePackageConfigHelpers)

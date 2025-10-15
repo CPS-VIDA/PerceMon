@@ -4,28 +4,29 @@ platforms = ["win-64", "linux-64", "osx-64"]
 
 [dependencies]
 # build-dependencies
-cmake = ">=3.20"
-ninja = ">=1.11"
-compilers = ">=1.11.0"
-doxygen = ">=1.13.2"
-lcov = ">=1.16"
+cmake = ">=4.1.2,<5"
+ninja = ">=1.13.1,<2"
+compilers = ">=1.11.0,<2"
+doxygen = ">=1.13.2,<2"
+lcov = ">=1.16,<2"
 scikit-build-core = ">=0.11.6,<0.12"
 
 # C++ deps to link against
-cli11 = ">=2.5.0,<3"
 libcppitertools = ">=2.3,<3"
-fmt = ">=11.2.0,<12"
 catch2 = ">=3.8.0,<4"
 
 # Python things
-python = "*"
+python = ">=3.14.0,<3.15"
 nanobind = ">=2.9.2,<3"
 pip = ">=25.2,<26"
 
 # dev dependencies
-cppcheck = "*"
-# clang-tools = "*"
+cppcheck = ">=2.18.3,<3"
+include-what-you-use = ">=0.25,<0.26"
+ipython = ">=9.6.0,<10"
+pytest = ">=8.4.2,<9"
+mypy = ">=1.18.2,<2"
 
 [pypi-dependencies]
-ruff = ">=0.14.0"
-zuban = ">=0.1.1"
+ruff = ">=0.14.3, <0.15"
+zuban = ">=0.2.1, <0.3"

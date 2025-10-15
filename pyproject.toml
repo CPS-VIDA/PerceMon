@@ -29,9 +29,20 @@ module-root = "python"
 requires = ["scikit-build-core>=0.10", "nanobind"]
 build-backend = "scikit_build_core.build"
 
+[tool.zuban]
+mypy_path = ["python"]
+
 [tool.mypy]
+mypy_path = "$MYPY_CONFIG_FILE_DIR/python"
 strict = true
-files = ["scripts/*.py", "scripts/**/*.py", "python/*.py", "python/**/*.py"]
+files = [
+  "scripts/*.py",
+  "scripts/**/*.py",
+  "python/*.py",
+  "python/**/*.py",
+  "tests/*.py",
+  "tests/**/*.py",
+]
 exclude = ["^build/", "^csrc/", "^doc/", "^include/"]
 show_error_codes = true
 namespace_packages = false

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <type_traits>
 #ifndef PERCEMON_STQL_HPP
 #define PERCEMON_STQL_HPP
 
@@ -10,6 +11,7 @@
 #include <optional>
 #include <stdexcept>
 #include <string>
+#include <utility>
 #include <variant>
 #include <vector>
 
@@ -992,6 +994,8 @@ struct FreezeExpr {
   Box<Expr> body;
 
   FreezeExpr(const std::optional<TimeVar>& t, const std::optional<FrameVar>& f, Expr e);
+  FreezeExpr(const std::optional<FrameVar>& f, Expr e);
+  FreezeExpr(const std::optional<TimeVar>& t, Expr e);
 
   [[nodiscard]] auto to_string() const -> std::string;
 };
@@ -1762,6 +1766,11 @@ inline FreezeExpr::FreezeExpr(
     throw std::invalid_argument("FreezeExpr requires at least time or frame variable");
   }
 }
+inline FreezeExpr::FreezeExpr(const std::optional<FrameVar>& f, Expr e) :
+    FreezeExpr{std::nullopt, f, std::move(e)} {};
+
+inline FreezeExpr::FreezeExpr(const std::optional<TimeVar>& t, Expr e) :
+    FreezeExpr{t, std::nullopt, std::move(e)} {};
 
 // Spatial expressions
 inline SpatialComplementExpr::SpatialComplementExpr(SpatialExpr e) : arg(std::move(e)) {}
@@ -1932,6 +1941,98 @@ inline auto operator-(TimeVar lhs, TimeVar rhs) -> TimeDiff {
 }
 inline auto operator-(FrameVar lhs, FrameVar rhs) -> FrameDiff {
   return FrameDiff{std::move(lhs), std::move(rhs)};
+}
+
+// Comparison expressions
+inline auto operator<(const TimeDiff& lhs, const double& rhs) -> Expr {
+  return TimeBoundExpr{lhs, CompareOp::LessThan, rhs};
+}
+inline auto operator<=(const TimeDiff& lhs, const double& rhs) -> Expr {
+  return TimeBoundExpr{lhs, CompareOp::LessEqual, rhs};
+}
+inline auto operator>(const TimeDiff& lhs, const double& rhs) -> Expr {
+  return TimeBoundExpr{lhs, CompareOp::GreaterThan, rhs};
+}
+inline auto operator>=(const TimeDiff& lhs, const double& rhs) -> Expr {
+  return TimeBoundExpr{lhs, CompareOp::GreaterEqual, rhs};
+}
+
+inline auto operator<(const FrameDiff& lhs, const int64_t& rhs) -> Expr {
+  return FrameBoundExpr{lhs, CompareOp::LessThan, rhs};
+}
+inline auto operator<=(const FrameDiff& lhs, const int64_t& rhs) -> Expr {
+  return FrameBoundExpr{lhs, CompareOp::LessEqual, rhs};
+}
+inline auto operator>(const FrameDiff& lhs, const int64_t& rhs) -> Expr {
+  return FrameBoundExpr{lhs, CompareOp::GreaterThan, rhs};
+}
+inline auto operator>=(const FrameDiff& lhs, const int64_t& rhs) -> Expr {
+  return FrameBoundExpr{lhs, CompareOp::GreaterEqual, rhs};
+}
+
+inline auto operator<(const ProbFunc& lhs, const double& rhs) -> Expr {
+  return ProbCompareExpr{lhs, CompareOp::LessThan, rhs};
+}
+inline auto operator<=(const ProbFunc& lhs, const double& rhs) -> Expr {
+  return ProbCompareExpr{lhs, CompareOp::LessEqual, rhs};
+}
+inline auto operator>(const ProbFunc& lhs, const double& rhs) -> Expr {
+  return ProbCompareExpr{lhs, CompareOp::GreaterThan, rhs};
+}
+inline auto operator>=(const ProbFunc& lhs, const double& rhs) -> Expr {
+  return ProbCompareExpr{lhs, CompareOp::GreaterEqual, rhs};
+}
+
+inline auto operator<(const ProbFunc& lhs, const ProbFunc& rhs) -> Expr {
+  return ProbCompareExpr{lhs, CompareOp::LessThan, rhs};
+}
+inline auto operator<=(const ProbFunc& lhs, const ProbFunc& rhs) -> Expr {
+  return ProbCompareExpr{lhs, CompareOp::LessEqual, rhs};
+}
+inline auto operator>(const ProbFunc& lhs, const ProbFunc& rhs) -> Expr {
+  return ProbCompareExpr{lhs, CompareOp::GreaterThan, rhs};
+}
+inline auto operator>=(const ProbFunc& lhs, const ProbFunc& rhs) -> Expr {
+  return ProbCompareExpr{lhs, CompareOp::GreaterEqual, rhs};
+}
+
+inline auto operator<(const EuclideanDistFunc& lhs, const double& rhs) -> Expr {
+  return DistCompareExpr{lhs, CompareOp::LessThan, rhs};
+}
+inline auto operator<=(const EuclideanDistFunc& lhs, const double& rhs) -> Expr {
+  return DistCompareExpr{lhs, CompareOp::LessEqual, rhs};
+}
+inline auto operator>(const EuclideanDistFunc& lhs, const double& rhs) -> Expr {
+  return DistCompareExpr{lhs, CompareOp::GreaterThan, rhs};
+}
+inline auto operator>=(const EuclideanDistFunc& lhs, const double& rhs) -> Expr {
+  return DistCompareExpr{lhs, CompareOp::GreaterEqual, rhs};
+}
+
+inline auto operator<(const AreaFunc& lhs, const double& rhs) -> Expr {
+  return AreaCompareExpr{lhs, CompareOp::LessThan, rhs};
+}
+inline auto operator<=(const AreaFunc& lhs, const double& rhs) -> Expr {
+  return AreaCompareExpr{lhs, CompareOp::LessEqual, rhs};
+}
+inline auto operator>(const AreaFunc& lhs, const double& rhs) -> Expr {
+  return AreaCompareExpr{lhs, CompareOp::GreaterThan, rhs};
+}
+inline auto operator>=(const AreaFunc& lhs, const double& rhs) -> Expr {
+  return AreaCompareExpr{lhs, CompareOp::GreaterEqual, rhs};
+}
+
+inline auto operator<(const AreaFunc& lhs, const AreaFunc& rhs) -> Expr {
+  return AreaCompareExpr{lhs, CompareOp::LessThan, rhs};
+}
+inline auto operator<=(const AreaFunc& lhs, const AreaFunc& rhs) -> Expr {
+  return AreaCompareExpr{lhs, CompareOp::LessEqual, rhs};
+}
+inline auto operator>(const AreaFunc& lhs, const AreaFunc& rhs) -> Expr {
+  return AreaCompareExpr{lhs, CompareOp::GreaterThan, rhs};
+}
+inline auto operator>=(const AreaFunc& lhs, const AreaFunc& rhs) -> Expr {
+  return AreaCompareExpr{lhs, CompareOp::GreaterEqual, rhs};
 }
 
 // =============================================================================
