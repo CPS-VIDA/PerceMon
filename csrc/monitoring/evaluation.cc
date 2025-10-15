@@ -177,9 +177,9 @@ template <std::bidirectional_iterator Iter, std::sentinel_for<Iter> Sentinel = I
     // Shift history by `-by`
     by = -by;
     assert(by > 0);
-    auto new_hist_end = ranges::prev(ctx.history_end, by, ctx.history_end);
+    auto new_hist_end = ranges::prev(ctx.history_end, by, ctx.history_begin);
     // Get the current frame using a sentinel value
-    new_ctx.current_frame = ranges::next(new_hist_end, 1, new_ctx.history_end);
+    new_ctx.current_frame = new_hist_end;
     new_ctx.history_end   = new_hist_end;
   } else {
     // Do nothing...
