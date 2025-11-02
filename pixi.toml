@@ -11,9 +11,6 @@ doxygen = ">=1.13.2,<2"
 lcov = ">=1.16,<2"
 scikit-build-core = ">=0.11.6,<0.12"
 
-# C++ deps to link against
-libcppitertools = ">=2.3,<3"
-catch2 = ">=3.8.0,<4"
 
 # Python things
 python = ">=3.14.0,<3.15"
@@ -26,6 +23,8 @@ include-what-you-use = ">=0.25,<0.26"
 ipython = ">=9.6.0,<10"
 pytest = ">=8.4.2,<9"
 mypy = ">=1.18.2,<2"
+# C++ testing
+catch2 = ">=3.8.0,<4"
 
 [pypi-dependencies]
 ruff = ">=0.14.3, <0.15"

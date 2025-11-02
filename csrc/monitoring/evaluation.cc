@@ -6,7 +6,6 @@
 #include <algorithm>
 #include <cassert>
 #include <cmath>
-#include <cppitertools/enumerate.hpp>
 #include <cstdint>
 #include <deque>
 #include <format>

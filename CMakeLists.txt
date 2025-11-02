@@ -66,9 +66,6 @@ if(PERCEMON_COVERAGE)
   find_package(codecov)
 endif()
 
-find_package(cppitertools REQUIRED)
-# find_package(range-v3 REQUIRED)
-
 add_library(
   PerceMon
   csrc/datastream.cc csrc/monitoring/evaluation.cc
@@ -80,7 +77,6 @@ target_include_directories(
 target_include_directories(PerceMon PRIVATE ${PROJECT_SOURCE_DIR}/csrc)
 target_compile_features(PerceMon PUBLIC cxx_std_20)
 set_target_properties(PerceMon PROPERTIES POSITION_INDEPENDENT_CODE ON)
-target_link_libraries(PerceMon PRIVATE cppitertools::cppitertools)
 if(PERCEMON_MASTER_PROJECT
    AND BUILD_TESTING
    AND (NOT SKBUILD))
