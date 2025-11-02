@@ -94,7 +94,7 @@ if(BUILD_PYTHON_BINDINGS)
 
   # Try to import all Python components potentially needed by nanobind
   find_package(
-    Python 3.9 REQUIRED
+    Python 3.10 REQUIRED
     COMPONENTS Interpreter ${DEV_MODULE}
     OPTIONAL_COMPONENTS Development.SABIModule)
 

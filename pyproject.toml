@@ -9,6 +9,7 @@ dependencies = []
 [tool.scikit-build]
 minimum-version = "build-system.requires"
 build-dir = "build/{wheel_tag}"
+wheel.exclude = ["**.cpp", "**.cc", "**.hpp", "**.cmake"]
 
 [tool.scikit-build.cmake.define]
 BUILD_PYTHON_BINDINGS = true
@@ -35,14 +36,7 @@ mypy_path = ["python"]
 [tool.mypy]
 mypy_path = "$MYPY_CONFIG_FILE_DIR/python"
 strict = true
-files = [
-  "scripts/*.py",
-  "scripts/**/*.py",
-  "python/*.py",
-  "python/**/*.py",
-  "tests/*.py",
-  "tests/**/*.py",
-]
+files = ["examples/*.py"]
 exclude = ["^build/", "^csrc/", "^doc/", "^include/"]
 show_error_codes = true
 namespace_packages = false
