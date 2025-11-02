@@ -29,6 +29,7 @@ jobs:
           cache: true
           cache-write: ${{ github.event_name == 'push' && github.ref_name == 'main' }}
           environments: ${{ matrix.environment }}
+          activate-environment: true
       - name: build
         run: mkdir -p build && cd build && cmake .. -GNinja -DBUILD_PYTHON_BINDINGS=ON -DBUILD_TESTING=ON
       - name: test C++
@@ -67,6 +68,7 @@ jobs:
           cache: true
           cache-write: ${{ github.event_name == 'push' && github.ref_name == 'main' }}
           environments: ${{ matrix.environment }}
+          activate-environment: true
       - name: Build wheels and sdist
         run: uv build
       - name: Upload wheels and sdist
