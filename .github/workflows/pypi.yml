@@ -30,8 +30,10 @@ jobs:
           cache-write: ${{ github.event_name == 'push' && github.ref_name == 'main' }}
           environments: ${{ matrix.environment }}
           activate-environment: true
-      - name: build
+      - name: configure
         run: mkdir -p build && cd build && cmake .. -GNinja -DBUILD_PYTHON_BINDINGS=ON -DBUILD_TESTING=ON
+      - name: build
+        run: cd build && ninja
       - name: test C++
         run: cd build && ctest --output-on-failure
       - name: Test with Python ${{ matrix.python-version }}
