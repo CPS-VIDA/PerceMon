@@ -63,15 +63,31 @@ jobs:
       - test
     steps:
       - uses: actions/checkout@v5
+      - name: Enable sccache
+        uses: mozilla-actions/sccache-action@7d986dd989559c6ecdb630a3fd2557667be217ad # 0.0.9
       - uses: astral-sh/setup-uv@v7
         with:
           version: "latest"
       - name: Build wheels
         run: uvx cibuildwheel --output-dir dist
+        env:
+          # CIBW mounts the host filesystem under /host
+          CIBW_ENVIRONMENT_LINUX: |
+            CC="/host/${{ env.SCCACHE_PATH }} cc"
+            CXX="/host/${{ env.SCCACHE_PATH }} c++"
+            SCCACHE_GHA_ENABLED=true
+            ACTIONS_RUNTIME_TOKEN=${{ env.ACTIONS_RUNTIME_TOKEN }}
+            ACTIONS_RUNTIME_URL=${{ env.ACTIONS_RUNTIME_URL }}
+            ACTIONS_RESULTS_URL=${{ env.ACTIONS_RESULTS_URL }}
+            ACTIONS_CACHE_URL=${{ env.ACTIONS_CACHE_URL }}
+            ACTIONS_CACHE_SERVICE_V2=${{ env.ACTIONS_CACHE_SERVICE_V2 }}
+            SCCACHE_DIR=/host/${{ env.SCCACHE_DIR }}
+            SCCACHE_CACHE_SIZE=${{ env.SCCACHE_CACHE_SIZE }}
       - uses: actions/upload-artifact@v5
         with:
           name: release-wheels-${{ matrix.os }}-${{ strategy.job-index }}
           path: ./dist/*.whl
+
 
   publish-pypi:
     name: Upload package to PyPI
