@@ -66,16 +66,17 @@ if(PERCEMON_COVERAGE)
 endif()
 
 add_library(
-  PerceMon
+  libPerceMon
   csrc/datastream.cc csrc/monitoring/evaluation.cc
   csrc/monitoring/online_monitor.cc csrc/spatial.cc csrc/stql_requirements.cc)
-add_library(PerceMon::PerceMon ALIAS PerceMon)
+add_library(libPerceMon::PerceMon ALIAS libPerceMon)
 target_include_directories(
-  PerceMon PUBLIC $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
-                  $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>)
-target_include_directories(PerceMon PRIVATE ${PROJECT_SOURCE_DIR}/csrc)
-target_compile_features(PerceMon PUBLIC cxx_std_20)
-set_target_properties(PerceMon PROPERTIES POSITION_INDEPENDENT_CODE ON)
+  libPerceMon PUBLIC $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+                     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>)
+target_include_directories(libPerceMon PRIVATE ${PROJECT_SOURCE_DIR}/csrc)
+target_compile_features(libPerceMon PUBLIC cxx_std_20)
+set_target_properties(libPerceMon PROPERTIES POSITION_INDEPENDENT_CODE ON
+                                             OUTPUT_NAME "PerceMon")
 
 if(BUILD_PYTHON_BINDINGS)
   if(CMAKE_VERSION VERSION_LESS 3.18)
@@ -109,11 +110,11 @@ if(BUILD_PYTHON_BINDINGS)
     python/percemon/bindings/spatial_bindings.cpp
     python/percemon/bindings/stql_bindings.cpp
     python/percemon/main.cpp)
-  target_link_libraries(percemon PUBLIC PerceMon::PerceMon)
+  target_link_libraries(percemon PUBLIC libPerceMon::PerceMon)
 endif()
 
 if(PERCEMON_COVERAGE)
-  add_coverage(PerceMon)
+  add_coverage(libPerceMon)
 endif()
 
 if(BUILD_TESTING)
@@ -131,7 +132,7 @@ if(PERCEMON_COVERAGE)
 endif()
 
 install(
-  TARGETS PerceMon
+  TARGETS libPerceMon
   EXPORT PerceMonTargets
   ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
   LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}

@@ -11,7 +11,7 @@ set(TEST_SRCS test_boolean_evaluation.cc test_datastream.cc test_monitoring.cc
 
 add_executable(percemon_tests ${TEST_SRCS})
 target_include_directories(percemon_tests PRIVATE ${CMAKE_CURRENT_LIST_DIR})
-target_link_libraries(percemon_tests PUBLIC PerceMon::PerceMon
+target_link_libraries(percemon_tests PUBLIC libPerceMon::PerceMon
                                             Catch2::Catch2WithMain)
 if(MSVC)
   target_compile_options(percemon_tests PRIVATE /W4 /WX /utf-8)
