@@ -2,4 +2,4 @@
 
 watch_file pixi.toml
 watch_file pixi.lock
-eval "$(pixi shell-hook -e py312)"
+eval "$(pixi shell-hook)"

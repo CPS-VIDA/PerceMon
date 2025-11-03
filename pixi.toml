@@ -34,14 +34,19 @@ zuban = "*"
 
 [feature.py310.dependencies]
 python = "3.10.*"
+cibuildwheel = "*"
 [feature.py311.dependencies]
 python = "3.11.*"
+cibuildwheel = "*"
 [feature.py312.dependencies]
 python = "3.12.*"
+cibuildwheel = "*"
 [feature.py313.dependencies]
 python = "3.13.*"
+cibuildwheel = "*"
 [feature.py314.dependencies]
 python = "3.14.*"
+cibuildwheel = "*"
 
 [environments]
 py310 = ["py310"]

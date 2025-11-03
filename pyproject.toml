@@ -1,6 +1,6 @@
 [project]
 name = "percemon"
-version = "1.0.0"
+version = "1.0.1"
 readme = "README.md"
 authors = [{ name = "Anand Balakrishnan", email = "anandbala1597@gmail.com" }]
 requires-python = ">=3.10"
@@ -51,3 +51,7 @@ extend-ignore = ["F722", "PYI041"]
 [tool.ruff.lint.extend-per-file-ignores]
 "*.py" = ["B905", "E203", "E501", "W291", "W293"]
 "*.pyi" = ["B", "E501", "E701"]
+
+[tool.cibuildwheel]
+# Use uv and build
+build-frontend = "build[uv]"
