@@ -73,8 +73,11 @@ jobs:
           cache-write: ${{ github.event_name == 'push' && github.ref_name == 'main' }}
           environments: ${{ matrix.environment }}
           activate-environment: true
-      - name: Build wheels and sdist
-        run: uv build
+      - name: Build sdist
+        run: uv build --sdist
+        if: ${{ matrix.environment == 'py11' && matrix.platform == 'ubuntu-latest'}}
+      - name: Build wheel
+        run: uv build --wheel
       - name: Upload wheels and sdist
         # upload-artifact@v5.0.0
         uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4
