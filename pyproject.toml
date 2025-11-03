@@ -55,3 +55,20 @@ extend-ignore = ["F722", "PYI041"]
 [tool.cibuildwheel]
 # Use uv and build
 build-frontend = "build[uv]"
+# Build all 64-bit wheels natively buildable on the image
+archs = ["auto64"]
+
+[tool.cibuildwheel.macos]
+# Build `universal2` and `arm64` wheels on an Intel runner.
+# Note that the `arm64` wheel and the `arm64` part of the `universal2`
+# wheel cannot be tested in this configuration.
+archs = ["x86_64", "arm64"]
+
+[tool.cibuildwheel.macos.environment]
+# If building macos, make sure that cibuildwheel knows it needs at least Xcode 15.4
+# (i.e. macOS 14.5+) as we use C++20 std::format
+MACOSX_DEPLOYMENT_TARGET = "14.5"
+
+[tool.cibuildwheel.linux]
+# On an Linux Intel runner with qemu installed, build Intel and ARM wheels
+archs = ["auto", "aarch64"]

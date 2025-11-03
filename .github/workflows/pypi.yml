@@ -38,7 +38,7 @@ jobs:
         run: cd build && ctest --output-on-failure
       - name: Install Python package
         run: pip install . -v
-      - name: Test with Python ${{ matrix.python-version }}
+      - name: Test with Python ${{ matrix.environment }}
         run: pytest
 
   release-build:
@@ -46,7 +46,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        environment: [py311, py312, py313, py314]
+        environment: [py310, py311, py312, py313, py314]
         platform: [ubuntu-latest, macos-latest, windows-latest]
     runs-on: ${{ matrix.platform }}
     needs:
@@ -72,20 +72,23 @@ jobs:
           cache: true
           cache-write: ${{ github.event_name == 'push' && github.ref_name == 'main' }}
           environments: ${{ matrix.environment }}
-          activate-environment: true
       - name: Build sdist
-        run: uv build --sdist
+        run: pixi run -e ${{matrix.environment}} uv build --sdist
         if: ${{ matrix.environment == 'py311' && matrix.platform == 'ubuntu-latest'}}
 
       - name: Build wheels
-        run: python -m cibuildwheel --output-dir dist
+        run: pixi run -e ${{matrix.environment}} python -m cibuildwheel --output-dir dist
+
+      - name: Publish release distributions to PyPI
+        run: pixi run -e ${{matrix.environment}} uv publish
+
       - uses: actions/upload-artifact@v4
         with:
-          name: cibw-wheels-${{ matrix.os }}-${{ strategy.job-index }}
+          name: cibw-wheels-${{ matrix.platform }}-${{ strategy.job-index }}
           path: ./dist/*.whl
+
       - uses: actions/upload-artifact@v4
         with:
           name: sdist
           path: ./dist/*.tar.gz
-      - name: Publish release distributions to PyPI
-        run: uv publish
+        if: ${{ matrix.environment == 'py311' && matrix.platform == 'ubuntu-latest'}}
