@@ -9,6 +9,8 @@ Tests cover:
 - Frame-by-frame evaluation workflows
 """
 
+from __future__ import annotations
+
 import percemon
 
 
@@ -65,8 +67,8 @@ class TestOnlineMonitorRequirements:
         monitor = percemon.OnlineMonitor(formula)
         reqs = monitor.requirements()
         assert isinstance(reqs, percemon.MonitoringRequirements)
-        assert hasattr(reqs, 'history')
-        assert hasattr(reqs, 'horizon')
+        assert hasattr(reqs, "history")
+        assert hasattr(reqs, "horizon")
 
     def test_requirements_past_time(self) -> None:
         """Test requirements for past-time formula."""
@@ -303,10 +305,7 @@ class TestOnlineMonitorIntegration:
         car = percemon.ObjectVar("car")
 
         # Formula: exists car with class 1 and high confidence
-        formula = percemon.exists(
-            [car],
-            percemon.is_class(car, 1) & percemon.high_confidence(car, 0.8)
-        )
+        formula = percemon.exists([car], percemon.is_class(car, 1) & percemon.high_confidence(car, 0.8))
 
         monitor = percemon.OnlineMonitor(formula, fps=30.0)
 

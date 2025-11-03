@@ -11,6 +11,8 @@ Tests cover:
 - Perception helpers
 """
 
+from __future__ import annotations
+
 import percemon
 
 

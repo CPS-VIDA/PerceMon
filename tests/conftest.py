@@ -5,6 +5,8 @@ This module provides reusable fixtures and helper functions for testing the
 PerceMon Python bindings.
 """
 
+from __future__ import annotations
+
 import percemon
 import pytest
 

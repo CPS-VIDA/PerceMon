@@ -10,6 +10,8 @@ Tests cover:
 - euclidean_distance() computation
 """
 
+from __future__ import annotations
+
 import percemon
 import pytest
 
@@ -19,12 +21,12 @@ class TestRefPointTypeEnum:
 
     def test_ref_point_type_enum(self) -> None:
         """Test RefPointType enum values."""
-        assert hasattr(percemon, 'RefPointType')
-        assert hasattr(percemon.RefPointType, 'LeftMargin')
-        assert hasattr(percemon.RefPointType, 'RightMargin')
-        assert hasattr(percemon.RefPointType, 'TopMargin')
-        assert hasattr(percemon.RefPointType, 'BottomMargin')
-        assert hasattr(percemon.RefPointType, 'Center')
+        assert hasattr(percemon, "RefPointType")
+        assert hasattr(percemon.RefPointType, "LeftMargin")
+        assert hasattr(percemon.RefPointType, "RightMargin")
+        assert hasattr(percemon.RefPointType, "TopMargin")
+        assert hasattr(percemon.RefPointType, "BottomMargin")
+        assert hasattr(percemon.RefPointType, "Center")
 
 
 class TestBoundingBox:
@@ -33,10 +35,10 @@ class TestBoundingBox:
     def test_bounding_box_construction(self) -> None:
         """Test BoundingBox default construction."""
         bbox = percemon.BoundingBox()
-        assert hasattr(bbox, 'xmin')
-        assert hasattr(bbox, 'xmax')
-        assert hasattr(bbox, 'ymin')
-        assert hasattr(bbox, 'ymax')
+        assert hasattr(bbox, "xmin")
+        assert hasattr(bbox, "xmax")
+        assert hasattr(bbox, "ymin")
+        assert hasattr(bbox, "ymax")
 
     def test_bounding_box_with_values(self) -> None:
         """Test BoundingBox construction with values."""
@@ -95,9 +97,9 @@ class TestObject:
     def test_object_construction(self) -> None:
         """Test Object default construction."""
         obj = percemon.Object()
-        assert hasattr(obj, 'object_class')
-        assert hasattr(obj, 'probability')
-        assert hasattr(obj, 'bbox')
+        assert hasattr(obj, "object_class")
+        assert hasattr(obj, "probability")
+        assert hasattr(obj, "bbox")
 
     def test_object_with_values(self, sample_object) -> None:
         """Test Object with assigned values."""
@@ -147,11 +149,11 @@ class TestFrame:
     def test_frame_construction(self) -> None:
         """Test Frame default construction."""
         frame = percemon.Frame()
-        assert hasattr(frame, 'timestamp')
-        assert hasattr(frame, 'frame_num')
-        assert hasattr(frame, 'size_x')
-        assert hasattr(frame, 'size_y')
-        assert hasattr(frame, 'objects')
+        assert hasattr(frame, "timestamp")
+        assert hasattr(frame, "frame_num")
+        assert hasattr(frame, "size_x")
+        assert hasattr(frame, "size_y")
+        assert hasattr(frame, "objects")
 
     def test_frame_properties(self, empty_frame) -> None:
         """Test Frame property assignment."""
@@ -267,8 +269,7 @@ class TestEuclideanDistance:
     def test_euclidean_distance_same_point(self, sample_bounding_box) -> None:
         """Test euclidean_distance between same points."""
         dist = percemon.euclidean_distance(
-            sample_bounding_box, percemon.RefPointType.Center,
-            sample_bounding_box, percemon.RefPointType.Center
+            sample_bounding_box, percemon.RefPointType.Center, sample_bounding_box, percemon.RefPointType.Center
         )
         assert dist == pytest.approx(0.0)
 
@@ -277,10 +278,7 @@ class TestEuclideanDistance:
         bbox1 = percemon.BoundingBox(0.0, 100.0, 0.0, 100.0)
         bbox2 = percemon.BoundingBox(100.0, 200.0, 0.0, 100.0)
 
-        dist = percemon.euclidean_distance(
-            bbox1, percemon.RefPointType.Center,
-            bbox2, percemon.RefPointType.Center
-        )
+        dist = percemon.euclidean_distance(bbox1, percemon.RefPointType.Center, bbox2, percemon.RefPointType.Center)
         # Centers are at (50, 50) and (150, 50), distance = 100
         assert dist == pytest.approx(100.0)
 
@@ -289,10 +287,7 @@ class TestEuclideanDistance:
         bbox1 = percemon.BoundingBox(0.0, 100.0, 0.0, 100.0)
         bbox2 = percemon.BoundingBox(0.0, 100.0, 100.0, 200.0)
 
-        dist = percemon.euclidean_distance(
-            bbox1, percemon.RefPointType.Center,
-            bbox2, percemon.RefPointType.Center
-        )
+        dist = percemon.euclidean_distance(bbox1, percemon.RefPointType.Center, bbox2, percemon.RefPointType.Center)
         # Centers are at (50, 50) and (50, 150), distance = 100
         assert dist == pytest.approx(100.0)
 
@@ -301,10 +296,7 @@ class TestEuclideanDistance:
         bbox1 = percemon.BoundingBox(0.0, 100.0, 0.0, 100.0)
         bbox2 = percemon.BoundingBox(100.0, 200.0, 100.0, 200.0)
 
-        dist = percemon.euclidean_distance(
-            bbox1, percemon.RefPointType.Center,
-            bbox2, percemon.RefPointType.Center
-        )
+        dist = percemon.euclidean_distance(bbox1, percemon.RefPointType.Center, bbox2, percemon.RefPointType.Center)
         # Centers are at (50, 50) and (150, 150)
         # distance = sqrt((100)^2 + (100)^2) = sqrt(20000) ≈ 141.42
         assert dist == pytest.approx(141.42, rel=1e-2)
@@ -314,10 +306,7 @@ class TestEuclideanDistance:
         bbox1 = percemon.BoundingBox(0.0, 100.0, 0.0, 100.0)
         bbox2 = percemon.BoundingBox(100.0, 200.0, 0.0, 100.0)
 
-        dist = percemon.euclidean_distance(
-            bbox1, percemon.RefPointType.RightMargin,
-            bbox2, percemon.RefPointType.LeftMargin
-        )
+        dist = percemon.euclidean_distance(bbox1, percemon.RefPointType.RightMargin, bbox2, percemon.RefPointType.LeftMargin)
         # Right margin of bbox1 at (100, 50)
         # Left margin of bbox2 at (100, 50)
         # distance = 0
@@ -371,9 +360,6 @@ class TestIntegration:
         frame.objects["obj2"] = obj2
 
         # Compute distance
-        dist = percemon.euclidean_distance(
-            obj1_bbox, percemon.RefPointType.Center,
-            obj2_bbox, percemon.RefPointType.Center
-        )
+        dist = percemon.euclidean_distance(obj1_bbox, percemon.RefPointType.Center, obj2_bbox, percemon.RefPointType.Center)
         # Centers at (50, 50) and (350, 50), distance = 300
         assert dist == pytest.approx(300.0)
