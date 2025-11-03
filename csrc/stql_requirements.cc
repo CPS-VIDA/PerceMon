@@ -158,29 +158,29 @@ auto extract_frame_bound_constraint(const stql::FrameBoundExpr& expr, ScopeDirec
  *
  * AND takes the minimum (tighter) bound.
  */
-auto intersect_bounds(const ConstraintBound& a, const ConstraintBound& b) -> ConstraintBound {
-  if (a.direction != b.direction) {
-    // Conflicting directions - conservatively return unbounded
-    return ConstraintBound{.frames = UNBOUNDED, .direction = a.direction};
-  }
-  return ConstraintBound{.frames = std::min(a.frames, b.frames), .direction = a.direction};
-}
+// auto intersect_bounds(const ConstraintBound& a, const ConstraintBound& b) -> ConstraintBound {
+//   if (a.direction != b.direction) {
+//     // Conflicting directions - conservatively return unbounded
+//     return ConstraintBound{.frames = UNBOUNDED, .direction = a.direction};
+//   }
+//   return ConstraintBound{.frames = std::min(a.frames, b.frames), .direction = a.direction};
+// }
 
 /**
  * @brief Combine two bounds under OR (disjunction)
  *
  * OR takes the maximum (looser) bound. If either side is unbounded, result is unbounded.
  */
-auto union_bounds(const ConstraintBound& a, const ConstraintBound& b) -> ConstraintBound {
-  if (a.direction != b.direction) {
-    // Conflicting directions - result is unbounded
-    return ConstraintBound{.frames = UNBOUNDED, .direction = a.direction};
-  }
-  if (a.frames == UNBOUNDED || b.frames == UNBOUNDED) {
-    return ConstraintBound{.frames = UNBOUNDED, .direction = a.direction};
-  }
-  return ConstraintBound{.frames = std::max(a.frames, b.frames), .direction = a.direction};
-}
+// auto union_bounds(const ConstraintBound& a, const ConstraintBound& b) -> ConstraintBound {
+//   if (a.direction != b.direction) {
+//     // Conflicting directions - result is unbounded
+//     return ConstraintBound{.frames = UNBOUNDED, .direction = a.direction};
+//   }
+//   if (a.frames == UNBOUNDED || b.frames == UNBOUNDED) {
+//     return ConstraintBound{.frames = UNBOUNDED, .direction = a.direction};
+//   }
+//   return ConstraintBound{.frames = std::max(a.frames, b.frames), .direction = a.direction};
+// }
 
 /**
  * @brief Recursively compute requirements from an expression
@@ -213,9 +213,9 @@ auto is_past_time_formula(const stql::Expr& formula) -> bool {
 
 namespace {
 auto compute_requirements_impl(
-    const stql::SpatialExpr& expr,
-    double fps,
-    ScopeDirection current_scope) -> std::pair<int64_t, int64_t> {
+    const stql::SpatialExpr& /* expr */,
+    double /* fps */,
+    ScopeDirection /* current_scope */) -> std::pair<int64_t, int64_t> {
   return {0, 0};
 }
 

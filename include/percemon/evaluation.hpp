@@ -25,7 +25,7 @@ namespace percemon::monitoring {
  *  the current frame. Since these change at every temporal scope, the implementation of
  *  this is hidden from the user.
  */
-template <std::bidirectional_iterator Iter, std::sentinel_for<Iter> Sentinel = Iter>
+template <std::bidirectional_iterator Iter, std::sized_sentinel_for<Iter> Sentinel = Iter>
   requires std::same_as<std::iter_value_t<Iter>, datastream::Frame>
 struct EvaluationContext {
   /**
@@ -96,8 +96,15 @@ struct EvaluationContext {
    */
   std::map<std::string, std::string> bound_objects;
 
-  [[nodiscard]] auto has_history() const -> bool { return history_begin != history_end; }
-  [[nodiscard]] auto has_horizon() const -> bool { return horizon_begin != horizon_end; }
+  [[nodiscard]] constexpr auto has_history() const -> bool { return history_begin != history_end; }
+  [[nodiscard]] constexpr auto has_horizon() const -> bool { return horizon_begin != horizon_end; }
+
+  [[nodiscard]] constexpr auto num_horizon() const -> std::iter_difference_t<Iter> {
+    return std::distance(horizon_begin, horizon_end);
+  }
+  [[nodiscard]] constexpr auto num_history() const -> std::iter_difference_t<Iter> {
+    return std::distance(history_begin, history_end);
+  }
 };
 
 /**

@@ -80,9 +80,6 @@ void Union::merge(const Union& other) {
 
 namespace {
 
-constexpr double TOP    = std::numeric_limits<double>::infinity();
-constexpr double BOTTOM = -TOP;
-
 // Compute intersection of two bounding boxes
 auto intersection_of(const BBox& a, const BBox& b) -> Region {
   // For the new BBOx, we compute the new bounds by taking the max of {a,b}.mins and min

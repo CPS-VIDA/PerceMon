@@ -95,26 +95,6 @@ template <typename T>
   throw std::logic_error("Unknown coordinate reference point");
 }
 
-template <std::bidirectional_iterator Iter, std::sentinel_for<Iter> Sentinel = Iter>
-  requires std::same_as<std::iter_value_t<Iter>, datastream::Frame>
-[[nodiscard]] constexpr auto current_plus_horizon(const EvaluationContext<Iter, Sentinel>& ctx)
-    -> decltype(auto) {
-  return views::join(
-      std::vector{
-          ranges::subrange(ctx.current_frame, ranges::next(ctx.current_frame)),
-          ranges::subrange(ctx.horizon_begin, ctx.horizon_end)});
-}
-
-template <std::bidirectional_iterator Iter, std::sentinel_for<Iter> Sentinel = Iter>
-  requires std::same_as<std::iter_value_t<Iter>, datastream::Frame>
-[[nodiscard]] constexpr auto current_plus_history(const EvaluationContext<Iter, Sentinel>& ctx)
-    -> decltype(auto) {
-  return views::join(
-      std::vector{
-          ranges::subrange(ctx.history_begin, ctx.history_end),
-          ranges::subrange(ctx.current_frame, ranges::next(ctx.current_frame))});
-}
-
 /**
  * @brief Find an object by ID in a frame's object map.
  *
@@ -138,7 +118,7 @@ find_object_in_frame(const datastream::Frame& frame, const std::string& object_i
  * @return the string ID of the object in the context
  * @throws std::logic_error If the object variable is not bound to the context
  */
-template <std::bidirectional_iterator Iter, std::sentinel_for<Iter> Sentinel = Iter>
+template <std::bidirectional_iterator Iter, std::sized_sentinel_for<Iter> Sentinel = Iter>
 [[nodiscard]] inline auto
 get_object_binding(const stql::ObjectVar& obj, const EvaluationContext<Iter, Sentinel>& ctx)
     -> std::string {
@@ -159,7 +139,7 @@ get_object_binding(const stql::ObjectVar& obj, const EvaluationContext<Iter, Sen
  * @param by The number of frames to shift by. If the number is negative, it shifts the history,
  * else, it shifts the horizon.
  */
-template <std::bidirectional_iterator Iter, std::sentinel_for<Iter> Sentinel = Iter>
+template <std::bidirectional_iterator Iter, std::sized_sentinel_for<Iter> Sentinel = Iter>
 [[nodiscard]] auto shift_eval_context(const EvaluationContext<Iter, Sentinel>& ctx, int64_t by)
     -> EvaluationContext<Iter, Sentinel> {
   // Copy over the context first
@@ -202,7 +182,7 @@ template <std::bidirectional_iterator Iter, std::sentinel_for<Iter> Sentinel = I
  * @param ctx The evaluation context (bindings, buffers, current frame)
  * @return true if expression is satisfied, false if violated
  */
-template <std::bidirectional_iterator Iter, std::sentinel_for<Iter> Sentinel = Iter>
+template <std::bidirectional_iterator Iter, std::sized_sentinel_for<Iter> Sentinel = Iter>
 [[nodiscard]] auto eval_impl(const stql::Expr& expr, const EvaluationContext<Iter, Sentinel>& ctx)
     -> bool;
 
@@ -215,7 +195,7 @@ template <std::bidirectional_iterator Iter, std::sentinel_for<Iter> Sentinel = I
  * @param ctx The evaluation context (bindings, buffers, current frame)
  * @return true if expression is satisfied, false if violated
  */
-template <std::bidirectional_iterator Iter, std::sentinel_for<Iter> Sentinel = Iter>
+template <std::bidirectional_iterator Iter, std::sized_sentinel_for<Iter> Sentinel = Iter>
 [[nodiscard]] auto
 eval_impl(const stql::SpatialExpr& expr, const EvaluationContext<Iter, Sentinel>& ctx)
     -> spatial::Region;
@@ -231,7 +211,7 @@ eval_impl(const stql::SpatialExpr& expr, const EvaluationContext<Iter, Sentinel>
  *
  * Trivial: return the constant value.
  */
-template <std::bidirectional_iterator Iter, std::sentinel_for<Iter> Sentinel = Iter>
+template <std::bidirectional_iterator Iter, std::sized_sentinel_for<Iter> Sentinel = Iter>
 [[nodiscard]] auto
 eval_const(const stql::ConstExpr& e, const EvaluationContext<Iter, Sentinel>& /*ctx*/) -> bool {
   return e.value;
@@ -244,7 +224,7 @@ eval_const(const stql::ConstExpr& e, const EvaluationContext<Iter, Sentinel>& /*
  *
  * Recursively evaluate the subexpression and negate the result.
  */
-template <std::bidirectional_iterator Iter, std::sentinel_for<Iter> Sentinel = Iter>
+template <std::bidirectional_iterator Iter, std::sized_sentinel_for<Iter> Sentinel = Iter>
 [[nodiscard]] auto eval_not(const stql::NotExpr& e, const EvaluationContext<Iter, Sentinel>& ctx)
     -> bool {
   return !eval_impl(*e.arg, ctx);
@@ -257,7 +237,7 @@ template <std::bidirectional_iterator Iter, std::sentinel_for<Iter> Sentinel = I
  *
  * Recursively evaluate both subexpressions and return logical AND.
  */
-template <std::bidirectional_iterator Iter, std::sentinel_for<Iter> Sentinel = Iter>
+template <std::bidirectional_iterator Iter, std::sized_sentinel_for<Iter> Sentinel = Iter>
 [[nodiscard]] auto eval_and(const stql::AndExpr& e, const EvaluationContext<Iter, Sentinel>& ctx)
     -> bool {
   return ranges::all_of(e.args, [&ctx](const auto& arg) { return eval_impl(arg, ctx); });
@@ -270,7 +250,7 @@ template <std::bidirectional_iterator Iter, std::sentinel_for<Iter> Sentinel = I
  *
  * Recursively evaluate both subexpressions and return logical OR.
  */
-template <std::bidirectional_iterator Iter, std::sentinel_for<Iter> Sentinel = Iter>
+template <std::bidirectional_iterator Iter, std::sized_sentinel_for<Iter> Sentinel = Iter>
 [[nodiscard]] auto eval_or(const stql::OrExpr& e, const EvaluationContext<Iter, Sentinel>& ctx)
     -> bool {
   return ranges::any_of(e.args, [&ctx](const auto& arg) { return eval_impl(arg, ctx); });
@@ -288,7 +268,7 @@ template <std::bidirectional_iterator Iter, std::sentinel_for<Iter> Sentinel = I
  * Evaluates φ on the next frame (horizon[0]).
  * Returns false if horizon buffer is empty (cannot evaluate next).
  */
-template <std::bidirectional_iterator Iter, std::sentinel_for<Iter> Sentinel = Iter>
+template <std::bidirectional_iterator Iter, std::sized_sentinel_for<Iter> Sentinel = Iter>
 [[nodiscard]] auto eval_next(const stql::NextExpr& e, const EvaluationContext<Iter, Sentinel>& ctx)
     -> bool {
   // Check if there is any next frame
@@ -305,11 +285,11 @@ template <std::bidirectional_iterator Iter, std::sentinel_for<Iter> Sentinel = I
  * Returns true if φ is satisfied on ALL future frames (up to horizon).
  * Returns true if horizon is empty (vacuously true).
  */
-template <std::bidirectional_iterator Iter, std::sentinel_for<Iter> Sentinel = Iter>
+template <std::bidirectional_iterator Iter, std::sized_sentinel_for<Iter> Sentinel = Iter>
 [[nodiscard]] auto
 eval_always(const stql::AlwaysExpr& e, const EvaluationContext<Iter, Sentinel>& ctx) -> bool {
   EvaluationContext<Iter, Sentinel> frame_ctx = ctx;
-  for (const auto& frame : current_plus_horizon(ctx)) {
+  for (auto i = ctx.num_horizon() + 1; i > 0; i--) {
     if (!eval_impl(*e.arg, frame_ctx)) { return false; }
     // Shift at end so we don't do an off-by-1 error
     frame_ctx = shift_eval_context(frame_ctx, 1);
@@ -325,12 +305,12 @@ eval_always(const stql::AlwaysExpr& e, const EvaluationContext<Iter, Sentinel>& 
  * Returns true if φ is satisfied on ANY future frame (up to horizon).
  * Returns false if horizon is empty (no opportunity to satisfy).
  */
-template <std::bidirectional_iterator Iter, std::sentinel_for<Iter> Sentinel = Iter>
+template <std::bidirectional_iterator Iter, std::sized_sentinel_for<Iter> Sentinel = Iter>
 [[nodiscard]] auto
 eval_eventually(const stql::EventuallyExpr& e, const EvaluationContext<Iter, Sentinel>& ctx)
     -> bool {
   EvaluationContext<Iter, Sentinel> frame_ctx = ctx;
-  for (const auto& frame : current_plus_horizon(ctx)) {
+  for (auto i = ctx.num_horizon() + 1; i > 0; i--) {
     if (eval_impl(*e.arg, frame_ctx)) { return true; }
     // Shift at end so we don't do an off-by-1 error
     frame_ctx = shift_eval_context(frame_ctx, 1);
@@ -351,38 +331,32 @@ eval_eventually(const stql::EventuallyExpr& e, const EvaluationContext<Iter, Sen
  *
  * **Semantics**: φ must hold until ψ eventually becomes true.
  */
-template <std::bidirectional_iterator Iter, std::sentinel_for<Iter> Sentinel = Iter>
+template <std::bidirectional_iterator Iter, std::sized_sentinel_for<Iter> Sentinel = Iter>
 [[nodiscard]] auto
 eval_until(const stql::UntilExpr& e, const EvaluationContext<Iter, Sentinel>& ctx) -> bool {
-  const auto trace = current_plus_horizon(ctx);
-  const auto begin = ranges::begin(trace);
-  const auto end   = ranges::end(trace);
-
+  // We will shift the frame context by 1 at the end of every iteration.
   EvaluationContext<Iter, Sentinel> frame_ctx = ctx;
-
-  // Search for first frame where ψ is true
-  for (auto it = begin; it != end; ++it) {
-    const datastream::Frame& frame = *it;
-
+  // Keep track of if lhs has been true until the previous frame
+  bool lhs_until_prev = true;
+  // Search for first frame where ψ is true, while keeping track of if LHS has been
+  // true until now.
+  // This is effectively the expansion of
+  // φ U ψ = ψ | (φ & X(φ U ψ)
+  for (auto i = ctx.num_horizon() + 1; i > 0; i--) {
     // Check if ψ is true at this frame
+
+    // If rhs is true, just check if lhs was true until now. Return that value
     if (eval_impl(*e.rhs, frame_ctx)) {
-      // ψ is true; now check φ holds on all prior frames
-      const auto& prior_end                       = it;
-      EvaluationContext<Iter, Sentinel> prior_ctx = ctx;
-      for (auto jt = begin; jt != prior_end; ++jt) {
-        const auto& prior_frame = *jt;
-        if (!eval_impl(*e.lhs, prior_ctx)) {
-          return false; // φ violated before ψ becomes true
-        }
-        // Shift at end so we don't do an off-by-1 error
-        prior_ctx = shift_eval_context(prior_ctx, 1);
-      }
-      return true; // ψ became true and φ held until then
+      return lhs_until_prev;
+    }
+    // Otherwise, keep track of the validity of lhs
+    else {
+      lhs_until_prev = lhs_until_prev && eval_impl(*e.lhs, frame_ctx);
     }
     // Shift at end so we don't do an off-by-1 error
     frame_ctx = shift_eval_context(frame_ctx, 1);
   }
-  return false; // ψ never became true
+  return false; // ψ never became true, i.e., strong until
 }
 
 /**
@@ -395,18 +369,13 @@ eval_until(const stql::UntilExpr& e, const EvaluationContext<Iter, Sentinel>& ct
  *
  * Returns true if ψ holds forever (ψ is never false).
  */
-template <std::bidirectional_iterator Iter, std::sentinel_for<Iter> Sentinel = Iter>
+template <std::bidirectional_iterator Iter, std::sized_sentinel_for<Iter> Sentinel = Iter>
 [[nodiscard]] auto
 eval_release(const stql::ReleaseExpr& e, const EvaluationContext<Iter, Sentinel>& ctx) -> bool {
-  const auto trace = current_plus_horizon(ctx);
-  const auto begin = ranges::begin(trace);
-  const auto end   = ranges::end(trace);
-
   EvaluationContext<Iter, Sentinel> frame_ctx = ctx;
 
   // Check if there's a frame where ψ becomes false
-  for (auto i = begin; i != end; ++i) {
-    const auto& frame = *i;
+  for (auto i = ctx.num_horizon() + 1; i > 0; i--) {
     if (!eval_impl(*e.rhs, frame_ctx)) {
       // ψ is false at frame i; φ must be true
       // φ is true when ψ first becomes false
@@ -431,7 +400,7 @@ eval_release(const stql::ReleaseExpr& e, const EvaluationContext<Iter, Sentinel>
  * Evaluates φ on the previous frame (history.back()).
  * Returns false if history buffer is empty (no previous frame).
  */
-template <std::bidirectional_iterator Iter, std::sentinel_for<Iter> Sentinel = Iter>
+template <std::bidirectional_iterator Iter, std::sized_sentinel_for<Iter> Sentinel = Iter>
 [[nodiscard]] auto
 eval_previous(const stql::PreviousExpr& e, const EvaluationContext<Iter, Sentinel>& ctx) -> bool {
   // No previous frame available: vacuously false
@@ -450,11 +419,11 @@ eval_previous(const stql::PreviousExpr& e, const EvaluationContext<Iter, Sentine
  * Returns true if φ is satisfied on ALL past frames (up to history).
  * Returns true if history is empty (vacuously true).
  */
-template <std::bidirectional_iterator Iter, std::sentinel_for<Iter> Sentinel = Iter>
+template <std::bidirectional_iterator Iter, std::sized_sentinel_for<Iter> Sentinel = Iter>
 [[nodiscard]] auto
 eval_holds(const stql::HoldsExpr& e, const EvaluationContext<Iter, Sentinel>& ctx) -> bool {
   EvaluationContext<Iter, Sentinel> frame_ctx = ctx;
-  for (const auto& frame : current_plus_history(ctx) | views::reverse) {
+  for (auto i = ctx.num_history() + 1; i > 0; i--) {
     if (!eval_impl(*e.arg, frame_ctx)) {
       return false; // Found a past frame where φ is false
     }
@@ -472,11 +441,11 @@ eval_holds(const stql::HoldsExpr& e, const EvaluationContext<Iter, Sentinel>& ct
  * Returns true if φ is satisfied on ANY past frame.
  * Returns false if history is empty (no opportunity).
  */
-template <std::bidirectional_iterator Iter, std::sentinel_for<Iter> Sentinel = Iter>
+template <std::bidirectional_iterator Iter, std::sized_sentinel_for<Iter> Sentinel = Iter>
 [[nodiscard]] auto
 eval_sometimes(const stql::SometimesExpr& e, const EvaluationContext<Iter, Sentinel>& ctx) -> bool {
   EvaluationContext<Iter, Sentinel> frame_ctx = ctx;
-  for (const auto& frame : current_plus_history(ctx) | views::reverse) {
+  for (auto i = ctx.num_history() + 1; i > 0; i--) {
     if (eval_impl(*e.arg, frame_ctx)) {
       return true; // Found a past frame where φ is true
     }
@@ -499,38 +468,24 @@ eval_sometimes(const stql::SometimesExpr& e, const EvaluationContext<Iter, Senti
  *
  * **Semantics**: φ has been true since ψ was last true.
  */
-template <std::bidirectional_iterator Iter, std::sentinel_for<Iter> Sentinel = Iter>
+template <std::bidirectional_iterator Iter, std::sized_sentinel_for<Iter> Sentinel = Iter>
 [[nodiscard]] auto
 eval_since(const stql::SinceExpr& e, const EvaluationContext<Iter, Sentinel>& ctx) -> bool {
-  const auto trace = current_plus_history(ctx) | views::reverse;
-  const auto begin = ranges::begin(trace);
-  const auto end   = ranges::end(trace);
+  // NOTE: see eval_until for implementation details as this is just the past time
+  // equivalent of until, where we iterate in the history in reverse effectively.
 
   EvaluationContext<Iter, Sentinel> frame_ctx = ctx;
-
-  // Search for first frame where ψ is true
-  for (auto it = begin; it != end; ++it) {
-    const datastream::Frame& frame = *it;
-
-    // Check if ψ is true at this frame
+  bool lhs_holds                              = true;
+  for (auto i = ctx.num_history() + 1; i > 0; i--) {
     if (eval_impl(*e.rhs, frame_ctx)) {
-      // ψ is true; now check φ holds on all future frames
-      const auto& future_end                       = it;
-      EvaluationContext<Iter, Sentinel> future_ctx = ctx;
-      for (auto jt = begin; jt != future_end; ++jt) {
-        const auto& future_frame = *jt;
-        if (!eval_impl(*e.lhs, future_ctx)) {
-          return false; // φ violated before ψ becomes true
-        }
-        // Shift at end so we don't do an off-by-1 error
-        future_ctx = shift_eval_context(future_ctx, -1);
-      }
-      return true; // ψ became true and φ held until then
+      return lhs_holds;
+    } else {
+      lhs_holds = lhs_holds && eval_impl(*e.lhs, frame_ctx);
     }
-    // Shift at end so we don't do an off-by-1 error
+    // move frame one to the past after computing to prevent off-by-1
     frame_ctx = shift_eval_context(frame_ctx, -1);
   }
-  return false; // ψ never became true
+  return false; // ψ never became true, i.e., strong until
 }
 
 /**
@@ -541,18 +496,13 @@ eval_since(const stql::SinceExpr& e, const EvaluationContext<Iter, Sentinel>& ct
  * Dual of Since: returns true if ψ holds at all past frames,
  * OR ψ eventually becomes false going backwards and φ is true at that point.
  */
-template <std::bidirectional_iterator Iter, std::sentinel_for<Iter> Sentinel = Iter>
+template <std::bidirectional_iterator Iter, std::sized_sentinel_for<Iter> Sentinel = Iter>
 [[nodiscard]] auto
 eval_backto(const stql::BackToExpr& e, const EvaluationContext<Iter, Sentinel>& ctx) -> bool {
-  const auto trace = current_plus_history(ctx);
-  const auto begin = ranges::begin(trace);
-  const auto end   = ranges::end(trace);
-
   EvaluationContext<Iter, Sentinel> frame_ctx = ctx;
 
   // Check if there's a frame where ψ becomes false
-  for (auto i = begin; i != end; ++i) {
-    const auto& frame = *i;
+  for (auto i = ctx.num_history() + 1; i > 0; --i) {
     if (!eval_impl(*e.rhs, frame_ctx)) {
       // ψ is false at frame i; φ must be true
       // φ is also false; backto violated
@@ -578,7 +528,7 @@ eval_backto(const stql::BackToExpr& e, const EvaluationContext<Iter, Sentinel>& 
  * binds each to the quantified variables, and evaluates φ.
  * Returns true if φ is satisfied for ANY permutation.
  */
-template <std::bidirectional_iterator Iter, std::sentinel_for<Iter> Sentinel = Iter>
+template <std::bidirectional_iterator Iter, std::sized_sentinel_for<Iter> Sentinel = Iter>
   requires std::same_as<std::iter_value_t<Iter>, datastream::Frame>
 [[nodiscard]] auto eval_exists(const stql::ExistsExpr& e, EvaluationContext<Iter, Sentinel> ctx)
     -> bool {
@@ -649,7 +599,7 @@ template <std::bidirectional_iterator Iter, std::sentinel_for<Iter> Sentinel = I
  * binds each to the quantified variables, and evaluates φ.
  * Returns true if φ is satisfied for ALL permutations.
  */
-template <std::bidirectional_iterator Iter, std::sentinel_for<Iter> Sentinel = Iter>
+template <std::bidirectional_iterator Iter, std::sized_sentinel_for<Iter> Sentinel = Iter>
 [[nodiscard]] auto eval_forall(const stql::ForallExpr& e, EvaluationContext<Iter, Sentinel> ctx)
     -> bool {
   if (ctx.current_frame->objects.empty()) {
@@ -712,7 +662,7 @@ template <std::bidirectional_iterator Iter, std::sentinel_for<Iter> Sentinel = I
  * Captures the current timestamp in frozen_times[x], then evaluates φ.
  * Captures the current frame in frozen_frames[f], then evaluates φ.
  */
-template <std::bidirectional_iterator Iter, std::sentinel_for<Iter> Sentinel = Iter>
+template <std::bidirectional_iterator Iter, std::sized_sentinel_for<Iter> Sentinel = Iter>
 [[nodiscard]] auto eval_freeze(const stql::FreezeExpr& e, EvaluationContext<Iter, Sentinel> ctx)
     -> bool {
   // If there is a time_var, update frozen_times accordingly
@@ -755,7 +705,7 @@ template <std::bidirectional_iterator Iter, std::sentinel_for<Iter> Sentinel = I
  * Compares the difference between frozen time x and current time C_TIME.
  * Returns false if x is not in the frozen_times map (unbound variable).
  */
-template <std::bidirectional_iterator Iter, std::sentinel_for<Iter> Sentinel = Iter>
+template <std::bidirectional_iterator Iter, std::sized_sentinel_for<Iter> Sentinel = Iter>
 [[nodiscard]] auto
 eval_time_bound(const stql::TimeBoundExpr& e, const EvaluationContext<Iter, Sentinel>& ctx)
     -> bool {
@@ -787,7 +737,7 @@ eval_time_bound(const stql::TimeBoundExpr& e, const EvaluationContext<Iter, Sent
  * Compares the difference between frozen frame f and current frame C_FRAME.
  * Returns false if f is not in the frozen_frames map (unbound variable).
  */
-template <std::bidirectional_iterator Iter, std::sentinel_for<Iter> Sentinel = Iter>
+template <std::bidirectional_iterator Iter, std::sized_sentinel_for<Iter> Sentinel = Iter>
 [[nodiscard]] auto
 eval_frame_bound(const stql::FrameBoundExpr& e, const EvaluationContext<Iter, Sentinel>& ctx)
     -> bool {
@@ -821,7 +771,7 @@ eval_frame_bound(const stql::FrameBoundExpr& e, const EvaluationContext<Iter, Se
  *
  * Extracts the object class and compares it with the expected class.
  */
-template <std::bidirectional_iterator Iter, std::sentinel_for<Iter> Sentinel = Iter>
+template <std::bidirectional_iterator Iter, std::sized_sentinel_for<Iter> Sentinel = Iter>
 [[nodiscard]] auto eval_obj_id_compare(
     const stql::ObjectIdCompareExpr& e,
     const EvaluationContext<Iter, Sentinel>& ctx) -> bool {
@@ -863,7 +813,7 @@ template <std::bidirectional_iterator Iter, std::sentinel_for<Iter> Sentinel = I
  *
  * Extracts the object class and compares it with the expected class.
  */
-template <std::bidirectional_iterator Iter, std::sentinel_for<Iter> Sentinel = Iter>
+template <std::bidirectional_iterator Iter, std::sized_sentinel_for<Iter> Sentinel = Iter>
 [[nodiscard]] auto
 eval_class_compare(const stql::ClassCompareExpr& e, const EvaluationContext<Iter, Sentinel>& ctx)
     -> bool {
@@ -914,7 +864,7 @@ eval_class_compare(const stql::ClassCompareExpr& e, const EvaluationContext<Iter
  *
  * Extracts the object probability and compares it with the threshold.
  */
-template <std::bidirectional_iterator Iter, std::sentinel_for<Iter> Sentinel = Iter>
+template <std::bidirectional_iterator Iter, std::sized_sentinel_for<Iter> Sentinel = Iter>
 [[nodiscard]] auto
 eval_prob_compare(const stql::ProbCompareExpr& e, const EvaluationContext<Iter, Sentinel>& ctx)
     -> bool {
@@ -958,7 +908,7 @@ eval_prob_compare(const stql::ProbCompareExpr& e, const EvaluationContext<Iter, 
  * @note This function doesn't actually make sense for CRTs that aren't centroids. If
  * you think otherwise, contributions are welcome.
  */
-template <std::bidirectional_iterator Iter, std::sentinel_for<Iter> Sentinel = Iter>
+template <std::bidirectional_iterator Iter, std::sized_sentinel_for<Iter> Sentinel = Iter>
 [[nodiscard]] auto
 eval_dist_compare(const stql::DistCompareExpr& e, const EvaluationContext<Iter, Sentinel>& ctx)
     -> bool {
@@ -1009,7 +959,7 @@ eval_dist_compare(const stql::DistCompareExpr& e, const EvaluationContext<Iter, 
  * **STQL**: `Lat(id, crt) ∼ Lon(id, crt)`
  * **STQL**: `Lon(id, crt) ∼ Lon(id, crt)`
  */
-template <std::bidirectional_iterator Iter, std::sentinel_for<Iter> Sentinel = Iter>
+template <std::bidirectional_iterator Iter, std::sized_sentinel_for<Iter> Sentinel = Iter>
 [[nodiscard]] auto
 eval_latlon_compare(const stql::LatLonCompareExpr& e, const EvaluationContext<Iter, Sentinel>& ctx)
     -> bool {
@@ -1048,7 +998,7 @@ eval_latlon_compare(const stql::LatLonCompareExpr& e, const EvaluationContext<It
  *
  * Resolves the object ID and returns its bounding box as a spatial Region.
  */
-template <std::bidirectional_iterator Iter, std::sentinel_for<Iter> Sentinel = Iter>
+template <std::bidirectional_iterator Iter, std::sized_sentinel_for<Iter> Sentinel = Iter>
 [[nodiscard]] auto eval_bbox(const stql::BBoxExpr& e, const EvaluationContext<Iter, Sentinel>& ctx)
     -> spatial::Region {
   // if (!ctx.current_frame) { return spatial::Region{spatial::Empty{}}; }
@@ -1076,7 +1026,7 @@ template <std::bidirectional_iterator Iter, std::sentinel_for<Iter> Sentinel = I
  *
  * **STQL**: `Ω₁ ⊔ Ω₂`
  */
-template <std::bidirectional_iterator Iter, std::sentinel_for<Iter> Sentinel = Iter>
+template <std::bidirectional_iterator Iter, std::sized_sentinel_for<Iter> Sentinel = Iter>
 [[nodiscard]] auto
 eval_spatial_union(const stql::SpatialUnionExpr& e, const EvaluationContext<Iter, Sentinel>& ctx)
     -> spatial::Region {
@@ -1097,7 +1047,7 @@ eval_spatial_union(const stql::SpatialUnionExpr& e, const EvaluationContext<Iter
  *
  * **STQL**: `Ω₁ ⊓ Ω₂`
  */
-template <std::bidirectional_iterator Iter, std::sentinel_for<Iter> Sentinel = Iter>
+template <std::bidirectional_iterator Iter, std::sized_sentinel_for<Iter> Sentinel = Iter>
 [[nodiscard]] auto eval_spatial_intersect(
     const stql::SpatialIntersectExpr& e,
     const EvaluationContext<Iter, Sentinel>& ctx) -> spatial::Region {
@@ -1116,7 +1066,7 @@ template <std::bidirectional_iterator Iter, std::sentinel_for<Iter> Sentinel = I
  *
  * **STQL**: `Ω̅`
  */
-template <std::bidirectional_iterator Iter, std::sentinel_for<Iter> Sentinel = Iter>
+template <std::bidirectional_iterator Iter, std::sized_sentinel_for<Iter> Sentinel = Iter>
 [[nodiscard]] auto eval_spatial_complement(
     const stql::SpatialComplementExpr& e,
     const EvaluationContext<Iter, Sentinel>& ctx) -> spatial::Region {
@@ -1130,7 +1080,7 @@ template <std::bidirectional_iterator Iter, std::sentinel_for<Iter> Sentinel = I
  *
  * **STQL**: `Area(Ω) ∼ threshold`
  */
-template <std::bidirectional_iterator Iter, std::sentinel_for<Iter> Sentinel = Iter>
+template <std::bidirectional_iterator Iter, std::sized_sentinel_for<Iter> Sentinel = Iter>
 [[nodiscard]] auto
 eval_area_compare(const stql::AreaCompareExpr& e, const EvaluationContext<Iter, Sentinel>& ctx)
     -> bool {
@@ -1158,7 +1108,7 @@ eval_area_compare(const stql::AreaCompareExpr& e, const EvaluationContext<Iter, 
  *
  * **STQL**: `∃Ω` (spatial exists)
  */
-template <std::bidirectional_iterator Iter, std::sentinel_for<Iter> Sentinel = Iter>
+template <std::bidirectional_iterator Iter, std::sized_sentinel_for<Iter> Sentinel = Iter>
 [[nodiscard]] auto
 eval_spatial_exists(const stql::SpatialExistsExpr& e, const EvaluationContext<Iter, Sentinel>& ctx)
     -> bool {
@@ -1174,7 +1124,7 @@ eval_spatial_exists(const stql::SpatialExistsExpr& e, const EvaluationContext<It
  *
  * **STQL**: `∀Ω` (spatial forall)
  */
-template <std::bidirectional_iterator Iter, std::sentinel_for<Iter> Sentinel = Iter>
+template <std::bidirectional_iterator Iter, std::sized_sentinel_for<Iter> Sentinel = Iter>
 [[nodiscard]] auto
 eval_spatial_forall(const stql::SpatialForallExpr& e, const EvaluationContext<Iter, Sentinel>& ctx)
     -> bool {
@@ -1197,7 +1147,7 @@ eval_spatial_forall(const stql::SpatialForallExpr& e, const EvaluationContext<It
 // Spatial Recursive Evaluator
 // ============================================================================
 
-template <std::bidirectional_iterator Iter, std::sentinel_for<Iter> Sentinel>
+template <std::bidirectional_iterator Iter, std::sized_sentinel_for<Iter> Sentinel>
 [[nodiscard]] auto
 eval_impl(const stql::SpatialExpr& expr, const EvaluationContext<Iter, Sentinel>& ctx)
     -> spatial::Region {
@@ -1205,11 +1155,11 @@ eval_impl(const stql::SpatialExpr& expr, const EvaluationContext<Iter, Sentinel>
   struct EvalDispatcher {
     const EvaluationContext<Iter, Sentinel>* ctx;
 
-    [[nodiscard]] auto operator()(const stql::EmptySetExpr& e) -> Region {
+    [[nodiscard]] auto operator()(const stql::EmptySetExpr& /*e*/) -> Region {
       return Region{spatial::Empty{}};
     }
 
-    [[nodiscard]] auto operator()(const stql::UniverseSetExpr& e) -> Region {
+    [[nodiscard]] auto operator()(const stql::UniverseSetExpr& /*e*/) -> Region {
       return Region{spatial::Universe{}};
     }
 
@@ -1234,7 +1184,7 @@ eval_impl(const stql::SpatialExpr& expr, const EvaluationContext<Iter, Sentinel>
 // Main Recursive Evaluator
 // ============================================================================
 
-template <std::bidirectional_iterator Iter, std::sentinel_for<Iter> Sentinel>
+template <std::bidirectional_iterator Iter, std::sized_sentinel_for<Iter> Sentinel>
 [[nodiscard]] auto eval_impl(const stql::Expr& expr, const EvaluationContext<Iter, Sentinel>& ctx)
     -> bool {
   struct EvalDispatcher {
@@ -1352,6 +1302,9 @@ auto BooleanEvaluator::evaluate(
       .history_end   = history_end,
       .horizon_begin = horizon_begin,
       .horizon_end   = horizon_end,
+      .frozen_times  = {},
+      .frozen_frames = {},
+      .bound_objects = {},
   };
   return eval_impl(formula, ctx);
 }
