@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.15)
+cmake_minimum_required(VERSION 3.29)
 
 project(
   PerceMon
@@ -35,7 +35,15 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
                                                "MinSizeRel" "RelWithDebInfo")
 endif()
 # Setup sccache if available
-find_program(SCCACHE_PROGRAM sccache PATHS ENV SCCACHE_PATH)
+if(DEFINED ENV{SCCACHE_PATH})
+  if(IS_EXECUTABLE "$ENV{SCCACHE_PATH}")
+    set(SCCACHE_PROGRAM
+        "$ENV{SCCACHE_PATH}"
+        CACHE STRING "use provided sccache" FORCE)
+  endif()
+else()
+  find_program(SCCACHE_PROGRAM sccache PATHS ENV SCCACHE_PATH)
+endif()
 if(SCCACHE_PROGRAM)
   set(CMAKE_C_COMPILER_LAUNCHER "${SCCACHE_PROGRAM}")
   set(CMAKE_CXX_COMPILER_LAUNCHER "${SCCACHE_PROGRAM}")
