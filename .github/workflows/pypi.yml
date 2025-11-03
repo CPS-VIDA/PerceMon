@@ -30,6 +30,8 @@ jobs:
       - name: Build and install package
         run: |
           pip install --no-build-isolation -Cbuild-dir=build -v .
+        env:
+          SCCACHE_GHA_ENABLED: true
       # This should have built the tests too, so lets run ctest!
       - name: test C++
         run: cd build && ctest --output-on-failure
@@ -74,10 +76,10 @@ jobs:
         run: uvx cibuildwheel --output-dir dist
         env:
           # CIBW mounts the host filesystem under /host
-          CIBW_ENVIRONMENT_LINUX: |
+          CIBW_ENVIRONMENT_LINUX: >
             SCCACHE_GHA_ENABLED=true
-            SCCACHE_PATH=${{ env.SCCACHE_PATH }}
-            SCCACHE_DIR=/host/${{ env.SCCACHE_DIR }}
+            SCCACHE_PATH=/host${{ env.SCCACHE_PATH }}
+            SCCACHE_DIR=/host${{ env.SCCACHE_DIR }}
             SCCACHE_CACHE_SIZE=${{ env.SCCACHE_CACHE_SIZE }}
             ACTIONS_RUNTIME_TOKEN=${{ env.ACTIONS_RUNTIME_TOKEN }}
             ACTIONS_RUNTIME_URL=${{ env.ACTIONS_RUNTIME_URL }}
