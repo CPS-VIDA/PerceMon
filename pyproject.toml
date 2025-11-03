@@ -6,14 +6,6 @@ authors = [{ name = "Anand Balakrishnan", email = "anandbala1597@gmail.com" }]
 requires-python = ">=3.10"
 dependencies = []
 
-[tool.scikit-build]
-minimum-version = "build-system.requires"
-build-dir = "build/{wheel_tag}"
-wheel.exclude = ["**.cpp", "**.cc", "**.hpp", "**.cmake"]
-
-[tool.scikit-build.cmake.define]
-BUILD_PYTHON_BINDINGS = true
-
 [tool.uv]
 cache-keys = [
   { file = "pyproject.toml" },
@@ -29,6 +21,14 @@ module-root = "python"
 [build-system]
 requires = ["scikit-build-core>=0.10", "nanobind"]
 build-backend = "scikit_build_core.build"
+
+[tool.scikit-build]
+minimum-version = "build-system.requires"
+build-dir = "build/{wheel_tag}"
+wheel.exclude = ["**.cpp", "**.cc", "**.hpp", "**.cmake"]
+
+[tool.scikit-build.cmake.define]
+BUILD_PYTHON_BINDINGS = true
 
 [tool.zuban]
 mypy_path = ["python"]

@@ -40,6 +40,12 @@ if(SKBUILD)
       ON
       CACHE BOOL "Force build Python bindings" FORCE)
 endif()
+# Disable testing if we are running cibuildwheel
+if(DEFINED ENV{CIBUILDWHEEL})
+  set(BUILD_TESTING
+      OFF
+      CACHE BOOL "Force disable testing in cibuildwheel" FORCE)
+endif()
 
 if(PERCEMON_MASTER_PROJECT)
   # Force color in compiler output as it will be easier to debug...
@@ -70,13 +76,6 @@ target_include_directories(
 target_include_directories(PerceMon PRIVATE ${PROJECT_SOURCE_DIR}/csrc)
 target_compile_features(PerceMon PUBLIC cxx_std_20)
 set_target_properties(PerceMon PROPERTIES POSITION_INDEPENDENT_CODE ON)
-if(PERCEMON_MASTER_PROJECT
-   AND BUILD_TESTING
-   AND (NOT SKBUILD))
-  set_target_properties(
-    PerceMon PROPERTIES CXX_CPPCHECK cppcheck CXX_INCLUDE_WHAT_YOU_USE
-                                              include-what-you-use)
-endif()
 
 if(BUILD_PYTHON_BINDINGS)
   if(CMAKE_VERSION VERSION_LESS 3.18)
@@ -117,7 +116,7 @@ if(PERCEMON_COVERAGE)
   add_coverage(PerceMon)
 endif()
 
-if(BUILD_TESTING AND NOT (SKBUILD))
+if(BUILD_TESTING)
   add_subdirectory(tests)
 endif()
 

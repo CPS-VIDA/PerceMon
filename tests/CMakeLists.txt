@@ -1,5 +1,8 @@
 message(STATUS "Building Tests in ${CMAKE_CURRENT_LIST_DIR}")
 find_package(Catch2)
+if(NOT Catch2_FOUND)
+  return()
+endif()
 
 include(Catch)
 
