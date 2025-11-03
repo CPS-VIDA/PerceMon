@@ -1,6 +1,6 @@
 [project]
 name = "percemon"
-version = "1.0.1"
+version = "1.0.2"
 readme = "README.md"
 authors = [{ name = "Anand Balakrishnan", email = "anandbala1597@gmail.com" }]
 requires-python = ">=3.10"
