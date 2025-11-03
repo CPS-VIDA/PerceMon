@@ -90,7 +90,7 @@ jobs:
           version: "latest"
       - uses: actions/download-artifact@v6
         with:
-          pattern: cibw-*
+          pattern: release-*
           path: dist
           merge-multiple: true
       - name: Publish to PyPI
