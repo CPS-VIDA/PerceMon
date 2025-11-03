@@ -34,6 +34,16 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
   set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug" "Release"
                                                "MinSizeRel" "RelWithDebInfo")
 endif()
+# Setup sccache if available
+find_program(SCCACHE_PROGRAM sccache PATHS ENV SCCACHE_PATH)
+if(SCCACHE_PROGRAM)
+  set(CMAKE_C_COMPILER_LAUNCHER "${SCCACHE_PROGRAM}")
+  set(CMAKE_CXX_COMPILER_LAUNCHER "${SCCACHE_PROGRAM}")
+  message(STATUS "sccache found: ${SCCACHE_PROGRAM}")
+else()
+  message(STATUS "sccache not found")
+endif()
+
 # Force building of python bindings if using scikit-build
 if(SKBUILD)
   set(BUILD_PYTHON_BINDINGS
