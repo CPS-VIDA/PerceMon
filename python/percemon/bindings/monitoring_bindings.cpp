@@ -12,8 +12,10 @@
 #include <nanobind/stl/vector.h>
 
 namespace nb = nanobind;
-using namespace percemon::monitoring;
+using namespace percemon::monitoring; // NOLINT(google-build-using-namespace)
 
+// NOLINTBEGIN(misc-redundant-expression)
+// NOLINTNEXTLINE(misc-use-internal-linkage)
 void init_monitoring_bindings(nb::module_& m) {
   // =====================================================================
   // Constants
@@ -73,3 +75,4 @@ void init_monitoring_bindings(nb::module_& m) {
       &is_past_time_formula,
       "Check if formula only uses past-time operators (no future operators)");
 }
+// NOLINTEND(misc-redundant-expression)

@@ -12,8 +12,10 @@
 #include <nanobind/stl/vector.h>
 
 namespace nb = nanobind;
-using namespace percemon::monitoring;
+using namespace percemon::monitoring; // NOLINT(google-build-using-namespace)
 
+// NOLINTBEGIN(misc-redundant-expression)
+// NOLINTNEXTLINE(misc-use-internal-linkage)
 void init_online_monitor_bindings(nb::module_& m) {
   // =====================================================================
   // OnlineMonitor Class
@@ -40,3 +42,4 @@ void init_online_monitor_bindings(nb::module_& m) {
           nb::rv_policy::reference,
           "Get memory requirements (history and horizon) for this formula");
 }
+// NOLINTEND(misc-redundant-expression)

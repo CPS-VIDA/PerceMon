@@ -1,12 +1,14 @@
 #include "percemon/spatial.hpp"
 #include "utils.hpp"
 
+#include <algorithm>
 #include <cassert>
 #include <cmath>
-#include <compare>
 #include <format>
 #include <utility>
 #include <vector>
+
+namespace ranges = std::ranges;
 
 namespace percemon::spatial {
 
@@ -33,14 +35,7 @@ BBox::BBox(
     bopen(bopen_) {}
 
 BBox::BBox(const datastream::BoundingBox& bbox) :
-    xmin(bbox.xmin),
-    xmax(bbox.xmax),
-    ymin(bbox.ymin),
-    ymax(bbox.ymax),
-    lopen(false),
-    ropen(false),
-    topen(false),
-    bopen(false) {}
+    xmin(bbox.xmin), xmax(bbox.xmax), ymin(bbox.ymin), ymax(bbox.ymax) {}
 
 [[nodiscard]] auto BBox::to_string() const -> std::string {
   std::string left   = lopen ? std::format("({}", xmin) : std::format("[{}", xmin);
@@ -125,7 +120,7 @@ auto intersection_of(const Union& a, const BBox& b) -> Region {
   auto intersect_set = std::vector<BBox>{};
   for (const BBox& bbox : a) {
     auto int_box = intersection_of(bbox, b);
-    if (auto box_p = std::get_if<BBox>(&int_box)) { intersect_set.push_back(*box_p); }
+    if (auto* box_p = std::get_if<BBox>(&int_box)) { intersect_set.push_back(*box_p); }
   }
   if (intersect_set.empty()) { return Empty{}; }
   if (intersect_set.size() == 1) { return intersect_set.back(); }
@@ -138,7 +133,7 @@ auto intersection_of(const Union& lhs, const Union& rhs) -> Region {
   for (const BBox& a : lhs) {
     for (const BBox& b : rhs) {
       auto int_box = intersection_of(a, b);
-      if (auto box_p = std::get_if<BBox>(&int_box)) { intersect_set.push_back(*box_p); }
+      if (auto* box_p = std::get_if<BBox>(&int_box)) { intersect_set.push_back(*box_p); }
     }
   }
   if (intersect_set.empty()) { return Empty{}; }
@@ -258,7 +253,7 @@ struct TopoSimplify {
     Interval(double l, double h) : low((l < h) ? l : h), high((l + h) - low) {}
 
     [[nodiscard]] constexpr auto is_overlapping(const Interval& other) const -> bool {
-      return !(low > other.high || other.low > high);
+      return low <= other.high && other.low <= high;
     }
 
     void merge(const Interval& other) {
@@ -279,7 +274,7 @@ struct TopoSimplify {
   auto operator()(const Universe& u) -> Region { return u; }
   auto operator()(const BBox& bbox) -> Region { return bbox; }
 
-  [[nodiscard]] auto get_all_xs(const std::set<BBox, BBoxOrder>& rects) const -> std::set<double> {
+  [[nodiscard]] static auto get_all_xs(const std::set<BBox, BBoxOrder>& rects) -> std::set<double> {
     auto ret = std::set<double>{};
     for (const auto& r : rects) {
       ret.insert(r.xmin);
@@ -288,10 +283,10 @@ struct TopoSimplify {
     return ret;
   }
 
-  [[nodiscard]] auto get_y_ranges(
+  [[nodiscard]] static auto get_y_ranges(
       const std::set<BBox, BBoxOrder>::const_iterator& start,
       const std::set<BBox, BBoxOrder>::const_iterator& end,
-      const Interval& x_range) const -> std::vector<Interval> {
+      const Interval& x_range) -> std::vector<Interval> {
     auto ret = std::vector<Interval>{};
 
     for (auto it = start; it != end; ++it) {
@@ -350,31 +345,24 @@ struct TopoSimplify {
 // Public API Functions
 // =============================================================================
 
-auto is_closed(const Region& region) -> bool {
+auto is_open(const Region& region) -> bool {
   return std::visit(
       utils::overloaded{
-          [](const BBox& box) { return box.is_closed(); },
+          [](const BBox& box) { return box.is_open(); },
           [](const Union& r) {
-            for (const auto& bbox : r) {
-              if (!bbox.is_closed()) { return false; }
-            }
-            return true;
+            return ranges::any_of(r, [](const auto& bbox) { return bbox.is_open(); });
           },
           [](const auto&) {
             return true;
           }},
       region);
 }
-
-auto is_open(const Region& region) -> bool {
+auto is_closed(const Region& region) -> bool {
   return std::visit(
       utils::overloaded{
-          [](const BBox& box) { return box.is_open(); },
+          [](const BBox& box) { return box.is_closed(); },
           [](const Union& r) {
-            for (const auto& bbox : r) {
-              if (!bbox.is_open()) { return false; }
-            }
-            return true;
+            return ranges::all_of(r, [](const auto& bbox) { return bbox.is_closed(); });
           },
           [](const auto&) {
             return true;
@@ -464,15 +452,15 @@ auto intersect(const Region& lhs, const Region& rhs) -> Region {
     return intersection_of(std::get<BBox>(lhs), std::get<BBox>(rhs));
   }
 
-  if (auto* union_lhs = std::get_if<Union>(&lhs)) {
+  if (const auto* union_lhs = std::get_if<Union>(&lhs)) {
     if (std::holds_alternative<BBox>(rhs)) {
       return intersection_of(*union_lhs, std::get<BBox>(rhs));
     } else {
       return intersection_of(*union_lhs, std::get<Union>(rhs));
     }
   } else {
-    auto* union_rhs = std::get_if<Union>(&rhs);
-    if (union_rhs) { return intersection_of(*union_rhs, std::get<BBox>(lhs)); }
+    const auto* union_rhs = std::get_if<Union>(&rhs);
+    if (union_rhs != nullptr) { return intersection_of(*union_rhs, std::get<BBox>(lhs)); }
   }
 
   return Empty{};
@@ -496,15 +484,15 @@ auto union_of(const Region& lhs, const Region& rhs) -> Region {
     return union_of(std::get<BBox>(lhs), std::get<BBox>(rhs));
   }
 
-  if (auto* union_lhs = std::get_if<Union>(&lhs)) {
+  if (const auto* union_lhs = std::get_if<Union>(&lhs)) {
     if (std::holds_alternative<BBox>(rhs)) {
       return union_of(*union_lhs, std::get<BBox>(rhs));
     } else {
       return union_of(*union_lhs, std::get<Union>(rhs));
     }
   } else {
-    auto* union_rhs = std::get_if<Union>(&rhs);
-    if (union_rhs) { return union_of(*union_rhs, std::get<BBox>(lhs)); }
+    const auto* union_rhs = std::get_if<Union>(&rhs);
+    if (union_rhs != nullptr) { return union_of(*union_rhs, std::get<BBox>(lhs)); }
   }
 
   return Empty{};

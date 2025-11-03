@@ -40,7 +40,7 @@ void init_spatial_bindings(nb::module_& m);
  *     result = monitor.evaluate(frame)
  * @endcode
  */
-NB_MODULE(percemon, m) {
+NB_MODULE(percemon, m) { // NOLINT(*)
   m.doc() = "PerceMon - Spatio-Temporal Quality Logic (STQL) monitoring library";
 
   // Initialize all sub-module bindings

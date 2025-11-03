@@ -14,13 +14,15 @@
 #include <nanobind/stl/vector.h>
 
 namespace nb = nanobind;
-using namespace percemon::spatial;
+using namespace percemon::spatial; // NOLINT
 
+// NOLINTNEXTLINE(misc-use-internal-linkage)
 void init_spatial_bindings(nb::module_& m) {
   // =====================================================================
   // Spatial Region Types
   // =====================================================================
 
+  // NOLINTBEGIN(misc-redundant-expression)
   nb::class_<Empty>(m, "Empty")
       .def(nb::init<>())
       .def("to_string", &Empty::to_string)
@@ -135,3 +137,4 @@ void init_spatial_bindings(nb::module_& m) {
 
   m.def("frame_universe", &frame_universe, "Get universe region for a frame");
 }
+// NOLINTEND(misc-redundant-expression)

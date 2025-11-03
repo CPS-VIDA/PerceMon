@@ -14,9 +14,11 @@
 #include <vector>
 
 namespace nb = nanobind;
-using namespace percemon::monitoring;
-using namespace percemon::datastream;
+using namespace percemon::monitoring; // NOLINT(google-build-using-namespace)
+using namespace percemon::datastream; // NOLINT(google-build-using-namespace)
 
+// NOLINTBEGIN(misc-redundant-expression)
+// NOLINTNEXTLINE(misc-use-internal-linkage)
 void init_evaluation_bindings(nb::module_& m) {
   // =====================================================================
   // BooleanEvaluator
@@ -42,3 +44,4 @@ void init_evaluation_bindings(nb::module_& m) {
           nb::arg("horizon"),
           "Evaluate STQL formula on a frame with history and horizon buffers");
 }
+// NOLINTEND(misc-redundant-expression)

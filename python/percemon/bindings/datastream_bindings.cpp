@@ -13,9 +13,12 @@
 #include <nanobind/stl/vector.h>
 
 namespace nb = nanobind;
-using namespace percemon::datastream;
+using namespace percemon::datastream; // NOLINT(google-build-using-namespace)
+
 using ObjectMap = std::map<std::string, Object>;
 
+// NOLINTBEGIN(misc-redundant-expression)
+// NOLINTNEXTLINE(misc-use-internal-linkage)
 void init_datastream_bindings(nb::module_& m) {
   // Binding types
   nb::bind_map<ObjectMap>(m, "ObjectMap");
@@ -101,3 +104,4 @@ void init_datastream_bindings(nb::module_& m) {
       nb::arg("ref2"),
       "Compute Euclidean distance between two reference points");
 }
+// NOLINTEND(misc-redundant-expression)

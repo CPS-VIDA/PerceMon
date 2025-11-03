@@ -1,4 +1,5 @@
 #include "percemon/evaluation.hpp"
+#include "percemon/monitoring.hpp"
 #include "percemon/spatial.hpp"
 #include "percemon/stql.hpp"
 #include "utils.hpp"
@@ -259,14 +260,7 @@ template <std::bidirectional_iterator Iter, std::sentinel_for<Iter> Sentinel = I
 template <std::bidirectional_iterator Iter, std::sentinel_for<Iter> Sentinel = Iter>
 [[nodiscard]] auto eval_and(const stql::AndExpr& e, const EvaluationContext<Iter, Sentinel>& ctx)
     -> bool {
-  for (const auto& arg : e.args) {
-    bool check = eval_impl(arg, ctx);
-    if (!check) {
-      // Short circuit when check becomes false
-      return false;
-    }
-  }
-  return true;
+  return ranges::all_of(e.args, [&ctx](const auto& arg) { return eval_impl(arg, ctx); });
 }
 
 /**
@@ -279,14 +273,7 @@ template <std::bidirectional_iterator Iter, std::sentinel_for<Iter> Sentinel = I
 template <std::bidirectional_iterator Iter, std::sentinel_for<Iter> Sentinel = Iter>
 [[nodiscard]] auto eval_or(const stql::OrExpr& e, const EvaluationContext<Iter, Sentinel>& ctx)
     -> bool {
-  for (const auto& arg : e.args) {
-    bool check = eval_impl(arg, ctx);
-    if (check) {
-      // Short circuit when check becomes true
-      return true;
-    }
-  }
-  return false;
+  return ranges::any_of(e.args, [&ctx](const auto& arg) { return eval_impl(arg, ctx); });
 }
 
 // ============================================================================
@@ -422,10 +409,9 @@ eval_release(const stql::ReleaseExpr& e, const EvaluationContext<Iter, Sentinel>
     const auto& frame = *i;
     if (!eval_impl(*e.rhs, frame_ctx)) {
       // ψ is false at frame i; φ must be true
-      if (!eval_impl(*e.lhs, frame_ctx)) {
-        return false; // φ is also false; release violated
-      }
-      return true; // φ is true when ψ first becomes false
+      // φ is true when ψ first becomes false
+      // φ is also false; release violated
+      return eval_impl(*e.lhs, frame_ctx);
     }
     // Shift at end so we don't do an off-by-1 error
     frame_ctx = shift_eval_context(frame_ctx, 1);
@@ -569,10 +555,9 @@ eval_backto(const stql::BackToExpr& e, const EvaluationContext<Iter, Sentinel>& 
     const auto& frame = *i;
     if (!eval_impl(*e.rhs, frame_ctx)) {
       // ψ is false at frame i; φ must be true
-      if (!eval_impl(*e.lhs, frame_ctx)) {
-        return false; // φ is also false; backto violated
-      }
-      return true; // φ is true when ψ first becomes false
+      // φ is also false; backto violated
+      // φ is true when ψ first becomes false; backto holds
+      return eval_impl(*e.lhs, frame_ctx);
     }
     // Shift at end so we don't do an off-by-1 error
     frame_ctx = shift_eval_context(frame_ctx, -1);
@@ -944,9 +929,9 @@ eval_prob_compare(const stql::ProbCompareExpr& e, const EvaluationContext<Iter, 
 
   // Resolve the comparison probability
   double rhs_prob = NAN;
-  if (auto* threshold = std::get_if<double>(&e.rhs)) {
+  if (const auto* threshold = std::get_if<double>(&e.rhs)) {
     rhs_prob = *threshold;
-  } else if (auto* rhs = std::get_if<stql::ProbFunc>(&e.rhs)) {
+  } else if (const auto* rhs = std::get_if<stql::ProbFunc>(&e.rhs)) {
     // Resolve the object ID
     std::string rhs_obj_id = get_object_binding(rhs->object, ctx);
     // Find the object in the frame
@@ -1339,6 +1324,7 @@ template <std::bidirectional_iterator Iter, std::sentinel_for<Iter> Sentinel>
 // Public API Implementation
 // ============================================================================
 
+// NOLINTNEXTLINE(readability-convert-member-functions-to-static)
 auto BooleanEvaluator::evaluate(
     const stql::Expr& formula,
     const datastream::Frame& current_frame,

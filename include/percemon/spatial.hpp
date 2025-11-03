@@ -4,8 +4,6 @@
 #define PERCEMON_SPATIAL_HPP
 
 #include "percemon/datastream.hpp"
-#include <limits>
-#include <memory>
 #include <set>
 #include <variant>
 #include <vector>

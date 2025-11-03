@@ -12,7 +12,7 @@
 #include <nanobind/stl/vector.h>
 
 namespace nb = nanobind;
-using namespace percemon::stql;
+using namespace percemon::stql; // NOLINT
 
 namespace {
 template <typename T>
@@ -37,6 +37,8 @@ constexpr auto fill_relational_op(nb::class_<Lhs>& expr) {
 }
 
 } // namespace
+
+// NOLINTNEXTLINE(misc-use-internal-linkage)
 void init_stql_bindings(nb::module_& m) {
   // =====================================================================
   // Enums
@@ -61,6 +63,7 @@ void init_stql_bindings(nb::module_& m) {
   // Variables
   // =====================================================================
 
+  // NOLINTBEGIN(misc-redundant-expression)
   nb::class_<TimeVar>(m, "TimeVar")
       .def(nb::init<std::string>())
       .def_ro("name", &TimeVar::name)
@@ -76,6 +79,7 @@ void init_stql_bindings(nb::module_& m) {
       .def("__str__", &FrameVar::to_string)
       .def("__repr__", &FrameVar::to_string)
       .def(nb::self - nb::self);
+  // NOLINTEND(misc-redundant-expression)
 
   nb::class_<ObjectVar>(m, "ObjectVar")
       .def(nb::init<std::string>())

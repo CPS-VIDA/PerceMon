@@ -57,7 +57,8 @@ auto extract_time_bound_constraint(
     const stql::TimeBoundExpr& expr,
     double fps,
     ScopeDirection scope) -> std::optional<ConstraintBound> {
-  using namespace stql;
+  // using namespace stql;
+  using stql::CompareOp;
 
   // Extract the structure of the time difference
   // TimeDiff contains: lhs_var (either TimeVar or C_TIME), rhs_var (either TimeVar or C_TIME)
@@ -111,7 +112,8 @@ auto extract_time_bound_constraint(
  */
 auto extract_frame_bound_constraint(const stql::FrameBoundExpr& expr, ScopeDirection scope)
     -> std::optional<ConstraintBound> {
-  using namespace stql;
+  // using namespace stql;
+  using stql::CompareOp;
 
   // Similar structure checking as time bounds
   const auto& diff = expr.diff;
@@ -219,7 +221,7 @@ auto compute_requirements_impl(
 
 auto compute_requirements_impl(const stql::Expr& expr, double fps, ScopeDirection current_scope)
     -> std::pair<int64_t, int64_t> {
-  using namespace stql;
+  using namespace stql; // NOLINT(google-build-using-namespace)
 
   return std::visit(
       [&](const auto& e) -> std::pair<int64_t, int64_t> {

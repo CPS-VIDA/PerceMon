@@ -1,6 +1,6 @@
 #pragma once
-#ifndef __CSRC_UTILS_HPP__
-#define __CSRC_UTILS_HPP__
+#ifndef PERCEMON_CSRC_UTILS_HPP
+#define PERCEMON_CSRC_UTILS_HPP
 
 #include <algorithm>
 #include <iterator>
@@ -45,7 +45,7 @@ overloaded(Ts...) -> overloaded<Ts...>;
  * Visit helper for virtual visitor pattern
  */
 template <typename Visitor, typename Base, typename MaybeDerived>
-constexpr bool try_visit(Visitor op, const std::shared_ptr<Base>& base) {
+constexpr auto try_visit(Visitor op, const std::shared_ptr<Base>& base) -> bool {
   if (const auto& derived = std::dynamic_pointer_cast<MaybeDerived>(base)) {
     op(derived);
     return true;
@@ -77,15 +77,15 @@ struct product_iterator {
   product_iterator(Iter first, Iter last, size_t k) :
       _begin{first}, _end{last}, _k{k}, _curr{std::vector<Iter>(k, first)} {};
 
-  bool operator!=(const product_iterator<Iter>& other) const {
+  auto operator!=(const product_iterator<Iter>& other) const -> bool {
     for (size_t i = 0; i < _curr.size(); i++) {
       if (_curr.at(i) != other._curr.at(i)) { return true; }
     }
     return false;
   }
-  bool operator==(const product_iterator<Iter>& other) const { return !(*this != other); }
+  auto operator==(const product_iterator<Iter>& other) const -> bool { return !(*this != other); }
 
-  value_type operator*() const {
+  auto operator*() const -> value_type {
     auto _curr_val = std::vector<ElementType>{};
     std::transform(
         std::begin(_curr), std::end(_curr), std::back_inserter(_curr_val), [](const auto i) {
@@ -94,12 +94,12 @@ struct product_iterator {
     return _curr_val;
   }
 
-  product_iterator& operator++() {
+  auto operator++() -> product_iterator& {
     increment(_k - 1);
     return *this;
   }
 
-  static product_iterator get_last(Iter first, Iter last, size_t k) {
+  static auto get_last(Iter first, Iter last, size_t k) -> product_iterator {
     auto ret = product_iterator{first, last, k, last};
     return ret;
   }
@@ -111,8 +111,8 @@ struct product_iterator {
   /**
    * Holds the end of the iter
    */
-  const Iter _begin;
-  const Iter _end;
+  Iter _begin;
+  Iter _end;
   /**
    * Number of repetitions in the self-product.
    */
@@ -123,7 +123,7 @@ struct product_iterator {
    */
   std::vector<Iter> _curr;
 
-  bool increment(int i) {
+  auto increment(int i) -> bool {
     if (i >= 0) {
       auto& it = _curr.at(i);
       it++; // Increment the current place.
@@ -162,7 +162,7 @@ template <
     typename Container,
     typename Iter = decltype(std::begin(std::declval<Container>())),
     typename      = decltype(std::end(std::declval<Container>()))>
-constexpr auto product(Container&& iterable, size_t k = 1) {
+constexpr auto product(Container&& iterable, size_t k = 1) { // NOLINT
   return product_range<Container, Iter>{iterable, k};
 }
 
@@ -178,4 +178,4 @@ auto map_optionals(Func func, const Optionals&... opts) -> std::optional<decltyp
 }
 } // namespace iter_helpers
 
-#endif // __CSRC_UTILS_HPP__
+#endif // PERCEMON_CSRC_UTILS_HPP

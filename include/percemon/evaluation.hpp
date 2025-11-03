@@ -2,13 +2,11 @@
 #define PERCEMON_EVALUATION_HPP
 
 #include "percemon/datastream.hpp"
-#include "percemon/monitoring.hpp"
 #include "percemon/stql.hpp"
 
 #include <deque>
 #include <iterator>
 #include <map>
-#include <optional>
 #include <string>
 
 namespace percemon::monitoring {
