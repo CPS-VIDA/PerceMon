@@ -78,6 +78,14 @@ target_compile_features(libPerceMon PUBLIC cxx_std_20)
 set_target_properties(libPerceMon PROPERTIES POSITION_INDEPENDENT_CODE ON
                                              OUTPUT_NAME "PerceMon")
 
+if(PERCEMON_MASTER_PROJECT)
+  if(MSVC)
+    target_compile_options(libPerceMon PRIVATE /W4 /WX /utf-8)
+  else()
+    target_compile_options(libPerceMon PRIVATE -pedantic -Wall -Wextra -Werror)
+  endif()
+endif()
+
 if(BUILD_PYTHON_BINDINGS)
   if(CMAKE_VERSION VERSION_LESS 3.18)
     set(DEV_MODULE Development)
