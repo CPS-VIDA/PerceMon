@@ -240,6 +240,125 @@ TEST_CASE("BooleanEvaluator - Future-Time Temporal Operators", "[evaluation][tem
   }
 
   // ==========================================================================
+  // NextExpr Tests with Varying Steps
+  // ==========================================================================
+
+  SECTION("NextExpr - steps=2 evaluates 2 frames ahead") {
+    // Create frames: current (no car), +1 (no car), +2 (has car)
+    auto frame0 = make_empty_frame(0, 0.0);
+    auto frame1 = make_empty_frame(1, 1.0);
+    auto frame2 = make_frame_with_car(2, 2.0);
+
+    std::deque<datastream::Frame> horizon;
+    horizon.push_back(frame1);
+    horizon.push_back(frame2);
+
+    // Formula: next(2, exists car)
+    auto car_id    = ObjectVar{"car"};
+    auto is_car    = is_class(car_id, CAR);
+    auto condition = exists({car_id}, is_car);
+    auto formula   = next(condition, 2);
+
+    // Should be TRUE: car exists at frame +2
+    REQUIRE(evaluator.evaluate(formula, frame0, empty_history, horizon));
+  }
+
+  SECTION("NextExpr - steps=2 fails when condition false at target frame") {
+    // Create frames: current (no car), +1 (has car), +2 (no car)
+    auto frame0 = make_empty_frame(0, 0.0);
+    auto frame1 = make_frame_with_car(1, 1.0);
+    auto frame2 = make_empty_frame(2, 2.0);
+
+    std::deque<datastream::Frame> horizon;
+    horizon.push_back(frame1);
+    horizon.push_back(frame2);
+
+    // Formula: next(2, exists car)
+    auto car_id    = ObjectVar{"car"};
+    auto is_car    = is_class(car_id, CAR);
+    auto condition = exists({car_id}, is_car);
+    auto formula   = next(condition, 2);
+
+    // Should be FALSE: car doesn't exist at frame +2
+    REQUIRE_FALSE(evaluator.evaluate(formula, frame0, empty_history, horizon));
+  }
+
+  SECTION("NextExpr - steps=5 evaluates 5 frames ahead") {
+    // Create frames: current + 5 in horizon
+    auto frame0 = make_empty_frame(0, 0.0);
+    std::deque<datastream::Frame> horizon;
+    horizon.push_back(make_empty_frame(1, 1.0));
+    horizon.push_back(make_empty_frame(2, 2.0));
+    horizon.push_back(make_frame_with_person(3, 3.0)); // Person at +3
+    horizon.push_back(make_empty_frame(4, 4.0));
+    horizon.push_back(make_frame_with_car(5, 5.0)); // Car at +5
+
+    // Formula: next(5, exists car)
+    auto car_id    = ObjectVar{"car"};
+    auto is_car    = is_class(car_id, CAR);
+    auto condition = exists({car_id}, is_car);
+    auto formula   = next(condition, 5);
+
+    // Should be TRUE: car exists at frame +5
+    REQUIRE(evaluator.evaluate(formula, frame0, empty_history, horizon));
+  }
+
+  SECTION("NextExpr - steps=3 with person detection") {
+    // Create frames with person appearing at +3
+    auto frame0 = make_empty_frame(0, 0.0);
+    std::deque<datastream::Frame> horizon;
+    horizon.push_back(make_frame_with_car(1, 1.0));      // Car at +1
+    horizon.push_back(make_frame_with_car(2, 2.0));      // Car at +2
+    horizon.push_back(make_frame_with_person(3, 3.0));   // Person at +3
+
+    // Formula: next(3, exists person)
+    auto person_id = ObjectVar{"person"};
+    auto is_person = is_class(person_id, PERSON);
+    auto condition = exists({person_id}, is_person);
+    auto formula   = next(condition, 3);
+
+    // Should be TRUE: person exists at frame +3
+    REQUIRE(evaluator.evaluate(formula, frame0, empty_history, horizon));
+  }
+
+  SECTION("NextExpr - steps=4 fails when insufficient horizon") {
+    // Only 3 frames in horizon, but asking for +4
+    auto frame0 = make_empty_frame(0, 0.0);
+    std::deque<datastream::Frame> horizon;
+    horizon.push_back(make_empty_frame(1, 1.0));
+    horizon.push_back(make_empty_frame(2, 2.0));
+    horizon.push_back(make_frame_with_car(3, 3.0));
+
+    // Formula: next(4, true)
+    auto formula = next(make_true(), 4);
+
+    // Should be FALSE: not enough frames in horizon
+    REQUIRE_FALSE(evaluator.evaluate(formula, frame0, empty_history, horizon));
+  }
+
+  SECTION("NextExpr - nested with different steps") {
+    // Test: next(2, next(3, condition))
+    // This should evaluate at frame +5 (2 + 3)
+    auto frame0 = make_empty_frame(0, 0.0);
+    std::deque<datastream::Frame> horizon;
+    horizon.push_back(make_empty_frame(1, 1.0));
+    horizon.push_back(make_empty_frame(2, 2.0));
+    horizon.push_back(make_empty_frame(3, 3.0));
+    horizon.push_back(make_empty_frame(4, 4.0));
+    horizon.push_back(make_frame_with_car(5, 5.0)); // Car at +5
+
+    // Formula: next(2, next(3, exists car))
+    auto car_id    = ObjectVar{"car"};
+    auto is_car    = is_class(car_id, CAR);
+    auto condition = exists({car_id}, is_car);
+    auto inner     = next(condition, 3);
+    auto formula   = next(inner, 2);
+
+    // Should be TRUE: evaluates at frame +2+3=+5 where car exists
+    REQUIRE(evaluator.evaluate(formula, frame0, empty_history, horizon));
+  }
+
+  // ==========================================================================
   // AlwaysExpr Tests
   // ==========================================================================
 
@@ -536,6 +655,237 @@ TEST_CASE("BooleanEvaluator - Past-Time Temporal Operators", "[evaluation][tempo
     auto formula   = previous(previous(condition));
 
     REQUIRE(evaluator.evaluate(formula, frame, history, empty_horizon));
+  }
+
+  // ==========================================================================
+  // PreviousExpr Tests with Varying Steps
+  // ==========================================================================
+
+  SECTION("PreviousExpr - steps=2 evaluates 2 frames back") {
+    // Create frames: -2 (has car), -1 (no car), current (no car)
+    auto frame_current = make_empty_frame(2, 2.0);
+    std::deque<datastream::Frame> history;
+    history.push_back(make_frame_with_car(0, 0.0));  // Frame at -2
+    history.push_back(make_empty_frame(1, 1.0));     // Frame at -1
+
+    // Formula: previous(2, exists car)
+    auto car_id    = ObjectVar{"car"};
+    auto is_car    = is_class(car_id, CAR);
+    auto condition = exists({car_id}, is_car);
+    auto formula   = previous(condition, 2);
+
+    // Should be TRUE: car exists at frame -2
+    REQUIRE(evaluator.evaluate(formula, frame_current, history, empty_horizon));
+  }
+
+  SECTION("PreviousExpr - steps=2 fails when condition false at target frame") {
+    // Create frames: -2 (no car), -1 (has car), current (no car)
+    auto frame_current = make_empty_frame(2, 2.0);
+    std::deque<datastream::Frame> history;
+    history.push_back(make_empty_frame(0, 0.0));     // Frame at -2
+    history.push_back(make_frame_with_car(1, 1.0)); // Frame at -1
+
+    // Formula: previous(2, exists car)
+    auto car_id    = ObjectVar{"car"};
+    auto is_car    = is_class(car_id, CAR);
+    auto condition = exists({car_id}, is_car);
+    auto formula   = previous(condition, 2);
+
+    // Should be FALSE: car doesn't exist at frame -2
+    REQUIRE_FALSE(evaluator.evaluate(formula, frame_current, history, empty_horizon));
+  }
+
+  SECTION("PreviousExpr - steps=5 evaluates 5 frames back") {
+    // Create frames: 5 frames of history + current
+    auto frame_current = make_empty_frame(5, 5.0);
+    std::deque<datastream::Frame> history;
+    history.push_back(make_frame_with_car(0, 0.0));     // Frame at -5 (has car)
+    history.push_back(make_empty_frame(1, 1.0));        // Frame at -4
+    history.push_back(make_frame_with_person(2, 2.0)); // Frame at -3 (has person)
+    history.push_back(make_empty_frame(3, 3.0));        // Frame at -2
+    history.push_back(make_empty_frame(4, 4.0));        // Frame at -1
+
+    // Formula: previous(5, exists car)
+    auto car_id    = ObjectVar{"car"};
+    auto is_car    = is_class(car_id, CAR);
+    auto condition = exists({car_id}, is_car);
+    auto formula   = previous(condition, 5);
+
+    // Should be TRUE: car exists at frame -5
+    REQUIRE(evaluator.evaluate(formula, frame_current, history, empty_horizon));
+  }
+
+  SECTION("PreviousExpr - steps=3 with person detection") {
+    // Create frames with person appearing at -3
+    auto frame_current = make_empty_frame(3, 3.0);
+    std::deque<datastream::Frame> history;
+    history.push_back(make_frame_with_person(0, 0.0)); // Person at -3
+    history.push_back(make_frame_with_car(1, 1.0));    // Car at -2
+    history.push_back(make_frame_with_car(2, 2.0));    // Car at -1
+
+    // Formula: previous(3, exists person)
+    auto person_id = ObjectVar{"person"};
+    auto is_person = is_class(person_id, PERSON);
+    auto condition = exists({person_id}, is_person);
+    auto formula   = previous(condition, 3);
+
+    // Should be TRUE: person exists at frame -3
+    REQUIRE(evaluator.evaluate(formula, frame_current, history, empty_horizon));
+  }
+
+  SECTION("PreviousExpr - steps=4 fails when insufficient history") {
+    // Only 3 frames in history, but asking for -4
+    auto frame_current = make_empty_frame(3, 3.0);
+    std::deque<datastream::Frame> history;
+    history.push_back(make_empty_frame(0, 0.0));
+    history.push_back(make_empty_frame(1, 1.0));
+    history.push_back(make_frame_with_car(2, 2.0));
+
+    // Formula: previous(4, true)
+    auto formula = previous(make_true(), 4);
+
+    // Should be FALSE: not enough frames in history
+    REQUIRE_FALSE(evaluator.evaluate(formula, frame_current, history, empty_horizon));
+  }
+
+  SECTION("PreviousExpr - nested with different steps") {
+    // Test: previous(2, previous(3, condition))
+    // This should evaluate at frame -5 (2 + 3)
+    auto frame_current = make_empty_frame(5, 5.0);
+    std::deque<datastream::Frame> history;
+    history.push_back(make_frame_with_car(0, 0.0));  // Car at -5
+    history.push_back(make_empty_frame(1, 1.0));     // Frame at -4
+    history.push_back(make_empty_frame(2, 2.0));     // Frame at -3
+    history.push_back(make_empty_frame(3, 3.0));     // Frame at -2
+    history.push_back(make_empty_frame(4, 4.0));     // Frame at -1
+
+    // Formula: previous(2, previous(3, exists car))
+    auto car_id    = ObjectVar{"car"};
+    auto is_car    = is_class(car_id, CAR);
+    auto condition = exists({car_id}, is_car);
+    auto inner     = previous(condition, 3);
+    auto formula   = previous(inner, 2);
+
+    // Should be TRUE: evaluates at frame -2-3=-5 where car exists
+    REQUIRE(evaluator.evaluate(formula, frame_current, history, empty_horizon));
+  }
+
+  // ==========================================================================
+  // Integration Tests: NextExpr/PreviousExpr with Multiple Steps
+  // ==========================================================================
+
+  SECTION("NextExpr - steps with quantifier and class comparison") {
+    // Verify that object bindings work correctly at distant frames
+    auto frame0 = make_empty_frame(0, 0.0);
+    std::deque<datastream::Frame> horizon;
+    horizon.push_back(make_empty_frame(1, 1.0));
+    horizon.push_back(make_frame_with_multiple_objects(2, 2.0)); // Has both car and person
+    horizon.push_back(make_empty_frame(3, 3.0));
+
+    // Formula: next(2, exists obj such that obj is a car)
+    auto obj_id    = ObjectVar{"obj"};
+    auto is_car    = is_class(obj_id, CAR);
+    auto condition = exists({obj_id}, is_car);
+    auto formula   = next(condition, 2);
+
+    // Should be TRUE: car exists at frame +2
+    REQUIRE(evaluator.evaluate(formula, frame0, {}, horizon));
+  }
+
+  SECTION("PreviousExpr - steps with quantifier and class comparison") {
+    // Verify that object bindings work correctly at distant past frames
+    auto frame_current = make_empty_frame(3, 3.0);
+    std::deque<datastream::Frame> history;
+    history.push_back(make_empty_frame(0, 0.0));
+    history.push_back(make_frame_with_multiple_objects(1, 1.0)); // Has both car and person
+    history.push_back(make_empty_frame(2, 2.0));
+
+    // Formula: previous(2, exists obj such that obj is a person)
+    auto obj_id    = ObjectVar{"obj"};
+    auto is_person = is_class(obj_id, PERSON);
+    auto condition = exists({obj_id}, is_person);
+    auto formula   = previous(condition, 2);
+
+    // Should be TRUE: person exists at frame -2
+    REQUIRE(evaluator.evaluate(formula, frame_current, history, {}));
+  }
+
+  SECTION("NextExpr - large steps with probability check") {
+    // Test with larger step count and probability comparison
+    auto frame0 = make_empty_frame(0, 0.0);
+    std::deque<datastream::Frame> horizon;
+    for (int i = 1; i <= 9; ++i) {
+      horizon.push_back(make_empty_frame(i, static_cast<double>(i)));
+    }
+    horizon.push_back(make_frame_with_car_probability(10, 10.0, 0.99)); // High confidence at +10
+
+    // Formula: next(10, exists car with P(car) >= 0.95)
+    auto car_id    = ObjectVar{"car"};
+    auto is_car    = is_class(car_id, CAR);
+    auto high_prob = high_confidence(car_id, 0.95);
+    auto condition = exists({car_id}, is_car & high_prob);
+    auto formula   = next(condition, 10);
+
+    // Should be TRUE: high-confidence car at frame +10
+    REQUIRE(evaluator.evaluate(formula, frame0, {}, horizon));
+  }
+
+  SECTION("PreviousExpr - large steps with multiple object types") {
+    // Test with larger step count going backwards
+    auto frame_current = make_empty_frame(10, 10.0);
+    std::deque<datastream::Frame> history;
+    history.push_back(make_frame_with_multiple_objects(0, 0.0)); // Both car and person at -10
+    for (int i = 1; i < 10; ++i) {
+      history.push_back(make_empty_frame(i, static_cast<double>(i)));
+    }
+
+    // Formula: previous(10, exists both car and person)
+    auto car_id    = ObjectVar{"car"};
+    auto person_id = ObjectVar{"person"};
+    auto is_car    = is_class(car_id, CAR);
+    auto is_person = is_class(person_id, PERSON);
+    auto has_car   = exists({car_id}, is_car);
+    auto has_person = exists({person_id}, is_person);
+    auto condition  = has_car & has_person;
+    auto formula    = previous(condition, 10);
+
+    // Should be TRUE: both objects exist at frame -10
+    REQUIRE(evaluator.evaluate(formula, frame_current, history, {}));
+  }
+
+  SECTION("NextExpr and PreviousExpr - asymmetric evaluation") {
+    // Verify that next(N) and previous(N) evaluate at correct frames
+    // Setup: -2, -1, current, +1, +2
+    // Only frame -2 and +2 have cars
+    auto frame_current = make_empty_frame(2, 2.0);
+
+    std::deque<datastream::Frame> history;
+    history.push_back(make_frame_with_car(0, 0.0));  // Frame -2: has car
+    history.push_back(make_empty_frame(1, 1.0));     // Frame -1: no car
+
+    std::deque<datastream::Frame> horizon;
+    horizon.push_back(make_empty_frame(3, 3.0));     // Frame +1: no car
+    horizon.push_back(make_frame_with_car(4, 4.0)); // Frame +2: has car
+
+    auto car_id    = ObjectVar{"car"};
+    auto is_car    = is_class(car_id, CAR);
+    auto condition = exists({car_id}, is_car);
+
+    // next(2, condition) should be TRUE (car at +2)
+    auto next_formula = next(condition, 2);
+    REQUIRE(evaluator.evaluate(next_formula, frame_current, history, horizon));
+
+    // previous(2, condition) should be TRUE (car at -2)
+    auto prev_formula = previous(condition, 2);
+    REQUIRE(evaluator.evaluate(prev_formula, frame_current, history, horizon));
+
+    // next(1, condition) should be FALSE (no car at +1)
+    auto next_1_formula = next(condition, 1);
+    REQUIRE_FALSE(evaluator.evaluate(next_1_formula, frame_current, history, horizon));
+
+    // previous(1, condition) should be FALSE (no car at -1)
+    auto prev_1_formula = previous(condition, 1);
+    REQUIRE_FALSE(evaluator.evaluate(prev_1_formula, frame_current, history, horizon));
   }
 
   // ==========================================================================

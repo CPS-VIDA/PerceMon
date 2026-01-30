@@ -271,9 +271,9 @@ template <std::bidirectional_iterator Iter, std::sized_sentinel_for<Iter> Sentin
 template <std::bidirectional_iterator Iter, std::sized_sentinel_for<Iter> Sentinel = Iter>
 [[nodiscard]] auto eval_next(const stql::NextExpr& e, const EvaluationContext<Iter, Sentinel>& ctx)
     -> bool {
-  // Check if there is any next frame
-  if (!ctx.has_horizon()) { return false; }
-  EvaluationContext<Iter, Sentinel> next_ctx = shift_eval_context(ctx, 1);
+  // Check if the frame `e.steps` away is available
+  if (static_cast<size_t>(ctx.num_horizon()) < e.steps) { return false; }
+  EvaluationContext<Iter, Sentinel> next_ctx = shift_eval_context(ctx, e.steps);
   return eval_impl(*e.arg, next_ctx);
 }
 
@@ -403,11 +403,11 @@ eval_release(const stql::ReleaseExpr& e, const EvaluationContext<Iter, Sentinel>
 template <std::bidirectional_iterator Iter, std::sized_sentinel_for<Iter> Sentinel = Iter>
 [[nodiscard]] auto
 eval_previous(const stql::PreviousExpr& e, const EvaluationContext<Iter, Sentinel>& ctx) -> bool {
-  // No previous frame available: vacuously false
-  if (!ctx.has_history()) { return false; }
-
+  // Check if the frame `e.steps` away is available
+  if (static_cast<size_t>(ctx.num_history()) < e.steps) { return false; }
+  const auto neg_shift = -1 * static_cast<int64_t>(e.steps);
   // Create context for previous frame (most recent in history)
-  EvaluationContext<Iter, Sentinel> prev_ctx = shift_eval_context(ctx, -1);
+  EvaluationContext<Iter, Sentinel> prev_ctx = shift_eval_context(ctx, neg_shift);
   return eval_impl(*e.arg, prev_ctx);
 }
 
