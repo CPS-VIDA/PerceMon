@@ -97,6 +97,8 @@ jobs:
             ACTIONS_RESULTS_URL=${{ env.ACTIONS_RESULTS_URL }}
             ACTIONS_CACHE_URL=${{ env.ACTIONS_CACHE_URL }}
             ACTIONS_CACHE_SERVICE_V2=${{ env.ACTIONS_CACHE_SERVICE_V2 }}
+            MACOSX_DEPLOYMENT_TARGET=14.5
+            CMAKE_OSX_DEPLOYMENT_TARGET=14.5
       - uses: actions/upload-artifact@v6
         with:
           name: release-wheels-${{ matrix.os }}-${{ strategy.job-index }}
