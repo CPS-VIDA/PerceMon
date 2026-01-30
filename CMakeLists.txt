@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.29)
 
 project(
   PerceMon
-  VERSION 1.0.2
+  VERSION 1.0.3
   DESCRIPTION
     "A library for efficient online monitoring for Spatio-Temporal Quality Logic on streams of perception data."
   LANGUAGES CXX)
